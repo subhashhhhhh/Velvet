@@ -122,6 +122,14 @@ private struct WatchInfoView: View {
     }
 
     private var channel: some View {
+        Button {
+            if let id = page.details?.channel?.id ?? video.channelId { app.openChannel(id) }
+        } label: { channelLabel }
+        .buttonStyle(.plain)
+        .help("Go to channel")
+    }
+
+    private var channelLabel: some View {
         HStack(spacing: 10) {
             RemoteImage(url: page.details?.channel?.avatar ?? video.channelAvatar)
                 .frame(width: 40, height: 40)
@@ -310,7 +318,7 @@ private struct RelatedRow: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
                 Text((showOriginal ? nil : branding?.title) ?? video.title).font(.system(size: 13, weight: .semibold)).lineLimit(2)
-                if let c = video.channelName { Text(c).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
+                if let c = video.channelName { Text(c).font(.caption).foregroundStyle(.secondary).lineLimit(1).channelLink(video.channelId) }
                 Text([video.viewCount, video.published].compactMap { $0 }.joined(separator: " · "))
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
@@ -371,10 +379,12 @@ private struct CommentRow: View {
             RemoteImage(url: comment.avatar)
                 .frame(width: isReply ? 28 : 36, height: isReply ? 28 : 36)
                 .clipShape(Circle())
+                .channelLink(comment.authorChannelId)
             VStack(alignment: .leading, spacing: 5) {
                 HStack(spacing: 6) {
                     Text(comment.author)
                         .font(.subheadline.weight(.semibold))
+                        .channelLink(comment.authorChannelId)
                         .padding(.horizontal, comment.isCreator ? 6 : 0)
                         .background(comment.isCreator ? AnyShapeStyle(.quaternary) : AnyShapeStyle(.clear), in: Capsule())
                     if comment.isVerified { Image(systemName: "checkmark.seal.fill").font(.caption).foregroundStyle(.secondary) }

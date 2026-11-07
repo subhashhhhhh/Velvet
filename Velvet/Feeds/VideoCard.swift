@@ -20,6 +20,7 @@ struct VideoCard: View {
                     .frame(width: 32, height: 32)
                     .clipShape(Circle())
                     .opacity(video.channelAvatar == nil ? 0 : 1)
+                    .channelLink(video.channelId)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(displayTitle)
                         .font(.system(size: 13, weight: .semibold))
@@ -30,6 +31,7 @@ struct VideoCard: View {
                             .font(.system(size: 12))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
+                            .channelLink(video.channelId)
                     }
                     if !metadataLine.isEmpty {
                         Text(metadataLine)
@@ -141,6 +143,7 @@ struct BadgeLabel: View {
 
 struct VideoContextMenu: View {
     let video: Video
+    @Environment(AppModel.self) private var app
 
     private var watchURL: URL {
         URL(string: video.kind == .short
@@ -154,7 +157,36 @@ struct VideoContextMenu: View {
             NSPasteboard.general.setString(watchURL.absoluteString, forType: .string)
         }
         Button("Open in Browser") { NSWorkspace.shared.open(watchURL) }
+        if let channelId = video.channelId {
+            Divider()
+            Button("Go to Channel") { app.openChannel(channelId) }
+        }
     }
+}
+
+/// Makes a channel name/avatar open the channel page. A high-priority tap so it wins over
+/// the enclosing card's "open video" button; a pointing hand hints it's a separate target.
+private struct ChannelLink: ViewModifier {
+    let channelId: String?
+    @Environment(AppModel.self) private var app
+    @State private var hovering = false
+
+    func body(content: Content) -> some View {
+        if let channelId {
+            content
+                .underline(hovering, color: .secondary)
+                .onHover { hovering = $0 }
+                .pointerStyle(.link)
+                .highPriorityGesture(TapGesture().onEnded { app.openChannel(channelId) })
+                .help("Go to channel")
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    func channelLink(_ channelId: String?) -> some View { modifier(ChannelLink(channelId: channelId)) }
 }
 
 /// Re-fetches branding when the video or any DeArrow setting changes.

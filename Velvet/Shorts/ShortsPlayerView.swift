@@ -150,6 +150,7 @@ private struct ShortCardPlayer: View {
                         .frame(width: 30, height: 30).clipShape(Circle())
                     Text(details?.channel?.name ?? session.video.channelName ?? "")
                         .font(.subheadline.weight(.semibold))
+                        .channelLink(details?.channel?.id ?? session.video.channelId)
                 }
                 Button(action: onTitleTap) {
                     Text(details?.title ?? session.video.title)
@@ -185,6 +186,7 @@ private struct ShortCardPlayer: View {
 
 private struct ShortActions: View {
     let session: PlayerSession
+    @Environment(AppModel.self) private var app
     let panel: ShortsController.Panel
     var toggle: (ShortsController.Panel) -> Void
 
@@ -211,9 +213,7 @@ private struct ShortActions: View {
             .buttonStyle(.plain)
             .fixedSize()
             Button {
-                if let path = page.details?.channel?.handlePath, let url = URL(string: "https://www.youtube.com\(path)/shorts") {
-                    NSWorkspace.shared.open(url)
-                }
+                if let id = page.details?.channel?.id ?? session.video.channelId { app.openChannel(id) }
             } label: {
                 RemoteImage(url: page.details?.channel?.avatar)
                     .frame(width: 40, height: 40)
