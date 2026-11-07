@@ -13,6 +13,13 @@ struct RootView: View {
         }
         .searchable(text: $app.searchText, placement: .toolbar, prompt: "Search YouTube")
         .onSubmit(of: .search) { app.submitSearch() }
+        .sheet(isPresented: $app.showingSignIn) {
+            SignInView(
+                onComplete: { cookies in Task { await app.completeSignIn(cookies: cookies) } },
+                onCancel: { app.showingSignIn = false }
+            )
+        }
+        .task { await app.start() }
     }
 
     @ViewBuilder
@@ -60,10 +67,48 @@ struct SidebarView: View {
             }
         }
         .listStyle(.sidebar)
+        .safeAreaInset(edge: .bottom) { AccountFooter().padding(10) }
     }
 
     private func row(_ d: Destination) -> some View {
         Label(d.title, systemImage: d.symbol).tag(d)
+    }
+}
+
+struct AccountFooter: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        switch app.authState {
+        case .unknown:
+            EmptyView()
+        case .signedOut:
+            Button {
+                app.showingSignIn = true
+            } label: {
+                Label("Sign In", systemImage: "person.crop.circle")
+                    .frame(maxWidth: .infinity)
+            }
+            .controlSize(.large)
+            .buttonStyle(.bordered)
+        case .signedIn:
+            Menu {
+                if let handle = app.account?.handle { Text(handle) }
+                Button("Sign Out", role: .destructive) { Task { await app.signOut() } }
+            } label: {
+                HStack(spacing: 8) {
+                    RemoteImage(url: app.account?.photo)
+                        .frame(width: 24, height: 24)
+                        .clipShape(Circle())
+                    Text(app.account?.name ?? "Signed In")
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                }
+            }
+            .menuStyle(.button)
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+        }
     }
 }
 

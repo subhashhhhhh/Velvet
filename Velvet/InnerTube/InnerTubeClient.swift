@@ -99,6 +99,11 @@ actor InnerTubeClient {
         try await post("next", ["continuation": .string(token)])
     }
 
+    /// The signed-in account's name, handle and photo.
+    func accountMenu() async throws -> JSON {
+        try await post("account/account_menu", [:])
+    }
+
     // MARK: - Transport
 
     func post(_ endpoint: String, _ body: [String: JSON]) async throws -> JSON {
