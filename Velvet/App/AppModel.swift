@@ -37,6 +37,15 @@ final class AppModel {
     let settings = Preferences()
     let tools = ToolManager()
     let progress = WatchProgressStore()
+    let deArrow = DeArrowService()
+
+    /// DeArrow branding for `video` per current settings (nil when off or nothing better exists).
+    func branding(for video: Video) async -> DeArrowBranding? {
+        guard settings.deArrowEnabled, video.kind == .video || video.kind == .upcoming else { return nil }
+        var b = await deArrow.branding(for: video.id, duration: video.durationSeconds, thumbnails: settings.deArrowThumbnails)
+        if !settings.deArrowTitles { b?.title = nil }
+        return b
+    }
     @ObservationIgnored private(set) lazy var resolver = StreamResolver(
         tools: tools, preferences: settings,
         session: { [weak self] in await self?.session }

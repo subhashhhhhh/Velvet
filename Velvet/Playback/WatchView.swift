@@ -102,15 +102,21 @@ private struct WatchInfoView: View {
     let session: PlayerSession
     @Environment(AppModel.self) private var app
     @State private var descriptionExpanded = false
+    @State private var branding: DeArrowBranding?
+    @State private var titleHovered = false
 
     private var page: WatchPageModel { session.page }
     private var video: Video { session.video }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(page.details?.title ?? video.title)
+            let original = page.details?.title ?? video.title
+            Text((titleHovered && app.settings.deArrowOriginalOnHover ? nil : branding?.title) ?? original)
                 .font(.title2.weight(.semibold))
                 .textSelection(.enabled)
+                .onHover { titleHovered = $0 }
+                .help(branding?.title != nil ? "Original: \(original)" : "")
+                .task(id: DeArrowKey(videoId: video.id, prefs: app.settings)) { branding = await app.branding(for: video) }
 
             HStack(alignment: .center, spacing: 12) {
                 channel
@@ -291,10 +297,18 @@ private struct RelatedRow: View {
     @Environment(AppModel.self) private var app
     @State private var hovering = false
     @State private var prefetch: Task<Void, Never>?
+    @State private var branding: DeArrowBranding?
+
+    private var showOriginal: Bool { hovering && app.settings.deArrowOriginalOnHover }
+    private var brandedThumbnail: URL? {
+        guard !showOriginal, let t = branding?.thumbnailTime else { return nil }
+        return DeArrowService.thumbnailURL(videoId: video.id, time: t)
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            RemoteImage(url: video.thumbnail(minWidth: 336))
+            RemoteImage(url: brandedThumbnail ?? video.thumbnail(minWidth: 336),
+                        fallback: brandedThumbnail == nil ? nil : video.thumbnail(minWidth: 336))
                 .frame(width: 168, height: 94.5)
                 .overlay(alignment: .bottomTrailing) {
                     if video.kind == .live { BadgeLabel(text: "LIVE", background: .red).padding(4) }
@@ -302,7 +316,7 @@ private struct RelatedRow: View {
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             VStack(alignment: .leading, spacing: 3) {
-                Text(video.title).font(.system(size: 13, weight: .semibold)).lineLimit(2)
+                Text((showOriginal ? nil : branding?.title) ?? video.title).font(.system(size: 13, weight: .semibold)).lineLimit(2)
                 if let c = video.channelName { Text(c).font(.caption).foregroundStyle(.secondary).lineLimit(1) }
                 Text([video.viewCount, video.published].compactMap { $0 }.joined(separator: " · "))
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
@@ -318,6 +332,7 @@ private struct RelatedRow: View {
             if h { prefetch = Task { try? await Task.sleep(for: .milliseconds(350)); if !Task.isCancelled { app.prefetch(video) } } }
         }
         .contextMenu { VideoContextMenu(video: video) }
+        .task(id: DeArrowKey(videoId: video.id, prefs: app.settings)) { branding = await app.branding(for: video) }
     }
 }
 

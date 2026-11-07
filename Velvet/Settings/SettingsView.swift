@@ -7,6 +7,7 @@ struct SettingsView: View {
             Tab("Feed", systemImage: "square.grid.2x2") { FeedPane() }
             Tab("Playback", systemImage: "play.rectangle") { PlaybackPane() }
             Tab("SponsorBlock", systemImage: "forward.end") { SponsorBlockPane() }
+            Tab("DeArrow", systemImage: "arrow.uturn.down.circle") { DeArrowPane() }
             Tab("Account", systemImage: "person.crop.circle") { AccountPane() }
             Tab("Advanced", systemImage: "wrench.and.screwdriver") { AdvancedPane() }
         }
@@ -138,6 +139,29 @@ private struct SponsorBlockPane: View {
                 }
             }
             .disabled(!settings.sponsorBlockEnabled)
+        }
+        .formStyle(.grouped)
+    }
+}
+
+// MARK: - DeArrow
+
+private struct DeArrowPane: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        @Bindable var settings = app.settings
+        Form {
+            Section {
+                Toggle("Replace clickbait titles", isOn: $settings.deArrowTitles)
+                Picker("Thumbnails", selection: $settings.deArrowThumbnails) {
+                    ForEach(DeArrowThumbnailMode.allCases) { Text($0.label).tag($0) }
+                }
+                Toggle("Show originals while hovering", isOn: $settings.deArrowOriginalOnHover)
+                    .disabled(!settings.deArrowEnabled)
+            } footer: {
+                Text("Community-submitted titles and thumbnails from DeArrow. Lookups use a 4-character hash prefix, so the server never learns which videos you're looking at. A random frame is used when nobody has picked a thumbnail yet.")
+            }
         }
         .formStyle(.grouped)
     }

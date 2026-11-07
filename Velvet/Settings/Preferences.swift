@@ -129,6 +129,12 @@ final class Preferences {
     var showSkipNotice: Bool { didSet { save(showSkipNotice, .showSkipNotice) } }
     var sponsorBlockServer: String { didSet { save(sponsorBlockServer, .sponsorBlockServer) } }
 
+    // DeArrow
+    var deArrowTitles: Bool { didSet { save(deArrowTitles, .deArrowTitles) } }
+    var deArrowThumbnails: DeArrowThumbnailMode { didSet { save(deArrowThumbnails.rawValue, .deArrowThumbnails) } }
+    var deArrowOriginalOnHover: Bool { didSet { save(deArrowOriginalOnHover, .deArrowOriginalOnHover) } }
+    var deArrowEnabled: Bool { deArrowTitles || deArrowThumbnails != .off }
+
     // Advanced
     var jsRuntime: JSRuntime { didSet { save(jsRuntime.rawValue, .jsRuntime) } }
     var autoUpdateTools: Bool { didSet { save(autoUpdateTools, .autoUpdateTools) } }
@@ -165,6 +171,10 @@ final class Preferences {
         showSkipNotice = get(.showSkipNotice, true)
         sponsorBlockServer = get(.sponsorBlockServer, Self.defaultSponsorServer)
 
+        deArrowTitles = get(.deArrowTitles, true)
+        deArrowThumbnails = DeArrowThumbnailMode(rawValue: get(.deArrowThumbnails, "")) ?? .random
+        deArrowOriginalOnHover = get(.deArrowOriginalOnHover, true)
+
         jsRuntime = JSRuntime(rawValue: get(.jsRuntime, "")) ?? .deno
         autoUpdateTools = get(.autoUpdateTools, true)
     }
@@ -185,6 +195,8 @@ final class Preferences {
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
         sponsorBlockEnabled = fresh.sponsorBlockEnabled; sponsorActions = fresh.sponsorActions
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
+        deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
+        deArrowOriginalOnHover = fresh.deArrowOriginalOnHover
         jsRuntime = fresh.jsRuntime; autoUpdateTools = fresh.autoUpdateTools
     }
 
@@ -194,6 +206,7 @@ final class Preferences {
         case startPage, showShortsShelf, shortsAfterRows, cardSize, hideWatched
         case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
+        case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
         case jsRuntime, autoUpdateTools
 
         var name: String { "settings.\(self)" }

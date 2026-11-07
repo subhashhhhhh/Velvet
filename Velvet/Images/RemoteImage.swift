@@ -3,6 +3,8 @@ import SwiftUI
 /// Shows a remote image, decoded at exactly the pixel size it's displayed at.
 struct RemoteImage: View {
     let url: URL?
+    /// Shown if `url` fails to load (e.g. a DeArrow frame that isn't generated yet).
+    var fallback: URL? = nil
     var contentMode: ContentMode = .fill
 
     @Environment(\.displayScale) private var displayScale
@@ -42,7 +44,10 @@ struct RemoteImage: View {
     private func load(side: Int) async {
         guard let url, side > 0 else { image = nil; return }
         if loadedURL != url { image = nil }
-        let result = await ImagePipeline.shared.image(for: url, maxPixel: side)
+        var result = await ImagePipeline.shared.image(for: url, maxPixel: side)
+        if result == nil, let fallback, !Task.isCancelled {
+            result = await ImagePipeline.shared.image(for: fallback, maxPixel: side)
+        }
         guard !Task.isCancelled else { return }
         withAnimation(.easeOut(duration: 0.15)) { image = result }
         loadedURL = url

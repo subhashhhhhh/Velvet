@@ -6,6 +6,11 @@ struct VideoCard: View {
     @Environment(AppModel.self) private var app
     @State private var hovering = false
     @State private var prefetchTask: Task<Void, Never>?
+    @State private var branding: DeArrowBranding?
+
+    /// Originals show while hovering if the user asked for that.
+    private var showOriginal: Bool { hovering && app.settings.deArrowOriginalOnHover }
+    private var displayTitle: String { (showOriginal ? nil : branding?.title) ?? video.title }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -16,7 +21,7 @@ struct VideoCard: View {
                     .clipShape(Circle())
                     .opacity(video.channelAvatar == nil ? 0 : 1)
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(video.title)
+                    Text(displayTitle)
                         .font(.system(size: 13, weight: .semibold))
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
@@ -55,6 +60,12 @@ struct VideoCard: View {
         }
         .animation(.easeOut(duration: 0.12), value: hovering)
         .contextMenu { VideoContextMenu(video: video) }
+        .task(id: DeArrowKey(videoId: video.id, prefs: app.settings)) { branding = await app.branding(for: video) }
+    }
+
+    private var brandedThumbnail: URL? {
+        guard !showOriginal, let t = branding?.thumbnailTime else { return nil }
+        return DeArrowService.thumbnailURL(videoId: video.id, time: t)
     }
 
     private var metadataLine: String {
@@ -62,7 +73,8 @@ struct VideoCard: View {
     }
 
     private var thumbnail: some View {
-        RemoteImage(url: video.thumbnail(minWidth: 480))
+        RemoteImage(url: brandedThumbnail ?? video.thumbnail(minWidth: 480),
+                    fallback: brandedThumbnail == nil ? nil : video.thumbnail(minWidth: 480))
             .aspectRatio(16 / 9, contentMode: .fit)
             .overlay(alignment: .bottomTrailing) { badge.padding(6) }
             .overlay(alignment: .bottom) {
@@ -142,5 +154,18 @@ struct VideoContextMenu: View {
             NSPasteboard.general.setString(watchURL.absoluteString, forType: .string)
         }
         Button("Open in Browser") { NSWorkspace.shared.open(watchURL) }
+    }
+}
+
+/// Re-fetches branding when the video or any DeArrow setting changes.
+struct DeArrowKey: Equatable {
+    let videoId: String
+    let titles: Bool
+    let thumbnails: DeArrowThumbnailMode
+
+    init(videoId: String, prefs: Preferences) {
+        self.videoId = videoId
+        titles = prefs.deArrowTitles
+        thumbnails = prefs.deArrowThumbnails
     }
 }
