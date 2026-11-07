@@ -62,6 +62,7 @@ final class PlayerSession: Identifiable {
             if abs(t - lastSaved) >= 15 { lastSaved = t; self?.saveProgress() }
         }
         player.onPauseChange = { [weak self, weak player] paused in
+            if paused { self?.noteLivePause() }
             guard paused, let t = player?.position else { return }
             tracker?.flush(at: t)
             self?.saveProgress()
@@ -99,6 +100,21 @@ final class PlayerSession: Identifiable {
         loadTask?.cancel()
         loadTask = Task { try? await play(info, at: position, autoplay: playing) }
     }
+
+    /// Live according to the stream itself (cards don't always know).
+    var isLive: Bool { info?.isLive ?? (video.kind == .live) }
+
+    /// Set once the viewer pauses a live stream: playback is then behind the live edge.
+    private(set) var isBehindLive = false
+
+    /// Reloads the live stream at its current edge.
+    func goLive() {
+        guard isLive, let selection else { return }
+        isBehindLive = false
+        player.load(selection, startAt: 0, autoplay: true)
+    }
+
+    func noteLivePause() { if isLive { isBehindLive = true } }
 
     /// Qualities this video actually offers.
     var availableQualities: [VideoQuality] {

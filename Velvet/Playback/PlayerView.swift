@@ -232,7 +232,7 @@ struct PlayerControls: View {
             Spacer()
             VStack(spacing: 8) {
                 SeekBar(position: scrubbing ?? player.position, buffered: player.bufferedUntil,
-                        duration: player.duration, isLive: session.video.kind == .live,
+                        duration: player.duration, isLive: session.isLive,
                         segments: session.sponsor.segments) { value, done in
                     scrubbing = done ? nil : value
                     if done { player.seek(to: value) }
@@ -245,7 +245,11 @@ struct PlayerControls: View {
                     Button { player.seek(by: -10) } label: { Image(systemName: "gobackward.10") }
                     Button { player.seek(by: 10) } label: { Image(systemName: "goforward.10") }
                     VolumeControl(player: player)
-                    Text(timeLabel).monospacedDigit().font(.callout).foregroundStyle(.white.opacity(0.85))
+                    if session.isLive {
+                        LiveBadge(behind: session.isBehindLive) { session.goLive() }
+                    } else {
+                        Text(timeLabel).monospacedDigit().font(.callout).foregroundStyle(.white.opacity(0.85))
+                    }
                     Spacer()
                     speedMenu
                     qualityMenu
@@ -271,7 +275,7 @@ struct PlayerControls: View {
     }
 
     private var timeLabel: String {
-        if session.video.kind == .live { return "● LIVE" }
+        if session.isLive { return "" }
         return "\(Self.format(scrubbing ?? player.position)) / \(Self.format(player.duration))"
     }
 
@@ -304,7 +308,7 @@ struct PlayerControls: View {
         .menuStyle(.button)
         .menuIndicator(.hidden)
         .fixedSize()
-        .disabled(session.info == nil || session.video.kind == .live)
+        .disabled(session.info == nil || session.isLive)
     }
 
     static func format(_ seconds: Double) -> String {
@@ -476,5 +480,23 @@ struct PictureInPicturePlaceholder: View {
             Button("Bring Back") { app.exitPictureInPicture() }.buttonStyle(.bordered)
         }
         .foregroundStyle(.white.opacity(0.85))
+    }
+}
+
+/// "● LIVE" at the live edge; "Go Live" (tap to jump back) once playback has fallen behind.
+struct LiveBadge: View {
+    let behind: Bool
+    var goLive: () -> Void
+
+    var body: some View {
+        Button(action: goLive) {
+            HStack(spacing: 5) {
+                Circle().fill(behind ? Color.white.opacity(0.6) : .red).frame(width: 8, height: 8)
+                Text(behind ? "Go Live" : "LIVE").font(.callout.weight(.bold))
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(!behind)
+        .help(behind ? "Jump to the live edge" : "Watching live")
     }
 }

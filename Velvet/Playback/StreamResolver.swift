@@ -87,9 +87,21 @@ actor StreamResolver {
 
     private func run(_ videoId: String, isLive: Bool) async throws -> StreamInfo {
         do {
-            return try await run(videoId, isLive: isLive, strategy: .fast)
+            let info = try await run(videoId, isLive: isLive, strategy: .fast)
+            // Opened from somewhere that didn't know it was live (related video, link): the
+            // HLS-skipping fast path then returns no playable formats. Retry with HLS.
+            if info.isLive && !isLive && !info.formats.contains(where: { $0.isHLS }) {
+                log.info("\(videoId, privacy: .public) is live; resolving again with HLS")
+                return try await run(videoId, isLive: true, strategy: .fast)
+            }
+            return info
         } catch is CancellationError {
             throw CancellationError()
+        } catch where !isLive && error.localizedDescription.localizedCaseInsensitiveContains("No video formats") {
+            // A live stream opened unflagged: with HLS skipped it has no formats at all, so
+            // yt-dlp errors out before we could see `is_live`. Retry with HLS.
+            log.info("\(videoId, privacy: .public) has no non-HLS formats (likely live); resolving again with HLS")
+            return try await run(videoId, isLive: true)
         } catch {
             log.info("Fast resolve failed for \(videoId, privacy: .public) (\(error.localizedDescription, privacy: .public)); retrying with account")
             return try await run(videoId, isLive: isLive, strategy: .account)
@@ -134,7 +146,7 @@ actor StreamResolver {
         }
         let json = try JSON(data: result.stdout)
         guard let info = StreamInfo(ytdlp: json),
-              info.formats.contains(where: { $0.hasVideo }) else {
+              info.isLive || info.formats.contains(where: { $0.hasVideo }) else {
             throw ProcessError.failed("yt-dlp", 0, "No playable formats were returned.")
         }
         log.info("Resolved \(videoId, privacy: .public) [\(strategy.rawValue, privacy: .public)]: \(info.formats.count) formats in \(ContinuousClock.now - start, privacy: .public)")
