@@ -13,6 +13,8 @@ final class PlayerSession: Identifiable {
     let player: MPVPlayer
     let sponsor: SponsorSkipper
     let page: WatchPageModel
+    /// Reports viewing to YouTube (history, progress); nil when signed out.
+    @ObservationIgnored private let tracker: WatchTracker?
     private(set) var phase: Phase = .resolving
     private(set) var info: StreamInfo?
     private(set) var selection: StreamInfo.Selection?
@@ -27,8 +29,9 @@ final class PlayerSession: Identifiable {
     @ObservationIgnored private let log = Logger(subsystem: "com.subhash.Velvet", category: "Player")
 
     init(video: Video, resolver: StreamResolver, preferences: Preferences, client: InnerTubeClient,
-         isSignedIn: @escaping () -> Bool) {
+         session: YouTubeSession?, isSignedIn: @escaping () -> Bool) {
         self.video = video
+        self.tracker = session.map { WatchTracker(videoId: video.id, client: client, session: $0) }
         self.page = WatchPageModel(videoId: video.id, client: client, isSignedIn: isSignedIn)
         self.resolver = resolver
         self.prefs = preferences
@@ -45,7 +48,14 @@ final class PlayerSession: Identifiable {
             seek: { [weak player] in player?.seek(to: $0) }
         )
         let sponsor = self.sponsor
-        player.onTimeChange = { [weak sponsor] in sponsor?.timeChanged($0) }
+        let tracker = self.tracker
+        player.onTimeChange = { [weak sponsor, weak player] t in
+            sponsor?.timeChanged(t)
+            tracker?.timeChanged(t, isPlaying: !(player?.isPaused ?? true))
+        }
+        player.onPauseChange = { [weak player] paused in
+            if paused, let t = player?.position { tracker?.flush(at: t) }
+        }
         player.onLoadFailure = { [weak self] message in self?.recoverFromLoadFailure(message) }
     }
 
@@ -54,6 +64,7 @@ final class PlayerSession: Identifiable {
         phase = .resolving
         loadSponsorSegments()
         Task { [page] in await page.load() }
+        tracker?.prepare()
         loadTask = Task {
             let start = ContinuousClock.now
             do {
@@ -126,6 +137,7 @@ final class PlayerSession: Identifiable {
     }
 
     func close() {
+        tracker?.flush(at: player.position, state: "paused")
         loadTask?.cancel()
         player.stop()
     }

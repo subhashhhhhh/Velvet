@@ -165,6 +165,8 @@ final class MPVPlayer {
 
     /// Fired (on the main actor) as playback time advances; used by SponsorBlock.
     @ObservationIgnored var onTimeChange: ((Double) -> Void)?
+    /// Fired when playback pauses or resumes.
+    @ObservationIgnored var onPauseChange: ((Bool) -> Void)?
     /// Fired when a load fails before any frame played (e.g. HTTP 403), so the owner can retry.
     @ObservationIgnored var onLoadFailure: ((String) -> Void)?
     @ObservationIgnored private var playedSinceLoad = false
@@ -332,7 +334,8 @@ final class MPVPlayer {
 
     private func apply(_ name: String, _ value: MPVCore.PropertyValue) {
         switch (name, value) {
-        case ("pause", .flag(let v)): isPaused = v
+        case ("pause", .flag(let v)):
+            if v != isPaused { isPaused = v; onPauseChange?(v) }
         case ("paused-for-cache", .flag(let v)): isBuffering = v
         case ("eof-reached", .flag(let v)): hasEnded = v
         case ("mute", .flag(let v)): isMuted = v

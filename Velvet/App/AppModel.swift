@@ -72,7 +72,8 @@ final class AppModel {
     func open(_ video: Video, at position: Double = 0) {
         watching?.close()
         let session = PlayerSession(video: video, resolver: resolver, preferences: settings,
-                                    client: client, isSignedIn: { [weak self] in self?.authState == .signedIn })
+                                    client: client, session: authState == .signedIn ? session : nil,
+                                    isSignedIn: { [weak self] in self?.authState == .signedIn })
         session.startPosition = position
         watching = session
         session.start()
@@ -162,8 +163,13 @@ final class AppModel {
     func start() async {
         guard authState == .unknown else { return }
         prepareTools()
+        if let saved = YouTubeSession.restore() {
+            await activate(saved)
+        } else {
+            authState = .signedOut
+        }
         #if DEBUG
-        // `-VelvetPlay <videoId>` opens straight into the player; handy for testing.
+        // `-VelvetPlay <videoId>` opens straight into the player (after the session restores).
         if let id = UserDefaults.standard.string(forKey: "VelvetPlay"), !id.isEmpty {
             open(Video(id: id, title: "Debug: \(id)"), at: UserDefaults.standard.double(forKey: "VelvetStart"))
             // `-VelvetResizeTest YES`: pause, then grow the window, to check mpv follows the new size.
@@ -179,11 +185,7 @@ final class AppModel {
             }
         }
         #endif
-        if let saved = YouTubeSession.restore() {
-            await activate(saved)
-        } else {
-            authState = .signedOut
-        }
+
     }
 
     func completeSignIn(cookies: [StoredCookie]) async {
