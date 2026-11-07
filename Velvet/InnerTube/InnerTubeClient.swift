@@ -99,6 +99,25 @@ actor InnerTubeClient {
         try await post("next", ["continuation": .string(token)])
     }
 
+    // MARK: - Account actions
+
+    func like(_ videoId: String) async throws { _ = try await post("like/like", ["target": ["videoId": .string(videoId)]]) }
+    func dislike(_ videoId: String) async throws { _ = try await post("like/dislike", ["target": ["videoId": .string(videoId)]]) }
+    func removeLike(_ videoId: String) async throws { _ = try await post("like/removelike", ["target": ["videoId": .string(videoId)]]) }
+
+    /// Your playlists (Watch Later first) and whether each contains `videoId`.
+    func playlistOptions(for videoId: String) async throws -> JSON {
+        try await post("playlist/get_add_to_playlist", ["videoIds": [.string(videoId)], "excludeWatchLater": false])
+    }
+
+    /// Adds or removes a video from a playlist; "WL" is Watch Later.
+    func setVideo(_ videoId: String, inPlaylist playlistId: String, _ included: Bool) async throws {
+        let action: JSON = included
+            ? ["action": "ACTION_ADD_VIDEO", "addedVideoId": .string(videoId)]
+            : ["action": "ACTION_REMOVE_VIDEO_BY_VIDEO_ID", "removedVideoId": .string(videoId)]
+        _ = try await post("browse/edit_playlist", ["playlistId": .string(playlistId), "actions": [action]])
+    }
+
     /// The signed-in account's name, handle and photo.
     func accountMenu() async throws -> JSON {
         try await post("account/account_menu", [:])
