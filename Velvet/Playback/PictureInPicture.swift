@@ -140,6 +140,37 @@ final class PictureInPicture: NSObject {
         restoreSignalled = false
     }
 
+    #if DEBUG
+    /// Discovery aid: log every optional delegate method PIP.framework asks about.
+    nonisolated override func responds(to aSelector: Selector!) -> Bool {
+        let name = NSStringFromSelector(aSelector)
+        if name.lowercased().contains("pip") {
+            Logger(subsystem: "com.subhash.Velvet", category: "PiP").debug("PIP asks delegate: \(name, privacy: .public)")
+        }
+        return super.responds(to: aSelector)
+    }
+    #endif
+
+    /// Tells the system PiP window the timeline, so it can show its native progress/scrubber.
+    func updatePlayback(duration: Double, elapsed: Double, rate: Double, playing: Bool, live: Bool) {
+        guard let pip else { return }
+        let sel = NSSelectorFromString("updatePlaybackStateUsingBlock:")
+        guard let method = class_getInstanceMethod(type(of: pip), sel) else { return }
+        let block: @convention(block) (NSObject) -> Void = { state in
+            if !live, duration > 0 {
+                state.setValue(duration, forKey: "contentDuration")
+            }
+            // setPlaybackRate:elapsedTime:timeControlStatus: — (double, double, long)
+            let s2 = NSSelectorFromString("setPlaybackRate:elapsedTime:timeControlStatus:")
+            if let m = class_getInstanceMethod(type(of: state), s2) {
+                typealias Fn = @convention(c) (NSObject, Selector, Double, Double, Int) -> Void
+                unsafeBitCast(method_getImplementation(m), to: Fn.self)(state, s2, playing ? rate : 0, elapsed, playing ? 2 : 0)
+            }
+        }
+        typealias Call = @convention(c) (NSObject, Selector, AnyObject) -> Void
+        unsafeBitCast(method_getImplementation(method), to: Call.self)(pip, sel, block as AnyObject)
+    }
+
     // MARK: - PIPViewControllerDelegate (informal; selector names as used by IINA)
 
     @objc func pipShouldClose(_ pip: NSViewController) -> Bool { true }

@@ -132,6 +132,7 @@ final class AppModel {
     // MARK: - Picture in Picture
 
     @ObservationIgnored let pip = PictureInPicture()
+    @ObservationIgnored private var pipTimelineTask: Task<Void, Never>?
     /// The main window, reported by RootView; watched for visibility to drive automatic PiP.
     @ObservationIgnored weak var mainWindow: NSWindow? {
         didSet { if mainWindow !== oldValue { observeWindow() } }
@@ -161,17 +162,8 @@ final class AppModel {
         // Stay in player fullscreen: coming back should return the video right where it was.
         let returnView = player.inlineView
         let rect = returnView.map { $0.convert($0.bounds, to: nil) }
-        let surface = player.makePictureInPictureView()
-        // The PiP window shows the video plus Velvet's own hover seek bar.
+        let view = player.makePictureInPictureView()
         let session = watching ?? shortsOverlay?.session ?? shortsTab?.session
-        let view = NSHostingView(rootView: PictureInPictureContent(
-            surface: surface, player: player,
-            isLive: session?.isLive ?? false,
-            segments: session?.sponsor.segments ?? []
-        ))
-        // Fill whatever size the PiP window gives us; don't advertise a (small) natural size.
-        view.sizingOptions = []
-        view.autoresizingMask = [.width, .height]
         // Start PiP from where the video is on the page (not the screen's corner): put the PiP
         // view exactly over the inline player first; PiP animates from a view's current frame.
         if let returnView, let content = returnView.window?.contentView {
@@ -187,6 +179,16 @@ final class AppModel {
             self?.pipPlayer = nil
         }
         player.onPictureInPicturePauseChange = { [weak self] paused in self?.pip.setPlaying(!paused) }
+        let live = session?.isLive ?? false
+        pipTimelineTask?.cancel()
+        pipTimelineTask = Task { [weak self, weak player] in
+            // Keep the system PiP's timeline current (cheap; once a second).
+            while let self, let player, self.pip.isActive, !Task.isCancelled {
+                self.pip.updatePlayback(duration: player.duration, elapsed: player.position, rate: player.speed,
+                                        playing: !player.isPaused, live: live)
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
         // PiP's "return to app" button: switch to Velvet's window (and its Space), like Safari.
         pip.onRestoreRequested = { [weak self] in self?.bringToFront() }
         pip.enter(view: view, aspect: player.videoSize ?? CGSize(width: 16, height: 9), playing: !player.isPaused,
