@@ -62,6 +62,7 @@ final class SectionedFeedModel {
                 }
             }
             continuation = page.continuation
+            MemoryRelief.soon()
         } catch {
             log.error("Load \(self.browseId, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
             self.error = error.localizedDescription

@@ -61,6 +61,7 @@ final class WatchPageModel {
             related = d.related
             relatedToken = d.relatedContinuation
             commentsToken = d.commentsToken
+            MemoryRelief.soon()
         } catch {
             loadError = error.localizedDescription
         }

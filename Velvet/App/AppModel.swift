@@ -166,6 +166,7 @@ final class AppModel {
         player.onPictureInPicturePauseChange = { [weak self] paused in self?.pip.setPlaying(!paused) }
         pip.enter(view: view, aspect: player.videoSize ?? CGSize(width: 16, height: 9), playing: !player.isPaused,
                   returnTo: returnView?.window, rect: rect, automatic: automatic)
+        releaseHiddenPageMemory()
     }
 
     func exitPictureInPicture() {
@@ -198,6 +199,16 @@ final class AppModel {
         }
     }
 
+    /// The page behind the player isn't visible (fullscreen/PiP): drop decoded thumbnails
+    /// (they reload from the disk cache in milliseconds) and return freed heap pages.
+    private func releaseHiddenPageMemory() {
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "VelvetNoRelief") { return } // for A/B measurement
+        #endif
+        Task { await ImagePipeline.shared.clearMemory() }
+        MemoryRelief.soon()
+    }
+
     // MARK: - Shorts
 
     /// Shorts opened from a feed (seeded with the one you clicked); shown over the current page.
@@ -226,6 +237,7 @@ final class AppModel {
         log.debug("player fullscreen → \(!self.playerFullscreen, privacy: .public) from \(Thread.callStackSymbols.dropFirst(1).prefix(4).map { $0.split(separator: " ", omittingEmptySubsequences: true).dropFirst(3).prefix(1).joined() }.joined(separator: " ← "), privacy: .public)")
         if !playerFullscreen {
             withAnimation(animation) { playerFullscreen = true }
+            releaseHiddenPageMemory()
             playerOwnsWindowFullscreen = !windowIsFullscreen
             if !windowIsFullscreen { window?.toggleFullScreen(nil) }
         } else {
@@ -307,6 +319,14 @@ final class AppModel {
             authRevision += 1
         }
         #if DEBUG
+        if let id = UserDefaults.standard.string(forKey: "VelvetHomeThenPlay"), !id.isEmpty {
+            Task {
+                try? await Task.sleep(for: .seconds(10))
+                open(Video(id: id, title: "Scenario \(id)"), at: 60)
+                try? await Task.sleep(for: .seconds(8))
+                togglePlayerFullscreen()
+            }
+        }
         // `-VelvetPlay <videoId>` opens straight into the player (after the session restores).
         if let id = UserDefaults.standard.string(forKey: "VelvetPlay"), !id.isEmpty {
             let start = UserDefaults.standard.double(forKey: "VelvetStart")
@@ -320,6 +340,16 @@ final class AppModel {
                     watching?.player.pause()
                     try? await Task.sleep(for: .seconds(3))
                     exitPictureInPicture()
+                }
+            }
+            // (scenario) `-VelvetHomeThenPlay <id>`: let Home load, then play <id> and go fullscreen.
+            // `-VelvetLeakTest YES`: open three more videos 8s apart (old players must be freed).
+            if UserDefaults.standard.bool(forKey: "VelvetLeakTest") {
+                Task {
+                    for vid in ["aqz-KE-bpKQ", "jNQXAC9IVRw", "dQw4w9WgXcQ"] {
+                        try? await Task.sleep(for: .seconds(8))
+                        open(Video(id: vid, title: "Leak test \(vid)"), at: 30)
+                    }
                 }
             }
             // `-VelvetFullscreenTest YES`: show the sidebar, player fullscreen at 6s, back at 12s.

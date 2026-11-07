@@ -56,6 +56,7 @@ final class FeedModel {
                 if v.kind == .short { shorts.append(v) } else { videos.append(v) }
             }
             continuation = page.continuation
+            MemoryRelief.soon()
         } catch {
             log.error("Feed load failed: \(error.localizedDescription, privacy: .public)")
             self.error = error.localizedDescription
