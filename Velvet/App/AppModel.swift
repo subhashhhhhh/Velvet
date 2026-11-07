@@ -161,7 +161,17 @@ final class AppModel {
         // Stay in player fullscreen: coming back should return the video right where it was.
         let returnView = player.inlineView
         let rect = returnView.map { $0.convert($0.bounds, to: nil) }
-        let view = player.makePictureInPictureView()
+        let surface = player.makePictureInPictureView()
+        // The PiP window shows the video plus Velvet's own hover seek bar.
+        let session = watching ?? shortsOverlay?.session ?? shortsTab?.session
+        let view = NSHostingView(rootView: PictureInPictureContent(
+            surface: surface, player: player,
+            isLive: session?.isLive ?? false,
+            segments: session?.sponsor.segments ?? []
+        ))
+        // Fill whatever size the PiP window gives us; don't advertise a (small) natural size.
+        view.sizingOptions = []
+        view.autoresizingMask = [.width, .height]
         // Start PiP from where the video is on the page (not the screen's corner): put the PiP
         // view exactly over the inline player first; PiP animates from a view's current frame.
         if let returnView, let content = returnView.window?.contentView {
