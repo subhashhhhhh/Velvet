@@ -20,6 +20,9 @@ final class PlayerSession: Identifiable {
     private(set) var selection: StreamInfo.Selection?
     /// Where playback begins (e.g. resuming from history).
     var startPosition: Double = 0
+    /// Set when we auto-resumed, so the player can offer "Start Over".
+    var resumedFrom: Double?
+    @ObservationIgnored private let progress: WatchProgressStore
     /// The quality the user picked for this video (defaults to the preference).
     private(set) var quality: VideoQuality
 
@@ -29,8 +32,9 @@ final class PlayerSession: Identifiable {
     @ObservationIgnored private let log = Logger(subsystem: "com.subhash.Velvet", category: "Player")
 
     init(video: Video, resolver: StreamResolver, preferences: Preferences, client: InnerTubeClient,
-         session: YouTubeSession?, isSignedIn: @escaping () -> Bool) {
+         session: YouTubeSession?, progress: WatchProgressStore, isSignedIn: @escaping () -> Bool) {
         self.video = video
+        self.progress = progress
         self.tracker = session.map { WatchTracker(videoId: video.id, client: client, session: $0) }
         self.page = WatchPageModel(videoId: video.id, client: client, isSignedIn: isSignedIn)
         self.resolver = resolver
@@ -49,12 +53,16 @@ final class PlayerSession: Identifiable {
         )
         let sponsor = self.sponsor
         let tracker = self.tracker
-        player.onTimeChange = { [weak sponsor, weak player] t in
+        var lastSaved = 0.0
+        player.onTimeChange = { [weak self, weak sponsor, weak player] t in
             sponsor?.timeChanged(t)
             tracker?.timeChanged(t, isPlaying: !(player?.isPaused ?? true))
+            if abs(t - lastSaved) >= 15 { lastSaved = t; self?.saveProgress() }
         }
-        player.onPauseChange = { [weak player] paused in
-            if paused, let t = player?.position { tracker?.flush(at: t) }
+        player.onPauseChange = { [weak self, weak player] paused in
+            guard paused, let t = player?.position else { return }
+            tracker?.flush(at: t)
+            self?.saveProgress()
         }
         player.onLoadFailure = { [weak self] message in self?.recoverFromLoadFailure(message) }
     }
@@ -138,8 +146,22 @@ final class PlayerSession: Identifiable {
 
     func close() {
         tracker?.flush(at: player.position, state: "paused")
+        saveProgress()
         loadTask?.cancel()
         player.stop()
+    }
+
+    /// Remembers the position locally (live streams have no meaningful position).
+    func saveProgress() {
+        guard video.kind != .live, player.duration > 0, player.position > 0 else { return }
+        progress.record(video.id, position: player.position, duration: player.duration)
+    }
+
+    /// Restart from the beginning after an automatic resume.
+    func startOver() {
+        resumedFrom = nil
+        player.seek(to: 0)
+        player.play()
     }
 
     /// Runs alongside stream resolution so it never delays playback.
@@ -172,6 +194,7 @@ final class PlayerSession: Identifiable {
             log.info("Waiting \(wait, format: .fixed(precision: 1), privacy: .public)s for YouTube's stream embargo")
             try await Task.sleep(for: .seconds(wait))
         }
+        log.info("Starting at \(time, format: .fixed(precision: 1), privacy: .public)s\(self.resumedFrom != nil ? " (resumed)" : "", privacy: .public)")
         log.info("Playing \(selection.video.id, privacy: .public) \(selection.video.height ?? 0)p \(selection.video.vcodec ?? "", privacy: .public) + \(selection.audio?.id ?? "muxed", privacy: .public)")
         player.load(selection, startAt: time, autoplay: autoplay)
         phase = .ready

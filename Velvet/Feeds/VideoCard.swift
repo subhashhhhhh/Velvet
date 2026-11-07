@@ -66,7 +66,7 @@ struct VideoCard: View {
             .aspectRatio(16 / 9, contentMode: .fit)
             .overlay(alignment: .bottomTrailing) { badge.padding(6) }
             .overlay(alignment: .bottom) {
-                if let f = video.watchedFraction, f > 0 {
+                if let f = app.progress.fraction(for: video.id) ?? video.watchedFraction, f > 0.01 {
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {
                             Rectangle().fill(.black.opacity(0.4))

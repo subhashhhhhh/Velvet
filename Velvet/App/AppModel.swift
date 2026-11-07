@@ -36,6 +36,7 @@ final class AppModel {
     let client = InnerTubeClient()
     let settings = Preferences()
     let tools = ToolManager()
+    let progress = WatchProgressStore()
     @ObservationIgnored private(set) lazy var resolver = StreamResolver(
         tools: tools, preferences: settings,
         session: { [weak self] in await self?.session }
@@ -69,12 +70,19 @@ final class AppModel {
     private(set) var watching: PlayerSession?
     var playerFullscreen = false
 
-    func open(_ video: Video, at position: Double = 0) {
+    /// Opens a video. Without an explicit position it resumes where you left off.
+    func open(_ video: Video, at position: Double? = nil) {
         watching?.close()
         let session = PlayerSession(video: video, resolver: resolver, preferences: settings,
                                     client: client, session: authState == .signedIn ? session : nil,
+                                    progress: progress,
                                     isSignedIn: { [weak self] in self?.authState == .signedIn })
-        session.startPosition = position
+        if let position {
+            session.startPosition = position
+        } else if video.kind != .live, let resume = progress.resumePosition(for: video) {
+            session.startPosition = resume
+            session.resumedFrom = resume
+        }
         watching = session
         session.start()
     }
@@ -171,7 +179,8 @@ final class AppModel {
         #if DEBUG
         // `-VelvetPlay <videoId>` opens straight into the player (after the session restores).
         if let id = UserDefaults.standard.string(forKey: "VelvetPlay"), !id.isEmpty {
-            open(Video(id: id, title: "Debug: \(id)"), at: UserDefaults.standard.double(forKey: "VelvetStart"))
+            let start = UserDefaults.standard.double(forKey: "VelvetStart")
+            open(Video(id: id, title: "Debug: \(id)"), at: start > 0 ? start : nil)
             // `-VelvetResizeTest YES`: pause, then grow the window, to check mpv follows the new size.
             if UserDefaults.standard.bool(forKey: "VelvetResizeTest") {
                 Task {

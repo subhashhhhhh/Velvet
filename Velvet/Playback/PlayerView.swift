@@ -63,6 +63,9 @@ struct PlayerView: View {
             Color.black
             VideoSurface(player: player)
             statusOverlay
+            if let resumed = session.resumedFrom {
+                ResumeNotice(position: resumed) { session.startOver() } onDismiss: { session.resumedFrom = nil }
+            }
             SponsorOverlay(skipper: session.sponsor)
                 .padding(.bottom, controlsVisible || player.isPaused ? 76 : 20)
                 .padding(.trailing, 16)
@@ -352,5 +355,34 @@ private struct OverlayPill: ViewModifier {
             .padding(.vertical, 8)
             .background(.black.opacity(0.7), in: Capsule())
             .transition(.opacity.combined(with: .move(edge: .trailing)))
+    }
+}
+
+/// "Resumed from 4:12 · Start Over", shown briefly after an automatic resume.
+struct ResumeNotice: View {
+    let position: Double
+    var onStartOver: () -> Void
+    var onDismiss: () -> Void
+
+    var body: some View {
+        VStack {
+            HStack(spacing: 10) {
+                Image(systemName: "clock.arrow.circlepath")
+                Text("Resumed from \(PlayerControls.format(position))")
+                Button("Start Over", action: onStartOver).buttonStyle(.plain).bold()
+            }
+            .font(.callout.weight(.medium))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(.black.opacity(0.7), in: Capsule())
+            .padding(.top, 14)
+            Spacer()
+        }
+        .transition(.opacity)
+        .task {
+            try? await Task.sleep(for: .seconds(6))
+            withAnimation { onDismiss() }
+        }
     }
 }
