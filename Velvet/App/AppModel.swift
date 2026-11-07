@@ -214,8 +214,11 @@ final class AppModel {
             guard settings.autoPictureInPicture, !pip.isActive, Date() > suppressAutoPiPUntil,
                   let player = activePlayer, !player.isPaused, player.duration > 0 || player.position > 0 else { return }
             enterPictureInPicture(automatic: true)
-        } else if pip.isActive && pip.startedAutomatically {
-            exitPictureInPicture()
+        } else {
+            // Back on Velvet: the post-restore pause has done its job (it only exists to stop a
+            // re-PiP loop if switching back failed), so switching away again should PiP at once.
+            suppressAutoPiPUntil = .distantPast
+            if pip.isActive && pip.startedAutomatically { exitPictureInPicture() }
         }
     }
 
