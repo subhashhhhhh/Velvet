@@ -4,6 +4,8 @@ import OSLog
 /// Supplies per-request auth headers (Cookie, Authorization: SAPISIDHASH …) once signed in.
 nonisolated protocol InnerTubeAuthProvider: Sendable {
     func headers(origin: String) async -> [String: String]
+    /// Receives each response's headers so rotated cookies can be kept.
+    func absorb(responseHeaders: [String: String], url: URL) async
 }
 
 nonisolated enum InnerTubeError: LocalizedError {
@@ -131,7 +133,11 @@ actor InnerTubeClient {
 
         let start = ContinuousClock.now
         let (data, response) = try await session.data(for: request)
-        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        let http = response as? HTTPURLResponse
+        let status = http?.statusCode ?? 0
+        if let auth, let http, let headers = http.allHeaderFields as? [String: String], let url = http.url {
+            await auth.absorb(responseHeaders: headers, url: url)
+        }
         log.debug("\(endpoint, privacy: .public) \(status) \(data.count)B in \(ContinuousClock.now - start)")
         guard (200..<300).contains(status) else { throw InnerTubeError.http(status, endpoint) }
         return try JSON(data: data)
