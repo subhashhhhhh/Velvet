@@ -19,7 +19,7 @@ struct HomeView: View {
                 }
             case .signedIn:
                 if let feed = app.homeFeed {
-                    FeedView(feed: feed, onOpen: app.open)
+                    FeedView(feed: feed, onOpen: { app.open($0) })
                         .id(app.authRevision)
                 }
             }

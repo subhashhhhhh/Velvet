@@ -69,9 +69,10 @@ final class AppModel {
     private(set) var watching: PlayerSession?
     var playerFullscreen = false
 
-    func open(_ video: Video) {
+    func open(_ video: Video, at position: Double = 0) {
         watching?.close()
         let session = PlayerSession(video: video, resolver: resolver, preferences: settings)
+        session.startPosition = position
         watching = session
         session.start()
     }
@@ -129,7 +130,7 @@ final class AppModel {
         #if DEBUG
         // `-VelvetPlay <videoId>` opens straight into the player; handy for testing.
         if let id = UserDefaults.standard.string(forKey: "VelvetPlay"), !id.isEmpty {
-            open(Video(id: id, title: "Debug: \(id)"))
+            open(Video(id: id, title: "Debug: \(id)"), at: UserDefaults.standard.double(forKey: "VelvetStart"))
         }
         #endif
         if let saved = YouTubeSession.restore() {

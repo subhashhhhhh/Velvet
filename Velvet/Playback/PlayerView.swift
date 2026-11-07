@@ -56,6 +56,10 @@ struct PlayerView: View {
             Color.black
             VideoSurface(player: player)
             statusOverlay
+            SponsorOverlay(skipper: session.sponsor)
+                .padding(.bottom, controlsVisible || player.isPaused ? 76 : 20)
+                .padding(.trailing, 16)
+                .animation(.easeOut(duration: 0.2), value: controlsVisible)
             PlayerControls(session: session, isFullscreen: isFullscreen, onToggleFullscreen: onToggleFullscreen,
                            onInteract: showControls)
                 .opacity(controlsVisible || player.isPaused ? 1 : 0)
@@ -153,7 +157,8 @@ struct PlayerControls: View {
             Spacer()
             VStack(spacing: 8) {
                 SeekBar(position: scrubbing ?? player.position, buffered: player.bufferedUntil,
-                        duration: player.duration, isLive: session.video.kind == .live) { value, done in
+                        duration: player.duration, isLive: session.video.kind == .live,
+                        segments: session.sponsor.segments) { value, done in
                     scrubbing = done ? nil : value
                     if done { player.seek(to: value) }
                     onInteract()
@@ -257,6 +262,7 @@ struct SeekBar: View {
     let buffered: Double
     let duration: Double
     var isLive = false
+    var segments: [SponsorSegment] = []
     var onScrub: (Double, Bool) -> Void
 
     @State private var hovering = false
@@ -268,6 +274,11 @@ struct SeekBar: View {
             ZStack(alignment: .leading) {
                 Capsule().fill(.white.opacity(0.25))
                 Capsule().fill(.white.opacity(0.4)).frame(width: frac(buffered))
+                ForEach(segments) { seg in
+                    Rectangle().fill(seg.category.color.opacity(0.9))
+                        .frame(width: max(2, frac(seg.end) - frac(seg.start)))
+                        .offset(x: frac(seg.start))
+                }
                 Capsule().fill(.red).frame(width: frac(position))
                 Circle().fill(.red)
                     .frame(width: hovering ? 13 : 0, height: hovering ? 13 : 0)
@@ -289,5 +300,50 @@ struct SeekBar: View {
     private func value(at x: CGFloat, width: CGFloat) -> Double {
         guard width > 0 else { return 0 }
         return Double(min(max(x / width, 0), 1)) * duration
+    }
+}
+
+/// "Skip" button for ask-first segments and the "Skipped · Undo" notice.
+struct SponsorOverlay: View {
+    let skipper: SponsorSkipper
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            Spacer()
+            if let seg = skipper.lastSkip {
+                HStack(spacing: 10) {
+                    Circle().fill(seg.category.color).frame(width: 8, height: 8)
+                    Text("Skipped \(seg.category.shortLabel)")
+                    Button("Undo") { skipper.undoLastSkip() }.buttonStyle(.plain).bold()
+                }
+                .modifier(OverlayPill())
+            }
+            if let seg = skipper.offered {
+                Button { skipper.skipOffered() } label: {
+                    HStack(spacing: 8) {
+                        Circle().fill(seg.category.color).frame(width: 8, height: 8)
+                        Text("Skip \(seg.category.shortLabel)")
+                        Image(systemName: "forward.end.fill")
+                    }
+                }
+                .buttonStyle(.plain)
+                .modifier(OverlayPill())
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .animation(.easeOut(duration: 0.2), value: skipper.offered)
+        .animation(.easeOut(duration: 0.2), value: skipper.lastSkip)
+    }
+}
+
+private struct OverlayPill: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .font(.callout.weight(.medium))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(.black.opacity(0.7), in: Capsule())
+            .transition(.opacity.combined(with: .move(edge: .trailing)))
     }
 }

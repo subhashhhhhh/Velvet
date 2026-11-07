@@ -23,6 +23,8 @@ private nonisolated final class MPVCore: @unchecked Sendable {
     /// Called on `queue` with (property name, value).
     var onProperty: ((String, PropertyValue) -> Void)?
     var onEvent: ((mpv_event_id) -> Void)?
+    /// Called on `queue` when a file stops; `failed` means mpv couldn't open or play it.
+    var onEndFile: ((_ failed: Bool, _ message: String?) -> Void)?
 
     enum PropertyValue: Sendable {
         case flag(Bool), double(Double), string(String), none
@@ -119,6 +121,12 @@ private nonisolated final class MPVCore: @unchecked Sendable {
                 if let msg = event.data?.assumingMemoryBound(to: mpv_event_log_message.self).pointee {
                     log.debug("[\(String(cString: msg.prefix), privacy: .public)] \(String(cString: msg.text).trimmingCharacters(in: .newlines), privacy: .public)")
                 }
+            case MPV_EVENT_END_FILE:
+                if let end = event.data?.assumingMemoryBound(to: mpv_event_end_file.self).pointee {
+                    let failed = end.reason == MPV_END_FILE_REASON_ERROR
+                    onEndFile?(failed, failed ? String(cString: mpv_error_string(end.error)) : nil)
+                }
+                onEvent?(event.event_id)
             case MPV_EVENT_SHUTDOWN:
                 return
             default:
@@ -157,6 +165,9 @@ final class MPVPlayer {
 
     /// Fired (on the main actor) as playback time advances; used by SponsorBlock.
     @ObservationIgnored var onTimeChange: ((Double) -> Void)?
+    /// Fired when a load fails before any frame played (e.g. HTTP 403), so the owner can retry.
+    @ObservationIgnored var onLoadFailure: ((String) -> Void)?
+    @ObservationIgnored private var playedSinceLoad = false
 
     @ObservationIgnored private let core: MPVCore?
     @ObservationIgnored private var lastPublishedPosition: Double = -1
@@ -215,6 +226,13 @@ final class MPVPlayer {
         core.onEvent = { [weak self] event in
             Task { @MainActor in self?.handle(event) }
         }
+        core.onEndFile = { [weak self] failed, message in
+            guard failed else { return }
+            Task { @MainActor in
+                guard let self, !self.playedSinceLoad else { return }
+                self.onLoadFailure?(message ?? "Couldn't open the stream.")
+            }
+        }
     }
 
     deinit {
@@ -229,6 +247,7 @@ final class MPVPlayer {
         failure = nil
         hasEnded = false
         isLoading = true
+        playedSinceLoad = false
         position = startAt
         lastPublishedPosition = -1
 
@@ -294,6 +313,7 @@ final class MPVPlayer {
         case ("duration", .double(let v)): duration = v
         case ("demuxer-cache-time", .double(let v)): bufferedUntil = v
         case ("time-pos", .double(let v)):
+            playedSinceLoad = true
             onTimeChange?(v)
             // mpv reports every frame; publishing ~4×/s keeps SwiftUI work negligible.
             if abs(v - lastPublishedPosition) >= 0.25 || v < lastPublishedPosition {

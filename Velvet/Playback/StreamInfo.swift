@@ -19,6 +19,8 @@ nonisolated struct StreamFormat: Hashable, Sendable {
     let isDRC: Bool
     /// Headers yt-dlp says the URL must be fetched with (notably User-Agent).
     let httpHeaders: [String: String]
+    /// YouTube embargoes fresh links for a few seconds (403 until then).
+    let availableAt: Date?
 
     var hasVideo: Bool { vcodec.map { $0 != "none" } ?? false }
     var hasAudio: Bool { acodec.map { $0 != "none" } ?? false }
@@ -50,6 +52,9 @@ nonisolated struct StreamInfo: Sendable {
         let video: StreamFormat
         /// Nil when `video` already contains audio (muxed or HLS).
         let audio: StreamFormat?
+
+        /// When every chosen stream is past YouTube's embargo.
+        var availableAt: Date? { [video.availableAt, audio?.availableAt].compactMap { $0 }.max() }
     }
 
     /// Picks the streams to play for the given preferences.
@@ -160,7 +165,8 @@ extension StreamInfo {
                 // yt-dlp ranks the original track highest via language_preference.
                 isDefaultAudio: note.contains("default") || note.contains("original") || (f["language_preference"].int ?? 0) >= 10,
                 isDRC: id.hasSuffix("-drc") || note.contains("drc"),
-                httpHeaders: (f["http_headers"].object ?? [:]).compactMapValues(\.string)
+                httpHeaders: (f["http_headers"].object ?? [:]).compactMapValues(\.string),
+                availableAt: f["available_at"].double.map { Date(timeIntervalSince1970: $0) }
             )
         }
         expires = earliestExpiry.isFinite

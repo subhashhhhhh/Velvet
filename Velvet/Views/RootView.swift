@@ -51,7 +51,7 @@ struct SearchResultsView: View {
     var body: some View {
         Group {
             if let feed, feed.source == .search(query) {
-                FeedView(feed: feed, onOpen: app.open).id(query)
+                FeedView(feed: feed, onOpen: { app.open($0) }).id(query)
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             }
