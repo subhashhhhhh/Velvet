@@ -77,7 +77,26 @@ actor StreamResolver {
 
     // MARK: - yt-dlp
 
+    /// Two strategies, fastest first:
+    /// - `fast`: the visionOS client, no cookies. ~2s, full quality (4K VP9/AV1), and no
+    ///   stream embargo — its links work immediately. Your session isn't sent at all.
+    /// - `account`: yt-dlp's default clients with your cookies, for videos that need an
+    ///   account (age-restricted, members-only, private). Slower, and its links are
+    ///   embargoed ~4s (PlayerSession waits that out).
+    private enum Strategy: String { case fast, account }
+
     private func run(_ videoId: String, isLive: Bool) async throws -> StreamInfo {
+        do {
+            return try await run(videoId, isLive: isLive, strategy: .fast)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch {
+            log.info("Fast resolve failed for \(videoId, privacy: .public) (\(error.localizedDescription, privacy: .public)); retrying with account")
+            return try await run(videoId, isLive: isLive, strategy: .account)
+        }
+    }
+
+    private func run(_ videoId: String, isLive: Bool, strategy: Strategy) async throws -> StreamInfo {
         let runtime = await MainActor.run { preferences.jsRuntime }
         let paths = try await tools.ready(runtime: runtime)
         try? FileManager.default.createDirectory(at: Self.cacheDir, withIntermediateDirectories: true)
@@ -87,12 +106,15 @@ actor StreamResolver {
             "--cache-dir", Self.cacheDir.path,
             "-J", "--no-playlist", "--no-warnings", "--no-progress", "--ignore-config",
         ]
+        var extractorArgs: [String] = []
         // HLS manifests cost ~0.5–2s extra and are only needed for live streams.
-        if !isLive { args += ["--extractor-args", "youtube:skip=hls"] }
+        if !isLive { extractorArgs.append("skip=hls") }
+        if strategy == .fast { extractorArgs.append("player_client=visionos") }
+        if !extractorArgs.isEmpty { args += ["--extractor-args", "youtube:" + extractorArgs.joined(separator: ";")] }
 
-        // Hand yt-dlp the session through a private temp cookies file, removed right after.
+        // Account strategy only: hand yt-dlp the session via a private temp file, removed right after.
         var cookieFile: URL?
-        if let session = await session() {
+        if strategy == .account, let session = await session() {
             let file = FileManager.default.temporaryDirectory.appending(path: "velvet-cookies-\(UUID().uuidString).txt")
             let contents = await session.netscapeCookieFile()
             FileManager.default.createFile(atPath: file.path, contents: Data(contents.utf8),
@@ -111,10 +133,11 @@ actor StreamResolver {
             throw ProcessError.failed("yt-dlp", result.status, Self.cleanError(result.stderrText))
         }
         let json = try JSON(data: result.stdout)
-        guard let info = StreamInfo(ytdlp: json), !info.formats.isEmpty else {
+        guard let info = StreamInfo(ytdlp: json),
+              info.formats.contains(where: { $0.hasVideo }) else {
             throw ProcessError.failed("yt-dlp", 0, "No playable formats were returned.")
         }
-        log.info("Resolved \(videoId, privacy: .public): \(info.formats.count) formats in \(ContinuousClock.now - start, privacy: .public)")
+        log.info("Resolved \(videoId, privacy: .public) [\(strategy.rawValue, privacy: .public)]: \(info.formats.count) formats in \(ContinuousClock.now - start, privacy: .public)")
         return info
     }
 
