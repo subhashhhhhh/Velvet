@@ -22,6 +22,7 @@ nonisolated enum WatchParser {
 
         let likeVM = primary.first("segmentedLikeDislikeButtonViewModel")?["likeButtonViewModel"]["likeButtonViewModel"] ?? .null
         let likeTitle = likeVM.first("defaultButtonViewModel")?["buttonViewModel"]["title"].string
+        let likedTitle = likeVM.first("toggledButtonViewModel")?["buttonViewModel"]["title"].string
         let status = likeVM["likeStatusEntity"]["likeStatus"].string.flatMap(LikeStatus.init(rawValue:)) ?? .none
 
         // Related videos live in the secondary column; their "load more" token sits at its end.
@@ -46,6 +47,7 @@ nonisolated enum WatchParser {
                 ?? secondary["description"].text ?? "",
             channel: channel,
             likeCount: likeTitle.flatMap { $0.first?.isNumber == true ? $0 : nil },
+            likeCountWhenLiked: likedTitle.flatMap { $0.first?.isNumber == true ? $0 : nil },
             likeStatus: status,
             related: related,
             relatedContinuation: relatedToken,

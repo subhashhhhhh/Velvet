@@ -26,9 +26,10 @@ final class PlayerSession: Identifiable {
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private let log = Logger(subsystem: "com.subhash.Velvet", category: "Player")
 
-    init(video: Video, resolver: StreamResolver, preferences: Preferences, client: InnerTubeClient, signedIn: Bool) {
+    init(video: Video, resolver: StreamResolver, preferences: Preferences, client: InnerTubeClient,
+         isSignedIn: @escaping () -> Bool) {
         self.video = video
-        self.page = WatchPageModel(videoId: video.id, client: client, signedIn: signedIn)
+        self.page = WatchPageModel(videoId: video.id, client: client, isSignedIn: isSignedIn)
         self.resolver = resolver
         self.prefs = preferences
         self.quality = preferences.quality

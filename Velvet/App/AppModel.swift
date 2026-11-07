@@ -72,7 +72,7 @@ final class AppModel {
     func open(_ video: Video, at position: Double = 0) {
         watching?.close()
         let session = PlayerSession(video: video, resolver: resolver, preferences: settings,
-                                    client: client, signedIn: authState == .signedIn)
+                                    client: client, isSignedIn: { [weak self] in self?.authState == .signedIn })
         session.startPosition = position
         watching = session
         session.start()

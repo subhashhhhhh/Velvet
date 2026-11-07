@@ -16,13 +16,14 @@ struct WatchView: View {
             } else {
                 GeometryReader { geo in
                     let wide = geo.size.width >= 1050
+                    let size = playerSize(in: geo.size, wide: wide)
                     ScrollView {
-                        HStack(alignment: .top, spacing: 24) {
+                        HStack(alignment: .top, spacing: Self.columnSpacing) {
                             VStack(alignment: .leading, spacing: 18) {
                                 player
-                                    .aspectRatio(aspect, contentMode: .fit)
-                                    .frame(maxWidth: .infinity, maxHeight: max(240, geo.size.height - 170))
+                                    .frame(width: size.width, height: size.height)
                                     .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                                    .frame(maxWidth: .infinity)
                                 WatchInfoView(session: session)
                                 if !wide { RelatedList(page: page, columns: true) }
                                 CommentsSection(page: page, player: session.player)
@@ -30,10 +31,10 @@ struct WatchView: View {
                             .frame(maxWidth: .infinity)
                             if wide {
                                 RelatedList(page: page, columns: false)
-                                    .frame(width: 360)
+                                    .frame(width: Self.relatedWidth)
                             }
                         }
-                        .padding(20)
+                        .padding(Self.padding)
                     }
                 }
             }
@@ -68,6 +69,24 @@ struct WatchView: View {
 
     private var player: some View {
         PlayerView(session: session, isFullscreen: app.playerFullscreen) { app.togglePlayerFullscreen() }
+    }
+
+    private static let padding: CGFloat = 20
+    private static let relatedWidth: CGFloat = 360
+    private static let columnSpacing: CGFloat = 24
+
+    /// Exact player size: full column width at the video's aspect ratio, shrunk (keeping the
+    /// ratio) only when that would leave too little room below it. No letterbox padding.
+    private func playerSize(in container: CGSize, wide: Bool) -> CGSize {
+        let columnWidth = container.width - Self.padding * 2 - (wide ? Self.relatedWidth + Self.columnSpacing : 0)
+        let maxHeight = max(240, container.height - 170)
+        var width = max(200, columnWidth)
+        var height = width / aspect
+        if height > maxHeight {
+            height = maxHeight
+            width = height * aspect
+        }
+        return CGSize(width: width.rounded(), height: height.rounded())
     }
 
     /// Shorts are vertical; everything else is 16:9 until mpv reports the real size.
@@ -121,7 +140,7 @@ private struct WatchInfoView: View {
         HStack(spacing: 8) {
             HStack(spacing: 0) {
                 Button { page.toggleLike() } label: {
-                    Label(page.details?.likeCount ?? "Like",
+                    Label(page.displayedLikeCount ?? "Like",
                           systemImage: page.likeStatus == .like ? "hand.thumbsup.fill" : "hand.thumbsup")
                 }
                 Divider().frame(height: 16)

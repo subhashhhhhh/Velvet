@@ -23,8 +23,10 @@ nonisolated struct WatchDetails: Sendable {
     var publishedDate: String?
     var description: String
     var channel: ChannelInfo?
-    /// Formatted like count, e.g. "68K".
+    /// Formatted like count as shown when you haven't liked it, e.g. "68K".
     var likeCount: String?
+    /// The count YouTube shows once you've liked it (it's preformatted, so we can't add 1 ourselves).
+    var likeCountWhenLiked: String?
     var likeStatus: LikeStatus
     var related: [Video]
     var relatedContinuation: String?

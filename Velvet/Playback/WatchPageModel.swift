@@ -27,16 +27,25 @@ final class WatchPageModel {
     var isInWatchLater: Bool { playlists.first(where: \.isWatchLater)?.containsVideo ?? false }
 
     @ObservationIgnored private let client: InnerTubeClient
-    @ObservationIgnored private let signedIn: Bool
+    /// Read at action time, not at open time, so a session restored a moment later still counts.
+    @ObservationIgnored private let isSignedIn: () -> Bool
+    private var signedIn: Bool { isSignedIn() }
     @ObservationIgnored private var relatedToken: String?
     @ObservationIgnored private var commentsToken: String?
     @ObservationIgnored private var replyTokens: [String: String] = [:]
     @ObservationIgnored private let log = Logger(subsystem: "com.subhash.Velvet", category: "Watch")
 
-    init(videoId: String, client: InnerTubeClient, signedIn: Bool) {
+    init(videoId: String, client: InnerTubeClient, isSignedIn: @escaping () -> Bool) {
         self.videoId = videoId
         self.client = client
-        self.signedIn = signedIn
+        self.isSignedIn = isSignedIn
+    }
+
+    /// The count to display for the current like state.
+    var displayedLikeCount: String? {
+        guard let d = details else { return nil }
+        if likeStatus == .like { return d.likeCountWhenLiked ?? d.likeCount }
+        return d.likeCount
     }
 
     func load() async {
