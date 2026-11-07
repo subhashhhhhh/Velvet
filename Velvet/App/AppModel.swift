@@ -166,10 +166,7 @@ final class AppModel {
         }
         player.onPictureInPicturePauseChange = { [weak self] paused in self?.pip.setPlaying(!paused) }
         // PiP's "return to app" button: switch to Velvet's window (and its Space), like Safari.
-        pip.onRestoreRequested = { [weak self] in
-            NSApp.activate()
-            self?.mainWindow?.makeKeyAndOrderFront(nil)
-        }
+        pip.onRestoreRequested = { [weak self] in self?.bringToFront() }
         pip.enter(view: view, aspect: player.videoSize ?? CGSize(width: 16, height: 9), playing: !player.isPaused,
                   returnTo: returnView?.window, rect: rect, automatic: automatic)
         releaseHiddenPageMemory()
@@ -179,6 +176,23 @@ final class AppModel {
         guard pip.isActive else { return }
         let inline = pipPlayer?.inlineView
         pip.exit(returnTo: inline?.window, rect: inline.map { $0.convert($0.bounds, to: nil) })
+    }
+
+    /// After PiP's restore button, don't let automatic PiP re-trigger while we switch back.
+    @ObservationIgnored private var suppressAutoPiPUntil = Date.distantPast
+
+    /// Brings Velvet's window forward from another app. Since macOS 14, a self-requested
+    /// `NSApp.activate()` is ignored while the user is in another app (cooperative activation),
+    /// so ask LaunchServices to open Velvet instead — like a Dock click, which switches Spaces.
+    private func bringToFront() {
+        suppressAutoPiPUntil = Date().addingTimeInterval(4)
+        NSApp.activate()
+        let config = NSWorkspace.OpenConfiguration()
+        config.activates = true
+        config.addsToRecentItems = false
+        NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: config) { [weak self] _, _ in
+            Task { @MainActor in self?.mainWindow?.makeKeyAndOrderFront(nil) }
+        }
     }
 
     private func observeWindow() {
@@ -197,7 +211,7 @@ final class AppModel {
         guard let window = mainWindow else { return }
         let visible = window.occlusionState.contains(.visible)
         if !visible {
-            guard settings.autoPictureInPicture, !pip.isActive,
+            guard settings.autoPictureInPicture, !pip.isActive, Date() > suppressAutoPiPUntil,
                   let player = activePlayer, !player.isPaused, player.duration > 0 || player.position > 0 else { return }
             enterPictureInPicture(automatic: true)
         } else if pip.isActive && pip.startedAutomatically {
