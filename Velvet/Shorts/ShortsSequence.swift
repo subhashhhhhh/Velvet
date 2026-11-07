@@ -32,20 +32,23 @@ final class ShortsSequence {
             await loadMore()
         } else {
             isLoading = true
-            defer { isLoading = false }
             do {
                 let json = try await client.shortsSeedless()
+                isLoading = false
                 guard let id = json["replacementEndpoint"]["reelWatchEndpoint"]["videoId"].string
                         ?? json["playerResponse"]["videoDetails"]["videoId"].string else {
                     error = "YouTube didn't return any Shorts."
                     return
                 }
+                // (isLoading already cleared above)
                 append([Self.short(id, from: json)])
                 token = json["sequenceContinuation"].string
             } catch {
+                isLoading = false
                 self.error = error.localizedDescription
                 return
             }
+            // isLoading must be clear here, or loadMore() bails out and there's no "next".
             await loadMore()
         }
     }

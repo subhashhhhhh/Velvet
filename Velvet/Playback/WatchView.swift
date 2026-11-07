@@ -338,13 +338,14 @@ private struct RelatedRow: View {
 
 // MARK: - Comments
 
-private struct CommentsSection: View {
+struct CommentsSection: View {
     let page: WatchPageModel
     let player: MPVPlayer
+    var showsHeader = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Comments").font(.title3.weight(.semibold))
+            if showsHeader { Text("Comments").font(.title3.weight(.semibold)) }
             if !page.hasComments && page.details != nil {
                 Text("Comments are turned off or unavailable.").foregroundStyle(.secondary)
             }

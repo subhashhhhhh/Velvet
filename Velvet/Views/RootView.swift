@@ -30,6 +30,8 @@ struct RootView: View {
     private var detail: some View {
         if let session = app.watching {
             WatchView(session: session).id(session.id)
+        } else if let shorts = app.shortsOverlay {
+            ShortsPlayerView(controller: shorts, showsBack: true).id(ObjectIdentifier(shorts))
         } else if let query = app.activeSearch {
             SearchResultsView(query: query)
         } else {
@@ -40,6 +42,13 @@ struct RootView: View {
                 LibraryFeedPage(destination: app.destination ?? .home).id(app.destination)
             case .playlists:
                 PlaylistsPage()
+            case .shorts:
+                if let shorts = app.shortsTab {
+                    // Identity follows the controller so a rebuilt one gets its own start.
+                    ShortsPlayerView(controller: shorts, showsBack: false).id(ObjectIdentifier(shorts))
+                } else {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
             case let d:
                 PlaceholderView(title: d.title, symbol: d.symbol, message: "Coming soon.")
             }

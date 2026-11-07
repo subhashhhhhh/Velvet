@@ -178,6 +178,8 @@ final class MPVPlayer {
         var hardwareDecoding = true
         var bufferMB = 150
         var speed = 1.0
+        /// Shorts loop forever, like YouTube's.
+        var loop = false
     }
 
     init(options: Options) {
@@ -206,6 +208,7 @@ final class MPVPlayer {
             // YouTube throttles open-ended range requests to ~500 KB/s; 10 MB chunks get full speed.
             ("stream-lavf-o", "request_size=10485760"),
             ("speed", String(options.speed)),
+            ("loop-file", options.loop ? "inf" : "no"),
             ("volume", "100"),
             ("volume-max", "150"),
         ])

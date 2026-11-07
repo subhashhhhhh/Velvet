@@ -79,13 +79,22 @@ final class AppModel {
     private(set) var watching: PlayerSession?
     var playerFullscreen = false
 
-    /// Opens a video. Without an explicit position it resumes where you left off.
+    func makeSession(for video: Video) -> PlayerSession {
+        PlayerSession(video: video, resolver: resolver, preferences: settings,
+                      client: client, session: authState == .signedIn ? session : nil,
+                      progress: progress,
+                      isSignedIn: { [weak self] in self?.authState == .signedIn })
+    }
+
+    /// Opens a video. Shorts open in the vertical Shorts player; other videos resume where you left off.
     func open(_ video: Video, at position: Double? = nil) {
+        if video.kind == .short && position == nil {
+            openShorts(startingWith: video)
+            return
+        }
         watching?.close()
-        let session = PlayerSession(video: video, resolver: resolver, preferences: settings,
-                                    client: client, session: authState == .signedIn ? session : nil,
-                                    progress: progress,
-                                    isSignedIn: { [weak self] in self?.authState == .signedIn })
+        shortsOverlay?.close(); shortsOverlay = nil
+        let session = makeSession(for: video)
         if let position {
             session.startPosition = position
         } else if video.kind != .live, let resume = progress.resumePosition(for: video) {
@@ -100,7 +109,25 @@ final class AppModel {
         if playerFullscreen { togglePlayerFullscreen() }
         watching?.close()
         watching = nil
+        shortsOverlay?.close()
+        shortsOverlay = nil
     }
+
+    // MARK: - Shorts
+
+    /// Shorts opened from a feed (seeded with the one you clicked); shown over the current page.
+    private(set) var shortsOverlay: ShortsController?
+    /// The sidebar Shorts tab (YouTube picks the first one).
+    private(set) var shortsTab: ShortsController?
+
+    func openShorts(startingWith video: Video) {
+        watching?.close(); watching = nil
+        shortsTab?.pause()
+        shortsOverlay?.close()
+        shortsOverlay = ShortsController(sequence: ShortsSequence(seed: video, client: client), app: self)
+    }
+
+
 
     /// True when entering player fullscreen also put the window into macOS fullscreen,
     /// so leaving it should take the window back out (and only then).
@@ -134,6 +161,7 @@ final class AppModel {
 
     func navigate(to destination: Destination) {
         closePlayer()
+        if destination != .shorts { shortsTab?.pause() }
         activeSearch = nil
         self.destination = destination
     }
@@ -161,6 +189,10 @@ final class AppModel {
     private(set) var playlistsModel: PlaylistsModel?
 
     private func rebuildAccountFeeds() {
+        // Shorts are personalized too; rebuilt once the account state is known.
+        shortsTab?.close()
+        shortsTab = authState == .unknown ? nil
+            : ShortsController(sequence: ShortsSequence(seed: nil, client: client), app: self)
         let signedIn = authState == .signedIn
         homeFeed = signedIn ? FeedModel(source: .browse("FEwhat_to_watch"), client: client) : nil
         historyFeed = signedIn ? SectionedFeedModel(browseId: "FEhistory", client: client) : nil
@@ -184,6 +216,7 @@ final class AppModel {
             await activate(saved)
         } else {
             authState = .signedOut
+            authRevision += 1
         }
         #if DEBUG
         // `-VelvetPlay <videoId>` opens straight into the player (after the session restores).

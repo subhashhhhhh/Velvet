@@ -43,7 +43,8 @@ final class PlayerSession: Identifiable {
         self.player = MPVPlayer(options: .init(
             hardwareDecoding: preferences.hardwareDecoding,
             bufferMB: preferences.bufferMB,
-            speed: preferences.defaultSpeed
+            speed: video.kind == .short ? 1 : preferences.defaultSpeed,
+            loop: video.kind == .short
         ))
         let player = self.player
         self.sponsor = SponsorSkipper(
