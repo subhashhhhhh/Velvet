@@ -5,14 +5,18 @@ import AppKit
 struct VideoSurface: NSViewRepresentable {
     let player: MPVPlayer
 
-    func makeNSView(context: Context) -> SurfaceView { SurfaceView(layer: player.layer) }
+    func makeNSView(context: Context) -> SurfaceView {
+        SurfaceView(layer: player.layer) { [weak player] in player?.surfaceDidResize(to: $0) }
+    }
     func updateNSView(_ nsView: SurfaceView, context: Context) {}
 
     final class SurfaceView: NSView {
         private let metal: CAMetalLayer
+        private let onResize: (CGSize) -> Void
 
-        init(layer: CAMetalLayer) {
+        init(layer: CAMetalLayer, onResize: @escaping (CGSize) -> Void) {
             metal = layer
+            self.onResize = onResize
             super.init(frame: .zero)
             self.layer = layer // layer-hosting: mpv draws into it directly
             wantsLayer = true
@@ -34,7 +38,10 @@ struct VideoSurface: NSViewRepresentable {
             let scale = window?.backingScaleFactor ?? 2
             metal.contentsScale = scale
             metal.frame = bounds
-            metal.drawableSize = CGSize(width: bounds.width * scale, height: bounds.height * scale)
+            let pixels = CGSize(width: (bounds.width * scale).rounded(), height: (bounds.height * scale).rounded())
+            guard pixels != metal.drawableSize else { return }
+            metal.drawableSize = pixels
+            onResize(pixels)
         }
     }
 }
@@ -218,7 +225,7 @@ struct PlayerControls: View {
                 }
             }
         } label: {
-            Text(session.selection?.video.height.map { "\($0)p" } ?? "Auto")
+            Text(session.selection?.video.height.map { String($0) + "p" } ?? "Auto")
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)

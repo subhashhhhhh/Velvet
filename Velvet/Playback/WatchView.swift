@@ -37,7 +37,7 @@ struct WatchView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
             // Covers leaving fullscreen via the green button or Mission Control, not just our controls.
-            if app.playerFullscreen { app.playerFullscreen = false }
+            app.windowDidExitFullscreen()
         }
     }
 
@@ -78,7 +78,7 @@ struct WatchView: View {
     }
 
     private func streamLabel(_ s: StreamInfo.Selection) -> String {
-        let v = [s.video.height.map { "\($0)p" }, s.video.fps.map { "\(Int($0))fps" }, s.video.codecFamily?.label]
+        let v = [s.video.height.map { String($0) + "p" }, s.video.fps.map { String(Int($0)) + "fps" }, s.video.codecFamily?.label]
             .compactMap { $0 }.joined(separator: " ")
         let a = s.audio?.acodec?.components(separatedBy: ".").first ?? ""
         return a.isEmpty ? v : "\(v) · \(a)"

@@ -83,10 +83,28 @@ final class AppModel {
         watching = nil
     }
 
+    /// True when entering player fullscreen also put the window into macOS fullscreen,
+    /// so leaving it should take the window back out (and only then).
+    @ObservationIgnored private var playerOwnsWindowFullscreen = false
+
     func togglePlayerFullscreen() {
-        playerFullscreen.toggle()
-        guard let window = NSApp.keyWindow ?? NSApp.mainWindow else { return }
-        if window.styleMask.contains(.fullScreen) != playerFullscreen { window.toggleFullScreen(nil) }
+        let window = NSApp.keyWindow ?? NSApp.mainWindow
+        let windowIsFullscreen = window?.styleMask.contains(.fullScreen) ?? false
+        if !playerFullscreen {
+            playerFullscreen = true
+            playerOwnsWindowFullscreen = !windowIsFullscreen
+            if !windowIsFullscreen { window?.toggleFullScreen(nil) }
+        } else {
+            playerFullscreen = false
+            if playerOwnsWindowFullscreen && windowIsFullscreen { window?.toggleFullScreen(nil) }
+            playerOwnsWindowFullscreen = false
+        }
+    }
+
+    /// The window left macOS fullscreen on its own (green button, Esc, Mission Control).
+    func windowDidExitFullscreen() {
+        if playerOwnsWindowFullscreen { playerFullscreen = false }
+        playerOwnsWindowFullscreen = false
     }
 
     /// Resolves streams ahead of a likely click (hovering a card).
@@ -131,6 +149,17 @@ final class AppModel {
         // `-VelvetPlay <videoId>` opens straight into the player; handy for testing.
         if let id = UserDefaults.standard.string(forKey: "VelvetPlay"), !id.isEmpty {
             open(Video(id: id, title: "Debug: \(id)"), at: UserDefaults.standard.double(forKey: "VelvetStart"))
+            // `-VelvetResizeTest YES`: pause, then grow the window, to check mpv follows the new size.
+            if UserDefaults.standard.bool(forKey: "VelvetResizeTest") {
+                Task {
+                    try? await Task.sleep(for: .seconds(6))
+                    watching?.player.pause()
+                    try? await Task.sleep(for: .seconds(1))
+                    if let w = NSApp.windows.first(where: { $0.isVisible && $0.styleMask.contains(.titled) }) {
+                        w.setFrame(NSRect(x: 60, y: 60, width: 1500, height: 950), display: true, animate: false)
+                    }
+                }
+            }
         }
         #endif
         if let saved = YouTubeSession.restore() {

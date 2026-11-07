@@ -181,6 +181,8 @@ final class MPVPlayer {
     init(options: Options) {
         layer.backgroundColor = NSColor.black.cgColor
         layer.framebufferOnly = true
+        // Until mpv re-renders at the new size, scale the last frame without distorting it.
+        layer.contentsGravity = .resizeAspect
         layer.contentsScale = NSScreen.main?.backingScaleFactor ?? 2
 
         core = MPVCore(layer: layer, options: [
@@ -248,6 +250,8 @@ final class MPVPlayer {
         hasEnded = false
         isLoading = true
         playedSinceLoad = false
+        appliedDrawable = .zero
+        core.set("video-aspect-override", "no")
         position = startAt
         lastPublishedPosition = -1
 
@@ -272,6 +276,30 @@ final class MPVPlayer {
 
     private static func escapeListItem(_ value: String) -> String {
         value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: ",", with: "\\,")
+    }
+
+    // MARK: - Surface size
+
+    @ObservationIgnored private var resizeTask: Task<Void, Never>?
+    @ObservationIgnored private var appliedDrawable: CGSize = .zero
+    @ObservationIgnored private var aspectNudge = false
+
+    /// MPVKit's MoltenVK context only reads the layer's drawable size when mpv reconfigures
+    /// the video output (its resize control is unimplemented), so mpv keeps rendering at the
+    /// old size after the view grows. Once a resize settles, nudge `video-aspect-override` by
+    /// an invisible amount (~0.001%) to force that reconfigure.
+    func surfaceDidResize(to pixels: CGSize) {
+        guard pixels.width > 1, pixels.height > 1 else { return }
+        resizeTask?.cancel()
+        resizeTask = Task {
+            try? await Task.sleep(for: .milliseconds(120))
+            guard !Task.isCancelled, pixels != appliedDrawable,
+                  let size = videoSize, size.width > 0, size.height > 0 else { return }
+            appliedDrawable = pixels
+            aspectNudge.toggle()
+            let aspect = size.width / size.height * (aspectNudge ? 1.00001 : 0.99999)
+            core?.set("video-aspect-override", String(format: "%.8f", aspect))
+        }
     }
 
     // MARK: - Controls
