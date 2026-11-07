@@ -58,17 +58,44 @@ final class AppModel {
     }
 
     func submitSearch() {
+        closePlayer()
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         activeSearch = q.isEmpty ? nil : q
     }
 
-    /// Opens a video. Playback arrives with the mpv player; for now this just records it.
-    var openedVideo: Video?
+    // MARK: - Playback
+
+    /// The video being watched; non-nil shows the watch page.
+    private(set) var watching: PlayerSession?
+    var playerFullscreen = false
+
     func open(_ video: Video) {
-        openedVideo = video
+        watching?.close()
+        let session = PlayerSession(video: video, resolver: resolver, preferences: settings)
+        watching = session
+        session.start()
+    }
+
+    func closePlayer() {
+        if playerFullscreen { togglePlayerFullscreen() }
+        watching?.close()
+        watching = nil
+    }
+
+    func togglePlayerFullscreen() {
+        playerFullscreen.toggle()
+        guard let window = NSApp.keyWindow ?? NSApp.mainWindow else { return }
+        if window.styleMask.contains(.fullScreen) != playerFullscreen { window.toggleFullScreen(nil) }
+    }
+
+    /// Resolves streams ahead of a likely click (hovering a card).
+    func prefetch(_ video: Video) {
+        guard settings.prefetchOnHover, video.kind != .upcoming else { return }
+        Task { await resolver.prefetch(video.id, isLive: video.kind == .live) }
     }
 
     func navigate(to destination: Destination) {
+        closePlayer()
         activeSearch = nil
         self.destination = destination
     }
@@ -99,6 +126,12 @@ final class AppModel {
     func start() async {
         guard authState == .unknown else { return }
         prepareTools()
+        #if DEBUG
+        // `-VelvetPlay <videoId>` opens straight into the player; handy for testing.
+        if let id = UserDefaults.standard.string(forKey: "VelvetPlay"), !id.isEmpty {
+            open(Video(id: id, title: "Debug: \(id)"))
+        }
+        #endif
         if let saved = YouTubeSession.restore() {
             await activate(saved)
         } else {

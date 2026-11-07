@@ -2,10 +2,14 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppModel.self) private var app
+    @State private var sidebarVisibility = NavigationSplitViewVisibility.automatic
 
     var body: some View {
         @Bindable var app = app
-        NavigationSplitView {
+        NavigationSplitView(columnVisibility: Binding(
+            get: { app.playerFullscreen ? .detailOnly : sidebarVisibility },
+            set: { if !app.playerFullscreen { sidebarVisibility = $0 } }
+        )) {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 280)
         } detail: {
@@ -24,7 +28,9 @@ struct RootView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let query = app.activeSearch {
+        if let session = app.watching {
+            WatchView(session: session).id(session.id)
+        } else if let query = app.activeSearch {
             SearchResultsView(query: query)
         } else {
             switch app.destination ?? .home {

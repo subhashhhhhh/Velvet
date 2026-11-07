@@ -114,7 +114,7 @@ actor StreamResolver {
         guard let info = StreamInfo(ytdlp: json), !info.formats.isEmpty else {
             throw ProcessError.failed("yt-dlp", 0, "No playable formats were returned.")
         }
-        log.info("Resolved \(videoId, privacy: .public): \(info.formats.count) formats in \(ContinuousClock.now - start)")
+        log.info("Resolved \(videoId, privacy: .public): \(info.formats.count) formats in \(ContinuousClock.now - start, privacy: .public)")
         return info
     }
 

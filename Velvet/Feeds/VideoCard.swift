@@ -3,7 +3,9 @@ import SwiftUI
 /// A 16:9 video tile: thumbnail with badges and progress, then avatar, title and metadata.
 struct VideoCard: View {
     let video: Video
+    @Environment(AppModel.self) private var app
     @State private var hovering = false
+    @State private var prefetchTask: Task<Void, Never>?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -40,7 +42,17 @@ struct VideoCard: View {
                 .fill(hovering ? AnyShapeStyle(.quinary) : AnyShapeStyle(.clear))
         )
         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .onHover { hovering = $0 }
+        .onHover { h in
+            hovering = h
+            // A short dwell filters out cards the pointer merely passes over.
+            prefetchTask?.cancel()
+            if h {
+                prefetchTask = Task {
+                    try? await Task.sleep(for: .milliseconds(350))
+                    if !Task.isCancelled { app.prefetch(video) }
+                }
+            }
+        }
         .animation(.easeOut(duration: 0.12), value: hovering)
         .contextMenu { VideoContextMenu(video: video) }
     }
