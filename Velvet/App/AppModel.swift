@@ -138,8 +138,24 @@ final class AppModel {
     /// Recommendations; kept here so the feed survives navigating away and back.
     private(set) var homeFeed: FeedModel?
 
+    private(set) var historyFeed: SectionedFeedModel?
+    private(set) var watchLaterFeed: SectionedFeedModel?
+    private(set) var playlistsModel: PlaylistsModel?
+
     private func rebuildAccountFeeds() {
-        homeFeed = authState == .signedIn ? FeedModel(source: .browse("FEwhat_to_watch"), client: client) : nil
+        let signedIn = authState == .signedIn
+        homeFeed = signedIn ? FeedModel(source: .browse("FEwhat_to_watch"), client: client) : nil
+        historyFeed = signedIn ? SectionedFeedModel(browseId: "FEhistory", client: client) : nil
+        watchLaterFeed = signedIn ? SectionedFeedModel(browseId: "VLWL", client: client) : nil
+        playlistsModel = signedIn ? PlaylistsModel(client: client) : nil
+    }
+
+    func libraryFeed(for destination: Destination) -> SectionedFeedModel? {
+        switch destination {
+        case .history: historyFeed
+        case .watchLater: watchLaterFeed
+        default: nil
+        }
     }
 
     /// Restores a saved session at launch.

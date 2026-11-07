@@ -36,6 +36,10 @@ struct RootView: View {
             switch app.destination ?? .home {
             case .home:
                 HomeView()
+            case .history, .watchLater:
+                LibraryFeedPage(destination: app.destination ?? .home).id(app.destination)
+            case .playlists:
+                PlaylistsPage()
             case let d:
                 PlaceholderView(title: d.title, symbol: d.symbol, message: "Coming soon.")
             }
