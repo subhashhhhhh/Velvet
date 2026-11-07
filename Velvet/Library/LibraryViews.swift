@@ -168,7 +168,7 @@ private struct PlaylistsGrid: View {
     }
 }
 
-private struct PlaylistCard: View {
+struct PlaylistCard: View {
     let playlist: PlaylistSummary
     @State private var hovering = false
 
@@ -204,7 +204,7 @@ private struct PlaylistCard: View {
     }
 }
 
-private struct PlaylistDetailView: View {
+struct PlaylistDetailView: View {
     let summary: PlaylistSummary
     @Environment(AppModel.self) private var app
     @State private var feed: SectionedFeedModel?

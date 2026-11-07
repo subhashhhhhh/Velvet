@@ -30,6 +30,8 @@ struct RootView: View {
             WatchView(session: session).id(session.id)
         } else if let shorts = app.shortsOverlay {
             ShortsPlayerView(controller: shorts, showsBack: true).id(ObjectIdentifier(shorts))
+        } else if let channel = app.channel {
+            ChannelView(model: channel).id(channel.id)
         } else if let query = app.activeSearch {
             SearchResultsView(query: query)
         } else {

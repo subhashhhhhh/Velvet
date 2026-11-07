@@ -69,6 +69,7 @@ final class AppModel {
 
     func submitSearch() {
         closePlayer()
+        channel = nil
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         activeSearch = q.isEmpty ? nil : q
     }
@@ -209,6 +210,23 @@ final class AppModel {
         MemoryRelief.soon()
     }
 
+    // MARK: - Channels
+
+    /// The open channel page (shown under any video opened from it, so Back returns here).
+    private(set) var channel: ChannelModel?
+
+    func openChannel(_ channelId: String) {
+        guard channel?.id != channelId || watching != nil || shortsOverlay != nil else { return }
+        closePlayer()
+        shortsTab?.pause()
+        if channel?.id != channelId {
+            channel = ChannelModel(channelId: channelId, client: client,
+                                   isSignedIn: { [weak self] in self?.authState == .signedIn })
+        }
+    }
+
+    func closeChannel() { channel = nil }
+
     // MARK: - Shorts
 
     /// Shorts opened from a feed (seeded with the one you clicked); shown over the current page.
@@ -261,6 +279,7 @@ final class AppModel {
 
     func navigate(to destination: Destination) {
         closePlayer()
+        channel = nil
         if destination != .shorts { shortsTab?.pause() }
         activeSearch = nil
         self.destination = destination
@@ -319,6 +338,7 @@ final class AppModel {
             authRevision += 1
         }
         #if DEBUG
+        if let id = UserDefaults.standard.string(forKey: "VelvetChannel"), !id.isEmpty { openChannel(id) }
         if let id = UserDefaults.standard.string(forKey: "VelvetHomeThenPlay"), !id.isEmpty {
             Task {
                 try? await Task.sleep(for: .seconds(10))
