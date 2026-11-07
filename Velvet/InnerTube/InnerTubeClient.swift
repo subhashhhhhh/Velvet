@@ -99,6 +99,26 @@ actor InnerTubeClient {
         try await post("next", ["continuation": .string(token)])
     }
 
+    // MARK: - Shorts
+
+    /// A first Short chosen by YouTube, plus the token for the rest of its sequence.
+    func shortsSeedless() async throws -> JSON {
+        try await post("reel/reel_item_watch", ["inputType": "REEL_WATCH_INPUT_TYPE_SEEDLESS", "params": "CA8%3D"])
+    }
+
+    /// The next Shorts in a sequence (token from `shortsSeedless`, `shortsSeed(for:)` or a previous page).
+    func shortsSequence(_ token: String) async throws -> JSON {
+        try await post("reel/reel_watch_sequence", ["sequenceParams": .string(token)])
+    }
+
+    /// Sequence token that starts from a specific Short: protobuf `{3: {1: videoId, 3: 0, 4: 1}}`.
+    nonisolated static func shortsSeed(for videoId: String) -> String {
+        let id = Array(videoId.utf8)
+        let inner: [UInt8] = [0x0A, UInt8(id.count)] + id + [0x18, 0x00, 0x20, 0x01]
+        return Data([0x1A, UInt8(inner.count)] + inner).base64EncodedString()
+            .replacingOccurrences(of: "+", with: "-").replacingOccurrences(of: "/", with: "_")
+    }
+
     // MARK: - Account actions
 
     func like(_ videoId: String) async throws { _ = try await post("like/like", ["target": ["videoId": .string(videoId)]]) }
