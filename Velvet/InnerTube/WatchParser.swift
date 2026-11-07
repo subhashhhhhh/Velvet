@@ -51,7 +51,8 @@ nonisolated enum WatchParser {
             likeStatus: status,
             related: related,
             relatedContinuation: relatedToken,
-            commentsToken: commentsToken
+            commentsToken: commentsToken,
+            liveChatToken: LiveChatParser.initialToken(from: json)
         )
     }
 

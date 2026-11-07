@@ -22,12 +22,15 @@ struct WatchView: View {
                             .frame(maxWidth: .infinity)
                             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.playerSlot = $0 }
                         WatchInfoView(session: session)
+                        if !wide, let chat = page.liveChat {
+                            LiveChatPanel(chat: chat).frame(height: 420)
+                        }
                         if !wide { RelatedList(page: page, columns: true) }
                         CommentsSection(page: page, player: session.player)
                     }
                     .frame(maxWidth: .infinity)
                     if wide {
-                        RelatedList(page: page, columns: false)
+                        SideColumn(page: page, chatHeight: max(360, size.height + 120))
                             .frame(width: Self.relatedWidth)
                     }
                 }
@@ -254,6 +257,35 @@ struct PillButtonStyle: ButtonStyle {
             .padding(.vertical, 7)
             .contentShape(Capsule())
             .opacity(configuration.isPressed ? 0.6 : 1)
+    }
+}
+
+// MARK: - Side column (live chat / related)
+
+/// Wide layout's right column: for live streams a Chat / Up Next switcher, else related videos.
+private struct SideColumn: View {
+    let page: WatchPageModel
+    let chatHeight: CGFloat
+    @State private var showChat = true
+
+    var body: some View {
+        if let chat = page.liveChat {
+            VStack(spacing: 12) {
+                Picker("", selection: $showChat) {
+                    Text("Chat").tag(true)
+                    Text("Up Next").tag(false)
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                if showChat {
+                    LiveChatPanel(chat: chat).frame(height: chatHeight)
+                } else {
+                    RelatedList(page: page, columns: false)
+                }
+            }
+        } else {
+            RelatedList(page: page, columns: false)
+        }
     }
 }
 

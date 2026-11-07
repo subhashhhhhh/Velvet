@@ -31,6 +31,8 @@ nonisolated struct WatchDetails: Sendable {
     var related: [Video]
     var relatedContinuation: String?
     var commentsToken: String?
+    /// "Top chat" token when the video is a live stream with chat.
+    var liveChatToken: String?
 }
 
 nonisolated struct Comment: Identifiable, Hashable, Sendable {

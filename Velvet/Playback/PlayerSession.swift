@@ -163,6 +163,7 @@ final class PlayerSession: Identifiable {
     }
 
     func close() {
+        page.stopLiveChat()
         tracker?.flush(at: player.position, state: "paused")
         saveProgress()
         loadTask?.cancel()

@@ -26,6 +26,11 @@ final class WatchPageModel {
 
     var isInWatchLater: Bool { playlists.first(where: \.isWatchLater)?.containsVideo ?? false }
 
+    /// Live chat, for live streams that have it (starts when the page loads).
+    private(set) var liveChat: LiveChatModel?
+
+    func stopLiveChat() { liveChat?.stop() }
+
     @ObservationIgnored private let client: InnerTubeClient
     /// Read at action time, not at open time, so a session restored a moment later still counts.
     @ObservationIgnored private let isSignedIn: () -> Bool
@@ -61,6 +66,11 @@ final class WatchPageModel {
             related = d.related
             relatedToken = d.relatedContinuation
             commentsToken = d.commentsToken
+            if let token = d.liveChatToken {
+                let chat = LiveChatModel(client: client)
+                liveChat = chat
+                chat.start(token: token)
+            }
             MemoryRelief.soon()
         } catch {
             loadError = error.localizedDescription
