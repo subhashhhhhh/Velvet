@@ -125,6 +125,14 @@ actor InnerTubeClient {
     func dislike(_ videoId: String) async throws { _ = try await post("like/dislike", ["target": ["videoId": .string(videoId)]]) }
     func removeLike(_ videoId: String) async throws { _ = try await post("like/removelike", ["target": ["videoId": .string(videoId)]]) }
 
+    func subscribe(to channelId: String) async throws {
+        _ = try await post("subscription/subscribe", ["channelIds": [.string(channelId)], "params": "EgIIAhgA"])
+    }
+
+    func unsubscribe(from channelId: String) async throws {
+        _ = try await post("subscription/unsubscribe", ["channelIds": [.string(channelId)], "params": "CgIIAhgA"])
+    }
+
     /// Your playlists (Watch Later first) and whether each contains `videoId`.
     func playlistOptions(for videoId: String) async throws -> JSON {
         try await post("playlist/get_add_to_playlist", ["videoIds": [.string(videoId)], "excludeWatchLater": false])
