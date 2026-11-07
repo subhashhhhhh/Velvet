@@ -3,7 +3,7 @@ import Observation
 
 // MARK: - Option types
 
-enum VideoQuality: Int, CaseIterable, Identifiable, Codable, Sendable {
+nonisolated enum VideoQuality: Int, CaseIterable, Identifiable, Codable, Sendable {
     case auto = 0, p2160 = 2160, p1440 = 1440, p1080 = 1080, p720 = 720, p480 = 480, p360 = 360
     var id: Int { rawValue }
     var label: String { self == .auto ? "Best Available" : (self == .p2160 ? "2160p (4K)" : "\(rawValue)p") }
@@ -11,7 +11,7 @@ enum VideoQuality: Int, CaseIterable, Identifiable, Codable, Sendable {
     var maxHeight: Int? { self == .auto ? nil : rawValue }
 }
 
-enum VideoCodec: String, CaseIterable, Identifiable, Codable, Sendable {
+nonisolated enum VideoCodec: String, CaseIterable, Identifiable, Codable, Sendable {
     case auto, av1, vp9, h264
     var id: String { rawValue }
     var label: String {
@@ -32,7 +32,7 @@ enum VideoCodec: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 }
 
-enum CardSize: String, CaseIterable, Identifiable, Codable, Sendable {
+nonisolated enum CardSize: String, CaseIterable, Identifiable, Codable, Sendable {
     case compact, regular, large
     var id: String { rawValue }
     var label: String { rawValue.capitalized }
@@ -45,7 +45,7 @@ enum CardSize: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 }
 
-enum JSRuntime: String, CaseIterable, Identifiable, Codable, Sendable {
+nonisolated enum JSRuntime: String, CaseIterable, Identifiable, Codable, Sendable {
     case deno, bun, quickjs
     var id: String { rawValue }
     var label: String {
@@ -64,7 +64,7 @@ enum JSRuntime: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 }
 
-enum SponsorCategory: String, CaseIterable, Identifiable, Codable, Sendable {
+nonisolated enum SponsorCategory: String, CaseIterable, Identifiable, Codable, Sendable {
     case sponsor, selfpromo, interaction, intro, outro, preview, music_offtopic, filler
     var id: String { rawValue }
     var label: String {
@@ -88,7 +88,7 @@ enum SponsorCategory: String, CaseIterable, Identifiable, Codable, Sendable {
     }
 }
 
-enum SponsorAction: String, CaseIterable, Identifiable, Codable, Sendable {
+nonisolated enum SponsorAction: String, CaseIterable, Identifiable, Codable, Sendable {
     case skip, ask, ignore
     var id: String { rawValue }
     var label: String {

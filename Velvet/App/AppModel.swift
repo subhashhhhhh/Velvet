@@ -36,6 +36,10 @@ final class AppModel {
     let client = InnerTubeClient()
     let settings = Preferences()
     let tools = ToolManager()
+    @ObservationIgnored private(set) lazy var resolver = StreamResolver(
+        tools: tools, preferences: settings,
+        session: { [weak self] in await self?.session }
+    )
 
     var destination: Destination?
     var searchText = ""
