@@ -24,6 +24,7 @@ struct RootView: View {
             )
         }
         .task { await app.start() }
+        .background(WindowReader { app.mainWindow = $0 })
     }
 
     @ViewBuilder
@@ -143,5 +144,26 @@ struct PlaceholderView: View {
     var body: some View {
         ContentUnavailableView(title, systemImage: symbol, description: Text(message))
             .navigationTitle(title)
+    }
+}
+
+/// Reports the hosting NSWindow (for window-level behaviour like automatic PiP).
+struct WindowReader: NSViewRepresentable {
+    var onWindow: (NSWindow?) -> Void
+
+    func makeNSView(context: Context) -> ReaderView { ReaderView(onWindow: onWindow) }
+    func updateNSView(_ nsView: ReaderView, context: Context) {}
+
+    final class ReaderView: NSView {
+        let onWindow: (NSWindow?) -> Void
+        init(onWindow: @escaping (NSWindow?) -> Void) {
+            self.onWindow = onWindow
+            super.init(frame: .zero)
+        }
+        required init?(coder: NSCoder) { fatalError() }
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            onWindow(window)
+        }
     }
 }

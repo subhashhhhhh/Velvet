@@ -122,6 +122,7 @@ final class Preferences {
     var hardwareDecoding: Bool { didSet { save(hardwareDecoding, .hardwareDecoding) } }
     var bufferMB: Int { didSet { save(bufferMB, .bufferMB) } }
     var prefetchOnHover: Bool { didSet { save(prefetchOnHover, .prefetchOnHover) } }
+    var autoPictureInPicture: Bool { didSet { save(autoPictureInPicture, .autoPictureInPicture) } }
 
     // SponsorBlock
     var sponsorBlockEnabled: Bool { didSet { save(sponsorBlockEnabled, .sponsorBlockEnabled) } }
@@ -160,6 +161,7 @@ final class Preferences {
         hardwareDecoding = get(.hardwareDecoding, true)
         bufferMB = get(.bufferMB, 150)
         prefetchOnHover = get(.prefetchOnHover, true)
+        autoPictureInPicture = get(.autoPictureInPicture, true)
 
         sponsorBlockEnabled = get(.sponsorBlockEnabled, true)
         var actions = Dictionary(uniqueKeysWithValues: SponsorCategory.allCases.map { ($0, $0.defaultAction) })
@@ -193,6 +195,7 @@ final class Preferences {
         quality = fresh.quality; codec = fresh.codec; defaultSpeed = fresh.defaultSpeed
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
+        autoPictureInPicture = fresh.autoPictureInPicture
         sponsorBlockEnabled = fresh.sponsorBlockEnabled; sponsorActions = fresh.sponsorActions
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
         deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
@@ -204,7 +207,7 @@ final class Preferences {
 
     private enum Key: CaseIterable {
         case startPage, showShortsShelf, shortsAfterRows, cardSize, hideWatched
-        case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover
+        case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
         case jsRuntime, autoUpdateTools

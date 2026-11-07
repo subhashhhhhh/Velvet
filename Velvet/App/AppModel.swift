@@ -92,6 +92,7 @@ final class AppModel {
             openShorts(startingWith: video)
             return
         }
+        if pip.isActive { exitPictureInPicture() }
         watching?.close()
         shortsOverlay?.close(); shortsOverlay = nil
         let session = makeSession(for: video)
@@ -106,11 +107,83 @@ final class AppModel {
     }
 
     func closePlayer() {
+        if pip.isActive { exitPictureInPicture() }
         if playerFullscreen { togglePlayerFullscreen() }
         watching?.close()
         watching = nil
         shortsOverlay?.close()
         shortsOverlay = nil
+    }
+
+    // MARK: - Picture in Picture
+
+    @ObservationIgnored let pip = PictureInPicture()
+    /// The main window, reported by RootView; watched for visibility to drive automatic PiP.
+    @ObservationIgnored weak var mainWindow: NSWindow? {
+        didSet { if mainWindow !== oldValue { observeWindow() } }
+    }
+    @ObservationIgnored private var occlusionObserver: NSObjectProtocol?
+    @ObservationIgnored private weak var pipPlayer: MPVPlayer?
+
+    /// The player currently on screen (watch page, a Short), if any.
+    var activePlayer: MPVPlayer? {
+        if let watching { return watching.player }
+        if let shortsOverlay { return shortsOverlay.session?.player }
+        if destination == .shorts, activeSearch == nil { return shortsTab?.session?.player }
+        return nil
+    }
+
+    func togglePictureInPicture() {
+        pip.isActive ? exitPictureInPicture() : enterPictureInPicture(automatic: false)
+    }
+
+    func enterPictureInPicture(automatic: Bool) {
+        guard PictureInPicture.isAvailable, !pip.isActive, let player = activePlayer else { return }
+        if playerFullscreen { playerFullscreen = false }
+        let returnView = player.inlineView
+        let rect = returnView.map { $0.convert($0.bounds, to: nil) }
+        let view = player.makePictureInPictureView()
+        pipPlayer = player
+        pip.onPlay = { [weak player] in player?.play() }
+        pip.onPause = { [weak player] in player?.pause() }
+        pip.onClosed = { [weak self, weak player] in
+            player?.returnFromPictureInPicture()
+            player?.onPictureInPicturePauseChange = nil
+            self?.pipPlayer = nil
+        }
+        player.onPictureInPicturePauseChange = { [weak self] paused in self?.pip.setPlaying(!paused) }
+        pip.enter(view: view, aspect: player.videoSize ?? CGSize(width: 16, height: 9), playing: !player.isPaused,
+                  returnTo: returnView?.window, rect: rect, automatic: automatic)
+    }
+
+    func exitPictureInPicture() {
+        guard pip.isActive else { return }
+        let inline = pipPlayer?.inlineView
+        pip.exit(returnTo: inline?.window, rect: inline.map { $0.convert($0.bounds, to: nil) })
+    }
+
+    private func observeWindow() {
+        if let occlusionObserver { NotificationCenter.default.removeObserver(occlusionObserver) }
+        guard let mainWindow else { return }
+        occlusionObserver = NotificationCenter.default.addObserver(
+            forName: NSWindow.didChangeOcclusionStateNotification, object: mainWindow, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.windowVisibilityChanged() }
+        }
+    }
+
+    /// Swiping to another Space (or minimizing/covering the window) hides it: continue the
+    /// playing video in PiP. Coming back ends an automatic PiP.
+    private func windowVisibilityChanged() {
+        guard let window = mainWindow else { return }
+        let visible = window.occlusionState.contains(.visible)
+        if !visible {
+            guard settings.autoPictureInPicture, !pip.isActive,
+                  let player = activePlayer, !player.isPaused, player.duration > 0 || player.position > 0 else { return }
+            enterPictureInPicture(automatic: true)
+        } else if pip.isActive && pip.startedAutomatically {
+            exitPictureInPicture()
+        }
     }
 
     // MARK: - Shorts
@@ -223,6 +296,15 @@ final class AppModel {
         if let id = UserDefaults.standard.string(forKey: "VelvetPlay"), !id.isEmpty {
             let start = UserDefaults.standard.double(forKey: "VelvetStart")
             open(Video(id: id, title: "Debug: \(id)"), at: start > 0 ? start : nil)
+            // `-VelvetPiPTest YES`: enter PiP after 6s, leave after 14s.
+            if UserDefaults.standard.bool(forKey: "VelvetPiPTest") {
+                Task {
+                    try? await Task.sleep(for: .seconds(6))
+                    enterPictureInPicture(automatic: false)
+                    try? await Task.sleep(for: .seconds(8))
+                    exitPictureInPicture()
+                }
+            }
             // `-VelvetResizeTest YES`: pause, then grow the window, to check mpv follows the new size.
             if UserDefaults.standard.bool(forKey: "VelvetResizeTest") {
                 Task {

@@ -283,6 +283,45 @@ final class MPVPlayer {
         value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: ",", with: "\\,")
     }
 
+    // MARK: - Hosting (inline vs Picture in Picture)
+
+    /// True while the video is shown in the Picture in Picture window.
+    private(set) var isInPictureInPicture = false
+    @ObservationIgnored private weak var inlineSurface: MPVSurfaceView?
+    @ObservationIgnored private weak var layerHost: MPVSurfaceView?
+    /// Keeps the PiP window's play/pause button in sync.
+    @ObservationIgnored var onPictureInPicturePauseChange: ((Bool) -> Void)?
+
+    /// The page's player view. It takes the layer unless PiP currently has it.
+    func registerInlineSurface(_ view: MPVSurfaceView) {
+        inlineSurface = view
+        if !isInPictureInPicture { host(in: view) }
+    }
+
+    var inlineView: MPVSurfaceView? { inlineSurface }
+
+    func host(in view: MPVSurfaceView) {
+        guard layerHost !== view else { return }
+        layerHost?.release()
+        view.adopt(layer)
+        layerHost = view
+        appliedDrawable = .zero // force the aspect nudge for the new size
+    }
+
+    /// Moves the layer into a fresh view for the PiP window.
+    func makePictureInPictureView() -> MPVSurfaceView {
+        let view = MPVSurfaceView { [weak self] in self?.surfaceDidResize(to: $0) }
+        isInPictureInPicture = true
+        host(in: view)
+        return view
+    }
+
+    /// PiP ended: give the layer back to the page's player view.
+    func returnFromPictureInPicture() {
+        isInPictureInPicture = false
+        if let inlineSurface { host(in: inlineSurface) }
+    }
+
     // MARK: - Surface size
 
     @ObservationIgnored private var resizeTask: Task<Void, Never>?
@@ -338,7 +377,7 @@ final class MPVPlayer {
     private func apply(_ name: String, _ value: MPVCore.PropertyValue) {
         switch (name, value) {
         case ("pause", .flag(let v)):
-            if v != isPaused { isPaused = v; onPauseChange?(v) }
+            if v != isPaused { isPaused = v; onPauseChange?(v); onPictureInPicturePauseChange?(v) }
         case ("paused-for-cache", .flag(let v)): isBuffering = v
         case ("eof-reached", .flag(let v)): hasEnded = v
         case ("mute", .flag(let v)): isMuted = v

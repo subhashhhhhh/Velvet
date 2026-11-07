@@ -1,54 +1,95 @@
 import SwiftUI
+import OSLog
 import AppKit
 
 /// Hosts mpv's Metal layer and keeps its drawable sized to the view in pixels.
 struct VideoSurface: NSViewRepresentable {
     let player: MPVPlayer
 
-    func makeNSView(context: Context) -> SurfaceView {
-        SurfaceView(layer: player.layer) { [weak player] in player?.surfaceDidResize(to: $0) }
+    func makeNSView(context: Context) -> MPVSurfaceView {
+        let view = MPVSurfaceView { [weak player] in player?.surfaceDidResize(to: $0) }
+        player.registerInlineSurface(view)
+        return view
     }
-    func updateNSView(_ nsView: SurfaceView, context: Context) {}
+    func updateNSView(_ nsView: MPVSurfaceView, context: Context) {}
+}
 
-    final class SurfaceView: NSView {
-        private let metal: CAMetalLayer
-        private let onResize: (CGSize) -> Void
+/// A view that can host mpv's layer. The layer lives in one host at a time (the page's
+/// player, or the Picture in Picture window); `MPVPlayer.host(in:)` moves it between them.
+final class MPVSurfaceView: NSView {
+    private var metal: CAMetalLayer?
+    private let onResize: (CGSize) -> Void
 
-        init(layer: CAMetalLayer, onResize: @escaping (CGSize) -> Void) {
-            metal = layer
-            self.onResize = onResize
-            super.init(frame: .zero)
-            self.layer = layer // layer-hosting: mpv draws into it directly
-            wantsLayer = true
-        }
+    init(onResize: @escaping (CGSize) -> Void) {
+        self.onResize = onResize
+        super.init(frame: .zero)
+        autoresizingMask = [.width, .height]
+        let placeholder = CALayer()
+        placeholder.backgroundColor = NSColor.black.cgColor
+        layer = placeholder
+        wantsLayer = true
+    }
 
-        required init?(coder: NSCoder) { fatalError() }
+    required init?(coder: NSCoder) { fatalError() }
 
-        override func layout() {
-            super.layout()
-            syncDrawable()
-        }
+    var hostsVideo: Bool { metal != nil }
 
-        override func viewDidChangeBackingProperties() {
-            super.viewDidChangeBackingProperties()
-            syncDrawable()
-        }
+    func adopt(_ layer: CAMetalLayer) {
+        metal = layer
+        self.layer = layer // layer-hosting: mpv draws into it directly
+        wantsLayer = true
+        syncDrawable(force: true)
+    }
 
-        private func syncDrawable() {
-            let scale = window?.backingScaleFactor ?? 2
-            metal.contentsScale = scale
-            metal.frame = bounds
-            let pixels = CGSize(width: (bounds.width * scale).rounded(), height: (bounds.height * scale).rounded())
-            guard pixels != metal.drawableSize else { return }
-            metal.drawableSize = pixels
-            onResize(pixels)
-        }
+    func release() {
+        guard metal != nil else { return }
+        metal = nil
+        let placeholder = CALayer()
+        placeholder.backgroundColor = NSColor.black.cgColor
+        layer = placeholder
+    }
+
+    override func layout() {
+        super.layout()
+        syncDrawable()
+    }
+
+    // The PiP window sizes its content view directly (no layout pass for a layer-hosting
+    // view without subviews), so react to frame changes too.
+    override func setFrameSize(_ newSize: NSSize) {
+        super.setFrameSize(newSize)
+        syncDrawable()
+    }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        syncDrawable(force: true)
+    }
+
+    override func viewDidChangeBackingProperties() {
+        super.viewDidChangeBackingProperties()
+        syncDrawable()
+    }
+
+    private func syncDrawable(force: Bool = false) {
+        guard let metal, bounds.width > 0, bounds.height > 0 else { return }
+        let scale = window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
+        metal.contentsScale = scale
+        metal.frame = bounds
+        let pixels = CGSize(width: (bounds.width * scale).rounded(), height: (bounds.height * scale).rounded())
+        guard force || pixels != metal.drawableSize else { return }
+        metal.drawableSize = pixels
+        #if DEBUG
+        Logger(subsystem: "com.subhash.Velvet", category: "PiP").debug("surface \(Int(self.bounds.width))x\(Int(self.bounds.height))pt → \(Int(pixels.width))x\(Int(pixels.height))px window=\(self.window.map { NSStringFromClass(type(of: $0)) } ?? "nil", privacy: .public)")
+        #endif
+        onResize(pixels)
     }
 }
 
 /// Video plus auto-hiding controls and keyboard shortcuts.
 struct PlayerView: View {
     let session: PlayerSession
+    @Environment(AppModel.self) private var app
     var isFullscreen: Bool
     var onToggleFullscreen: () -> Void
 
@@ -62,6 +103,9 @@ struct PlayerView: View {
         ZStack {
             Color.black
             VideoSurface(player: player)
+            if player.isInPictureInPicture {
+                PictureInPicturePlaceholder()
+            }
             statusOverlay
             if let resumed = session.resumedFrom {
                 ResumeNotice(position: resumed) { session.startOver() } onDismiss: { session.resumedFrom = nil }
@@ -140,6 +184,7 @@ struct PlayerView: View {
             case "l": player.seek(by: 10)
             case "m": player.toggleMute()
             case "f": onToggleFullscreen()
+            case "p": app.togglePictureInPicture()
             case ",": player.setSpeed(player.speed - 0.25)
             case ".": player.setSpeed(player.speed + 0.25)
             case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
@@ -154,6 +199,7 @@ struct PlayerView: View {
 
 struct PlayerControls: View {
     let session: PlayerSession
+    @Environment(AppModel.self) private var app
     var isFullscreen: Bool
     var onToggleFullscreen: () -> Void
     var onInteract: () -> Void
@@ -184,6 +230,12 @@ struct PlayerControls: View {
                     Spacer()
                     speedMenu
                     qualityMenu
+                    if PictureInPicture.isAvailable {
+                        Button { app.togglePictureInPicture() } label: {
+                            Image(systemName: player.isInPictureInPicture ? "pip.exit" : "pip.enter")
+                        }
+                        .help("Picture in Picture (P)")
+                    }
                     Button(action: onToggleFullscreen) {
                         Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
                     }
@@ -384,5 +436,18 @@ struct ResumeNotice: View {
             try? await Task.sleep(for: .seconds(6))
             withAnimation { onDismiss() }
         }
+    }
+}
+
+struct PictureInPicturePlaceholder: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "pip").font(.system(size: 40, weight: .light))
+            Text("Playing in Picture in Picture").font(.headline)
+            Button("Bring Back") { app.exitPictureInPicture() }.buttonStyle(.bordered)
+        }
+        .foregroundStyle(.white.opacity(0.85))
     }
 }
