@@ -92,6 +92,43 @@ private nonisolated final class MPVCore: @unchecked Sendable {
         }
     }
 
+    /// The current video frame as an image (mpv `screenshot-raw video`), or nil.
+    func snapshot() -> CGImage? {
+        queue.sync { () -> CGImage? in
+            guard let handle else { return nil }
+            let words: [String] = ["screenshot-raw", "video"]
+            var cargs: [UnsafePointer<CChar>?] = words.map { UnsafePointer(strdup($0)) } + [nil]
+            defer { for p in cargs where p != nil { free(UnsafeMutablePointer(mutating: p!)) } }
+            var result = mpv_node()
+            guard mpv_command_ret(handle, &cargs, &result) >= 0 else { return nil }
+            defer { mpv_free_node_contents(&result) }
+            guard result.format == MPV_FORMAT_NODE_MAP, let list = result.u.list?.pointee else { return nil }
+
+            var w = 0, h = 0, stride = 0
+            var bytes: Data?
+            for i in 0..<Int(list.num) {
+                guard let key = list.keys?[i] else { continue }
+                let value = list.values[i]
+                switch String(cString: key) {
+                case "w": w = Int(value.u.int64)
+                case "h": h = Int(value.u.int64)
+                case "stride": stride = Int(value.u.int64)
+                case "data":
+                    if value.format == MPV_FORMAT_BYTE_ARRAY, let ba = value.u.ba?.pointee, let ptr = ba.data {
+                        bytes = Data(bytes: ptr, count: Int(ba.size))
+                    }
+                default: break
+                }
+            }
+            // "bgr0": 8-bit B,G,R,unused — little-endian 32-bit with the alpha byte skipped.
+            guard w > 0, h > 0, stride > 0, let bytes, let provider = CGDataProvider(data: bytes as CFData) else { return nil }
+            return CGImage(width: w, height: h, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: stride,
+                           space: CGColorSpaceCreateDeviceRGB(),
+                           bitmapInfo: CGBitmapInfo(rawValue: CGBitmapInfo.byteOrder32Little.rawValue | CGImageAlphaInfo.noneSkipFirst.rawValue),
+                           provider: provider, decode: nil, shouldInterpolate: true, intent: .defaultIntent)
+        }
+    }
+
     /// Stops callbacks and destroys mpv. Blocks until the event queue is idle.
     func shutdown() {
         queue.sync {
@@ -309,11 +346,14 @@ final class MPVPlayer {
         layerHost = view
     }
 
-    /// Moves the layer into a fresh view for the PiP window.
+    /// Moves the layer into a fresh view for the PiP window. The page's player keeps a still of
+    /// the current frame, so the window doesn't show a black hole while it slides away (Spaces).
     func makePictureInPictureView() -> MPVSurfaceView {
+        let still = core?.snapshot()
         let view = MPVSurfaceView()
         isInPictureInPicture = true
         host(in: view)
+        inlineSurface?.showStill(still)
         return view
     }
 

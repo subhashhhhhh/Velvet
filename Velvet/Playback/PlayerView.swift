@@ -34,10 +34,20 @@ final class MPVSurfaceView: NSView {
 
     var hostsVideo: Bool { metal != nil }
 
+    /// Shows a frozen frame while the live video is elsewhere (PiP).
+    func showStill(_ image: CGImage?) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        container.contents = image
+        container.contentsGravity = .resizeAspect
+        CATransaction.commit()
+    }
+
     func adopt(_ layer: CAMetalLayer) {
         metal = layer
         CATransaction.begin()
         CATransaction.setDisableActions(true)
+        container.contents = nil
         layer.removeFromSuperlayer()
         container.addSublayer(layer)
         CATransaction.commit()
@@ -452,6 +462,14 @@ struct PictureInPicturePlaceholder: View {
     @Environment(AppModel.self) private var app
 
     var body: some View {
+        ZStack {
+            // Dim the frozen frame underneath, like Safari's PiP placeholder.
+            Color.black.opacity(0.55)
+            content
+        }
+    }
+
+    private var content: some View {
         VStack(spacing: 10) {
             Image(systemName: "pip").font(.system(size: 40, weight: .light))
             Text("Playing in Picture in Picture").font(.headline)

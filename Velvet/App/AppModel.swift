@@ -145,7 +145,7 @@ final class AppModel {
 
     func enterPictureInPicture(automatic: Bool) {
         guard PictureInPicture.isAvailable, !pip.isActive, let player = activePlayer else { return }
-        if playerFullscreen { playerFullscreen = false }
+        // Stay in player fullscreen: coming back should return the video right where it was.
         let returnView = player.inlineView
         let rect = returnView.map { $0.convert($0.bounds, to: nil) }
         let view = player.makePictureInPictureView()
