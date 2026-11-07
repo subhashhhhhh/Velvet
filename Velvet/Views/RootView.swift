@@ -42,6 +42,9 @@ struct RootView: View {
                 LibraryFeedPage(destination: app.destination ?? .home).id(app.destination)
             case .playlists:
                 PlaylistsPage()
+            case .live:
+                SectionedFeedView(feed: app.liveFeed, emptyMessage: "Nothing is live right now.")
+                    .navigationTitle("Live")
             case .shorts:
                 if let shorts = app.shortsTab {
                     // Identity follows the controller so a rebuilt one gets its own start.

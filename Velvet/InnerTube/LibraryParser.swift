@@ -25,6 +25,12 @@ nonisolated struct PlaylistSummary: Identifiable, Hashable, Sendable {
 nonisolated enum LibraryParser {
     /// Splits a browse/continuation response into its item sections, keeping their headers.
     static func sections(in json: JSON) -> [FeedSection] {
+        // Channel-style pages (e.g. YouTube's Live page) group items in titled shelves.
+        let shelves = json.all("richShelfRenderer")
+        if !shelves.isEmpty {
+            return shelves.map { section(title: $0["title"].text, from: $0) }
+                .filter { !$0.videos.isEmpty || !$0.shorts.isEmpty }
+        }
         let sectionNodes = json.all("itemSectionRenderer")
         guard !sectionNodes.isEmpty else {
             return [section(title: nil, from: json)].filter { !$0.videos.isEmpty || !$0.shorts.isEmpty }

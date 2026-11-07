@@ -396,6 +396,8 @@ final class AppModel {
     /// Recommendations; kept here so the feed survives navigating away and back.
     private(set) var homeFeed: FeedModel?
 
+    /// YouTube's own Live page (works signed out too): Live Now, News, Gaming, Sports, Upcoming…
+    @ObservationIgnored private(set) lazy var liveFeed = SectionedFeedModel(browseId: "UC4R8DWoMoI7CAwX8_LjQHig", client: client)
     private(set) var historyFeed: SectionedFeedModel?
     private(set) var watchLaterFeed: SectionedFeedModel?
     private(set) var playlistsModel: PlaylistsModel?
