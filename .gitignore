@@ -1,0 +1,15 @@
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+build/
+*.xcscmblueprint
+.swiftpm/
+.build/
+
+# macOS
+.DS_Store
+
+# Local tooling / secrets
+*.cookies
+.env
