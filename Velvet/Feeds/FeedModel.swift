@@ -27,9 +27,11 @@ final class FeedModel {
         self.client = client
     }
 
+    /// Starts the first load in its own task: a view's `.task` being cancelled (SwiftUI
+    /// re-creating the view) must not cancel the load or leave the model marked as loaded.
     func loadIfNeeded() async {
-        guard !hasLoaded else { return }
-        await reload()
+        guard !hasLoaded, !isLoading else { return }
+        await Task { await self.reload() }.value
     }
 
     func reload() async {

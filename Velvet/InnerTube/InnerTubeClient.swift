@@ -162,7 +162,8 @@ actor InnerTubeClient {
         if let auth, let http, let headers = http.allHeaderFields as? [String: String], let url = http.url {
             await auth.absorb(responseHeaders: headers, url: url)
         }
-        log.debug("\(endpoint, privacy: .public) \(status) \(data.count)B in \(ContinuousClock.now - start)")
+        let target = body["browseId"]?.string ?? body["videoId"]?.string ?? (body["continuation"] != nil ? "continuation" : "")
+        log.debug("\(endpoint, privacy: .public) \(target, privacy: .public) \(status) \(data.count)B in \(ContinuousClock.now - start, privacy: .public)")
         guard (200..<300).contains(status) else { throw InnerTubeError.http(status, endpoint) }
         return try JSON(data: data)
     }
