@@ -18,11 +18,29 @@ struct RootView: View {
     @ViewBuilder
     private var detail: some View {
         if let query = app.activeSearch {
-            PlaceholderView(title: "Search", symbol: "magnifyingglass", message: "Results for “\(query)” land in the next step.")
+            SearchResultsView(query: query)
         } else {
             let d = app.destination ?? .home
             PlaceholderView(title: d.title, symbol: d.symbol, message: "Coming soon.")
         }
+    }
+}
+
+struct SearchResultsView: View {
+    let query: String
+    @Environment(AppModel.self) private var app
+    @State private var feed: FeedModel?
+
+    var body: some View {
+        Group {
+            if let feed, feed.source == .search(query) {
+                FeedView(feed: feed, onOpen: app.open).id(query)
+            } else {
+                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .navigationTitle(query)
+        .task(id: query) { feed = FeedModel(source: .search(query), client: app.client) }
     }
 }
 

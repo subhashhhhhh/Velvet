@@ -39,9 +39,25 @@ final class AppModel {
     /// The submitted query; non-nil shows search results instead of the destination.
     var activeSearch: String?
 
+    init() {
+        #if DEBUG
+        // `-VelvetSearch "query"` opens straight into results; handy for testing.
+        if let q = UserDefaults.standard.string(forKey: "VelvetSearch"), !q.isEmpty {
+            searchText = q
+            activeSearch = q
+        }
+        #endif
+    }
+
     func submitSearch() {
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         activeSearch = q.isEmpty ? nil : q
+    }
+
+    /// Opens a video. Playback arrives with the mpv player; for now this just records it.
+    var openedVideo: Video?
+    func open(_ video: Video) {
+        openedVideo = video
     }
 
     func navigate(to destination: Destination) {
