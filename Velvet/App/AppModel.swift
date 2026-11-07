@@ -77,7 +77,16 @@ final class AppModel {
     private(set) var session: YouTubeSession?
     var showingSignIn = false
     /// Bumped on sign-in/out so account-dependent feeds rebuild.
-    private(set) var authRevision = 0
+    private(set) var authRevision = 0 {
+        didSet { rebuildAccountFeeds() }
+    }
+
+    /// Recommendations; kept here so the feed survives navigating away and back.
+    private(set) var homeFeed: FeedModel?
+
+    private func rebuildAccountFeeds() {
+        homeFeed = authState == .signedIn ? FeedModel(source: .browse("FEwhat_to_watch"), client: client) : nil
+    }
 
     /// Restores a saved session at launch.
     func start() async {

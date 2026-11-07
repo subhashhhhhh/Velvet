@@ -27,8 +27,12 @@ struct RootView: View {
         if let query = app.activeSearch {
             SearchResultsView(query: query)
         } else {
-            let d = app.destination ?? .home
-            PlaceholderView(title: d.title, symbol: d.symbol, message: "Coming soon.")
+            switch app.destination ?? .home {
+            case .home:
+                HomeView()
+            case let d:
+                PlaceholderView(title: d.title, symbol: d.symbol, message: "Coming soon.")
+            }
         }
     }
 }
