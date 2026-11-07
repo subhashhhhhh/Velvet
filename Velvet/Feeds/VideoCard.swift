@@ -79,6 +79,9 @@ struct VideoCard: View {
                     fallback: brandedThumbnail == nil ? nil : video.thumbnail(minWidth: 480))
             .aspectRatio(16 / 9, contentMode: .fit)
             .overlay(alignment: .bottomTrailing) { badge.padding(6) }
+            .overlay(alignment: .topLeading) {
+                if video.isMembersOnly { MembersOnlyBadge().padding(6) }
+            }
             .overlay(alignment: .bottom) {
                 if let f = app.progress.fraction(for: video.id) ?? video.watchedFraction, f > 0.01 {
                     GeometryReader { geo in
@@ -199,5 +202,19 @@ struct DeArrowKey: Equatable {
         self.videoId = videoId
         titles = prefs.deArrowTitles
         thumbnails = prefs.deArrowThumbnails
+    }
+}
+
+/// "★ Members only" tag for videos only the channel's paying members can watch.
+struct MembersOnlyBadge: View {
+    var body: some View {
+        Label("Members only", systemImage: "star.fill")
+            .labelStyle(.titleAndIcon)
+            .font(.system(size: 11, weight: .semibold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color(red: 0.13, green: 0.55, blue: 0.27), in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+            .help("Only the channel's members can watch this")
     }
 }

@@ -27,6 +27,8 @@ nonisolated struct Video: Identifiable, Hashable, Sendable {
     var thumbnails: [Thumbnail] = []
     /// 0...1 when YouTube reports the signed-in user has partially watched it.
     var watchedFraction: Double?
+    /// Only the channel's paying members can watch it.
+    var isMembersOnly = false
 
     /// Smallest thumbnail at least `minWidth` pixels wide, else the largest available.
     /// Falls back to YouTube's predictable `mqdefault` (320×180) URL.

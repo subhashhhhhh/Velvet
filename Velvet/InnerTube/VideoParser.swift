@@ -99,7 +99,7 @@ nonisolated enum VideoParser {
             .compactMap { $0["thumbnailOverlayResumePlaybackRenderer"]["percentDurationWatched"].double }
             .first
 
-        return Video(
+        var video = Video(
             id: id,
             title: title,
             kind: kind,
@@ -113,6 +113,8 @@ nonisolated enum VideoParser {
             thumbnails: thumbnails(r["thumbnail"]["thumbnails"]),
             watchedFraction: resume.map { $0 / 100 }
         )
+        video.isMembersOnly = badges.contains("BADGE_STYLE_TYPE_MEMBERS_ONLY")
+        return video
     }
 
     // MARK: - lockupViewModel
@@ -169,8 +171,10 @@ nonisolated enum VideoParser {
 
         let duration = badgeTexts.first { $0.contains(":") }
         let progress = image.first("startPercent")?.double
+        // Metadata-row badges, e.g. {badgeStyle: BADGE_MEMBERS_ONLY, badgeText: "Members only"}.
+        let rowBadges = rows.flatMap { $0["badges"].array.compactMap { $0["badgeViewModel"]["badgeStyle"].string } }
 
-        return Video(
+        var video = Video(
             id: id,
             title: title,
             kind: kind,
@@ -183,6 +187,8 @@ nonisolated enum VideoParser {
             thumbnails: thumbnails(image["image"]["sources"]),
             watchedFraction: progress.map { $0 / 100 }
         )
+        video.isMembersOnly = rowBadges.contains("BADGE_MEMBERS_ONLY")
+        return video
     }
 
     // MARK: - Shorts

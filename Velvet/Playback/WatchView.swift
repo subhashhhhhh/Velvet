@@ -342,6 +342,9 @@ private struct RelatedRow: View {
             RemoteImage(url: brandedThumbnail ?? video.thumbnail(minWidth: 336),
                         fallback: brandedThumbnail == nil ? nil : video.thumbnail(minWidth: 336))
                 .frame(width: 168, height: 94.5)
+                .overlay(alignment: .topLeading) {
+                    if video.isMembersOnly { MembersOnlyBadge().scaleEffect(0.85, anchor: .topLeading).padding(4) }
+                }
                 .overlay(alignment: .bottomTrailing) {
                     if video.kind == .live { BadgeLabel(text: "LIVE", background: .red).padding(4) }
                     else if let d = video.duration { BadgeLabel(text: d, background: .black.opacity(0.75)).padding(4) }
