@@ -29,6 +29,9 @@ final class PictureInPicture: NSObject {
     /// Why PiP is closing: our own exit(), the X button, or the restore button.
     private var closingBecauseOfExit = false
     private var stopPressed = false
+    /// Between pipWillClose and pipDidClose: the closing animation is running.
+    private var isClosing = false
+    private var restoreSignalled = false
 
     private var pip: NSViewController?
     private var content: NSViewController?
@@ -98,6 +101,8 @@ final class PictureInPicture: NSObject {
         guard isActive, let pip, let content else { return }
         // Dismissing mid-presentation is ignored by PIP.framework; do it once it's shown.
         if isPresenting { exitRequested = true; return }
+        // Already animating closed (e.g. the restore button): a second dismiss would fight it.
+        if isClosing { return }
         closingBecauseOfExit = true
         if let window, let rect {
             pip.setValue(window, forKey: "replacementWindow")
@@ -106,24 +111,39 @@ final class PictureInPicture: NSObject {
         pip.dismiss(content)
     }
 
+    private var isRestore: Bool { !closingBecauseOfExit && !stopPressed }
+
+    /// Closing has begun. For the restore button, switch to the app *now* so the Space slide
+    /// and PiP's fly-back animation run together instead of one after the other.
+    private func willClose() {
+        isClosing = true
+        if isRestore && !restoreSignalled {
+            restoreSignalled = true
+            onRestoreRequested?()
+        }
+    }
+
     private func finish() {
         guard isActive else { return }
-        let restore = !closingBecauseOfExit && !stopPressed
+        let restore = isRestore
         isActive = false
         startedAutomatically = false
         closingBecauseOfExit = false
         stopPressed = false
+        isClosing = false
         pip = nil
         content = nil
         log.info("Left PiP\(restore ? " (restore to app)" : "", privacy: .public)")
         onClosed?()
-        if restore { onRestoreRequested?() }
+        // Fallback if the framework skipped pipWillClose.
+        if restore && !restoreSignalled { onRestoreRequested?() }
+        restoreSignalled = false
     }
 
     // MARK: - PIPViewControllerDelegate (informal; selector names as used by IINA)
 
     @objc func pipShouldClose(_ pip: NSViewController) -> Bool { true }
-    @objc func pipWillClose(_ pip: NSViewController) {}
+    @objc func pipWillClose(_ pip: NSViewController) { willClose() }
     @objc func pipDidClose(_ pip: NSViewController) { finish() }
     @objc func pipActionPlay(_ pip: NSViewController) { onPlay?() }
     @objc func pipActionPause(_ pip: NSViewController) { onPause?() }
