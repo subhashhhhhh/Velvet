@@ -3,16 +3,26 @@ import SwiftUI
 /// Grid of videos with an optional Shorts shelf, infinite scroll and states.
 struct FeedView: View {
     let feed: FeedModel
-    var showsShorts = true
-    /// Rows of regular videos shown before the Shorts shelf.
-    var shortsAfterRows = 3
+    /// Set false for surfaces that should never show the Shorts shelf.
+    var allowsShortsShelf = true
     var onOpen: (Video) -> Void = { _ in }
 
-    private nonisolated static let minCardWidth: CGFloat = 260
+    @Environment(AppModel.self) private var app
+    @State private var gridWidth: CGFloat = 0
+
+    private var columnCount: Int {
+        Self.columns(for: gridWidth - Self.padding * 2, minCard: prefs.cardSize.minWidth)
+    }
+
     private nonisolated static let spacing: CGFloat = 14
     private nonisolated static let padding: CGFloat = 20
 
-    @State private var columnCount = 3
+    private var prefs: Preferences { app.settings }
+
+    /// Videos after applying the "hide watched" preference.
+    private var visible: [Video] {
+        prefs.hideWatched ? feed.videos.filter { ($0.watchedFraction ?? 0) < 0.9 } : feed.videos
+    }
 
     var body: some View {
         Group {
@@ -21,30 +31,29 @@ struct FeedView: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 24) {
-                        let split = min(feed.videos.count, columnCount * shortsAfterRows)
-                        grid(feed.videos[..<split])
-                        if showsShorts && !feed.shorts.isEmpty {
+                        let videos = visible
+                        let split = min(videos.count, columnCount * prefs.shortsAfterRows)
+                        grid(videos[..<split], all: videos)
+                        if allowsShortsShelf && prefs.showShortsShelf && !feed.shorts.isEmpty {
                             ShortsShelf(shorts: feed.shorts, onOpen: onOpen)
                         }
-                        grid(feed.videos[split...])
+                        grid(videos[split...], all: videos)
                         footer
                     }
                     .padding(Self.padding)
                 }
-                .onGeometryChange(for: Int.self) { geo in
-                    Self.columns(for: geo.size.width - Self.padding * 2)
-                } action: { columnCount = $0 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 }
             }
         }
         .task { await feed.loadIfNeeded() }
     }
 
     /// Explicit column count (instead of `.adaptive`) so "after N rows" is exact.
-    private nonisolated static func columns(for width: CGFloat) -> Int {
-        max(1, Int((width + spacing) / (minCardWidth + spacing)))
+    private nonisolated static func columns(for width: CGFloat, minCard: CGFloat) -> Int {
+        max(1, Int((width + spacing) / (minCard + spacing)))
     }
 
-    private func grid(_ videos: ArraySlice<Video>) -> some View {
+    private func grid(_ videos: ArraySlice<Video>, all: [Video]) -> some View {
         LazyVGrid(
             columns: Array(repeating: GridItem(.flexible(), spacing: Self.spacing, alignment: .top), count: columnCount),
             alignment: .leading,
@@ -53,7 +62,12 @@ struct FeedView: View {
             ForEach(videos) { video in
                 Button { onOpen(video) } label: { VideoCard(video: video) }
                     .buttonStyle(.plain)
-                    .onAppear { feed.itemAppeared(video) }
+                    .onAppear {
+                        // Fetch the next page when one of the last few visible cards appears.
+                        if all.suffix(8).contains(where: { $0.id == video.id }) {
+                            Task { await feed.loadMore() }
+                        }
+                    }
             }
         }
     }

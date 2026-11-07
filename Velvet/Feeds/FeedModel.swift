@@ -44,13 +44,6 @@ final class FeedModel {
         await load(continuation: token)
     }
 
-    /// Call when `video` appears on screen; prefetches the next page near the end.
-    func itemAppeared(_ video: Video) {
-        guard canLoadMore, !isLoading,
-              let index = videos.lastIndex(of: video), index >= videos.count - 8 else { return }
-        Task { await loadMore() }
-    }
-
     private func load(continuation token: String?) async {
         isLoading = true
         error = nil
