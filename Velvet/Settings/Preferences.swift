@@ -123,6 +123,7 @@ final class Preferences {
     var bufferMB: Int { didSet { save(bufferMB, .bufferMB) } }
     var prefetchOnHover: Bool { didSet { save(prefetchOnHover, .prefetchOnHover) } }
     var autoPictureInPicture: Bool { didSet { save(autoPictureInPicture, .autoPictureInPicture) } }
+    var pipOnScroll: Bool { didSet { save(pipOnScroll, .pipOnScroll) } }
 
     // SponsorBlock
     var sponsorBlockEnabled: Bool { didSet { save(sponsorBlockEnabled, .sponsorBlockEnabled) } }
@@ -162,6 +163,7 @@ final class Preferences {
         bufferMB = get(.bufferMB, 150)
         prefetchOnHover = get(.prefetchOnHover, true)
         autoPictureInPicture = get(.autoPictureInPicture, true)
+        pipOnScroll = get(.pipOnScroll, true)
 
         sponsorBlockEnabled = get(.sponsorBlockEnabled, true)
         var actions = Dictionary(uniqueKeysWithValues: SponsorCategory.allCases.map { ($0, $0.defaultAction) })
@@ -195,7 +197,7 @@ final class Preferences {
         quality = fresh.quality; codec = fresh.codec; defaultSpeed = fresh.defaultSpeed
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
-        autoPictureInPicture = fresh.autoPictureInPicture
+        autoPictureInPicture = fresh.autoPictureInPicture; pipOnScroll = fresh.pipOnScroll
         sponsorBlockEnabled = fresh.sponsorBlockEnabled; sponsorActions = fresh.sponsorActions
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
         deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
@@ -207,7 +209,7 @@ final class Preferences {
 
     private enum Key: CaseIterable {
         case startPage, showShortsShelf, shortsAfterRows, cardSize, hideWatched
-        case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture
+        case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
         case jsRuntime, autoUpdateTools

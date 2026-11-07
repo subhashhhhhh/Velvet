@@ -83,8 +83,15 @@ final class AppModel {
     /// The player itself is drawn in a window-level layer (RootView) so fullscreen is a single
     /// frame animation over everything, sidebar included.
     var sidebarVisibility = NavigationSplitViewVisibility.automatic
-    var playerSlot: CGRect = .zero
-    var watchViewport: CGRect = .zero
+    var playerSlot: CGRect = .zero { didSet { playerVisibilityChanged() } }
+    var watchViewport: CGRect = .zero { didSet { playerVisibilityChanged() } }
+
+    /// How much of the inline player is inside the watch page's visible area (0…1).
+    var playerVisibleFraction: CGFloat {
+        guard playerSlot.height > 0, !watchViewport.isEmpty else { return 1 }
+        let visible = playerSlot.intersection(watchViewport)
+        return visible.isNull ? 0 : visible.height / playerSlot.height
+    }
 
     func makeSession(for video: Video) -> PlayerSession {
         PlayerSession(video: video, resolver: resolver, preferences: settings,
@@ -144,7 +151,12 @@ final class AppModel {
         pip.isActive ? exitPictureInPicture() : enterPictureInPicture(automatic: false)
     }
 
-    func enterPictureInPicture(automatic: Bool) {
+    /// Why PiP started, which decides what ends it.
+    enum PiPReason { case manual, windowHidden, scrolledPast }
+    @ObservationIgnored private var pipReason: PiPReason = .manual
+
+    func enterPictureInPicture(automatic: Bool, reason: PiPReason? = nil) {
+        pipReason = reason ?? (automatic ? .windowHidden : .manual)
         guard PictureInPicture.isAvailable, !pip.isActive, let player = activePlayer else { return }
         // Stay in player fullscreen: coming back should return the video right where it was.
         let returnView = player.inlineView
@@ -169,13 +181,27 @@ final class AppModel {
         pip.onRestoreRequested = { [weak self] in self?.bringToFront() }
         pip.enter(view: view, aspect: player.videoSize ?? CGSize(width: 16, height: 9), playing: !player.isPaused,
                   returnTo: returnView?.window, rect: rect, automatic: automatic)
-        releaseHiddenPageMemory()
+        if pipReason != .scrolledPast { releaseHiddenPageMemory() }
     }
 
     func exitPictureInPicture() {
         guard pip.isActive else { return }
         let inline = pipPlayer?.inlineView
         pip.exit(returnTo: inline?.window, rect: inline.map { $0.convert($0.bounds, to: nil) })
+    }
+
+    /// Scrolling the watch page: move the video into PiP once the player is mostly out of view,
+    /// and back once it's mostly visible again (hysteresis avoids flicker at the edge).
+    private func playerVisibilityChanged() {
+        guard settings.pipOnScroll, watching != nil, !playerFullscreen,
+              mainWindow?.occlusionState.contains(.visible) ?? true else { return }
+        let fraction = playerVisibleFraction
+        if !pip.isActive {
+            guard fraction < 0.33, let player = activePlayer, !player.isPaused, player.position > 0 else { return }
+            enterPictureInPicture(automatic: true, reason: .scrolledPast)
+        } else if pipReason == .scrolledPast, fraction > 0.5 {
+            exitPictureInPicture()
+        }
     }
 
     /// After PiP's restore button, don't let automatic PiP re-trigger while we switch back.
@@ -195,7 +221,48 @@ final class AppModel {
         }
     }
 
+    @ObservationIgnored private var scrollMonitor: Any?
+
+    /// The inline player floats above the page (see PlayerLayer), so wheel/trackpad scrolling
+    /// over it would never reach the page. Forward those events to the page's scroll view.
+    private func installScrollForwarding() {
+        guard scrollMonitor == nil else { return }
+        scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
+            // Local monitors run on the main thread; NSEvent just isn't marked Sendable.
+            nonisolated(unsafe) let event = event
+            let consumed = MainActor.assumeIsolated { () -> Bool in
+                guard let self, self.watching != nil, !self.playerFullscreen,
+                      let window = self.mainWindow, event.window === window,
+                      let content = window.contentView else { return false }
+                // SwiftUI's .global space here is the content view with a top-left origin.
+                let p = event.locationInWindow
+                let point = CGPoint(x: p.x, y: content.bounds.height - p.y)
+                guard self.playerSlot.contains(point), self.watchViewport.contains(point),
+                      let scrollView = Self.largestScrollView(in: content, containing: event.locationInWindow) else { return false }
+                scrollView.scrollWheel(with: event)
+                return true
+            }
+            return consumed ? nil : event
+        }
+    }
+
+    /// The page's main scroll view: the largest NSScrollView under the point.
+    private static func largestScrollView(in root: NSView, containing windowPoint: NSPoint) -> NSScrollView? {
+        var best: NSScrollView?
+        func visit(_ v: NSView) {
+            if let sv = v as? NSScrollView, !sv.isHidden,
+               sv.convert(sv.bounds, to: nil).contains(windowPoint),
+               sv.bounds.height * sv.bounds.width > (best.map { $0.bounds.height * $0.bounds.width } ?? 0) {
+                best = sv
+            }
+            v.subviews.forEach(visit)
+        }
+        visit(root)
+        return best
+    }
+
     private func observeWindow() {
+        installScrollForwarding()
         if let occlusionObserver { NotificationCenter.default.removeObserver(occlusionObserver) }
         guard let mainWindow else { return }
         occlusionObserver = NotificationCenter.default.addObserver(
@@ -213,12 +280,16 @@ final class AppModel {
         if !visible {
             guard settings.autoPictureInPicture, !pip.isActive, Date() > suppressAutoPiPUntil,
                   let player = activePlayer, !player.isPaused, player.duration > 0 || player.position > 0 else { return }
-            enterPictureInPicture(automatic: true)
+            enterPictureInPicture(automatic: true, reason: .windowHidden)
         } else {
             // Back on Velvet: the post-restore pause has done its job (it only exists to stop a
             // re-PiP loop if switching back failed), so switching away again should PiP at once.
             suppressAutoPiPUntil = .distantPast
-            if pip.isActive && pip.startedAutomatically { exitPictureInPicture() }
+            // Coming back: end a window-hidden PiP, unless the player is scrolled out of view
+            // (then it stays in PiP, as if it had been scrolled past).
+            if pip.isActive && pip.startedAutomatically {
+                if playerVisibleFraction > 0.5 { exitPictureInPicture() } else { pipReason = .scrolledPast }
+            }
         }
     }
 
@@ -361,6 +432,19 @@ final class AppModel {
         }
         #if DEBUG
         if let id = UserDefaults.standard.string(forKey: "VelvetChannel"), !id.isEmpty { openChannel(id) }
+        // `-VelvetScrollPiPTest YES` (with -VelvetPlay): scroll the page down at 9s, back up at 15s.
+        if UserDefaults.standard.bool(forKey: "VelvetScrollPiPTest") {
+            Task {
+                @MainActor func scroll(to y: CGFloat) {
+                    guard let content = mainWindow?.contentView,
+                          let sv = Self.largestScrollView(in: content, containing: NSPoint(x: content.bounds.midX, y: content.bounds.midY)) else { return }
+                    sv.contentView.scroll(to: NSPoint(x: 0, y: y))
+                    sv.reflectScrolledClipView(sv.contentView)
+                }
+                try? await Task.sleep(for: .seconds(9)); scroll(to: 900)
+                try? await Task.sleep(for: .seconds(6)); scroll(to: 0)
+            }
+        }
         if let id = UserDefaults.standard.string(forKey: "VelvetHomeThenPlay"), !id.isEmpty {
             Task {
                 try? await Task.sleep(for: .seconds(10))
