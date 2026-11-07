@@ -4,9 +4,15 @@ import SwiftUI
 struct FeedView: View {
     let feed: FeedModel
     var showsShorts = true
+    /// Rows of regular videos shown before the Shorts shelf.
+    var shortsAfterRows = 3
     var onOpen: (Video) -> Void = { _ in }
 
-    private let columns = [GridItem(.adaptive(minimum: 260, maximum: 420), spacing: 14, alignment: .top)]
+    private nonisolated static let minCardWidth: CGFloat = 260
+    private nonisolated static let spacing: CGFloat = 14
+    private nonisolated static let padding: CGFloat = 20
+
+    @State private var columnCount = 3
 
     var body: some View {
         Group {
@@ -15,23 +21,41 @@ struct FeedView: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 24) {
+                        let split = min(feed.videos.count, columnCount * shortsAfterRows)
+                        grid(feed.videos[..<split])
                         if showsShorts && !feed.shorts.isEmpty {
                             ShortsShelf(shorts: feed.shorts, onOpen: onOpen)
                         }
-                        LazyVGrid(columns: columns, alignment: .leading, spacing: 18) {
-                            ForEach(feed.videos) { video in
-                                Button { onOpen(video) } label: { VideoCard(video: video) }
-                                    .buttonStyle(.plain)
-                                    .onAppear { feed.itemAppeared(video) }
-                            }
-                        }
+                        grid(feed.videos[split...])
                         footer
                     }
-                    .padding(20)
+                    .padding(Self.padding)
                 }
+                .onGeometryChange(for: Int.self) { geo in
+                    Self.columns(for: geo.size.width - Self.padding * 2)
+                } action: { columnCount = $0 }
             }
         }
         .task { await feed.loadIfNeeded() }
+    }
+
+    /// Explicit column count (instead of `.adaptive`) so "after N rows" is exact.
+    private nonisolated static func columns(for width: CGFloat) -> Int {
+        max(1, Int((width + spacing) / (minCardWidth + spacing)))
+    }
+
+    private func grid(_ videos: ArraySlice<Video>) -> some View {
+        LazyVGrid(
+            columns: Array(repeating: GridItem(.flexible(), spacing: Self.spacing, alignment: .top), count: columnCount),
+            alignment: .leading,
+            spacing: 18
+        ) {
+            ForEach(videos) { video in
+                Button { onOpen(video) } label: { VideoCard(video: video) }
+                    .buttonStyle(.plain)
+                    .onAppear { feed.itemAppeared(video) }
+            }
+        }
     }
 
     @ViewBuilder
