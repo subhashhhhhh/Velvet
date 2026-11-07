@@ -21,6 +21,9 @@ final class PictureInPicture: NSObject {
 
     var onPlay: (() -> Void)?
     var onPause: (() -> Void)?
+    /// The native scrubber and skip buttons both arrive as a relative jump in seconds.
+    var onSkip: ((Double) -> Void)?
+    var onSkipToLive: (() -> Void)?
     /// PiP closed (via its own buttons or `exit()`); the caller moves the video back inline.
     var onClosed: (() -> Void)?
     /// The user pressed PiP's "return to app" button: bring the app's window forward.
@@ -144,10 +147,26 @@ final class PictureInPicture: NSObject {
     /// Discovery aid: log every optional delegate method PIP.framework asks about.
     nonisolated override func responds(to aSelector: Selector!) -> Bool {
         let name = NSStringFromSelector(aSelector)
-        if name.lowercased().contains("pip") {
+        if name.lowercased().contains("pip") || name.lowercased().contains("skip") || name.lowercased().contains("seek") {
             Logger(subsystem: "com.subhash.Velvet", category: "PiP").debug("PIP asks delegate: \(name, privacy: .public)")
         }
         return super.responds(to: aSelector)
+    }
+
+    /// Catches messages sent without a responds(to:) check, so their names show up too.
+    nonisolated override func forwardingTarget(for aSelector: Selector!) -> Any? {
+        Logger(subsystem: "com.subhash.Velvet", category: "PiP").debug("PIP sent unhandled: \(NSStringFromSelector(aSelector), privacy: .public)")
+        return super.forwardingTarget(for: aSelector)
+    }
+
+    /// Debug: simulate the system's skip message (what scrubbing/skip buttons send).
+    func debugSimulateSkip(_ seconds: Double) {
+        guard let pip else { return }
+        let sel = NSSelectorFromString("_pipActionSkipInterval:")
+        guard let m = class_getInstanceMethod(type(of: pip), sel) else { log.info("no _pipActionSkipInterval:"); return }
+        typealias Fn = @convention(c) (NSObject, Selector, Double) -> Void
+        log.info("Simulating skip \(seconds, privacy: .public)s")
+        unsafeBitCast(method_getImplementation(m), to: Fn.self)(pip, sel, seconds)
     }
     #endif
 
@@ -176,6 +195,15 @@ final class PictureInPicture: NSObject {
     @objc func pipShouldClose(_ pip: NSViewController) -> Bool { true }
     @objc func pipWillClose(_ pip: NSViewController) { willClose() }
     @objc func pipDidClose(_ pip: NSViewController) { finish() }
+    /// Scrubbing and the ±skip buttons (selector discovered from PIP.framework's delegate checks).
+    @objc(pipAction:skipInterval:) func pipAction(_ pip: NSViewController, skipInterval: Double) {
+        log.info("PiP skip \(skipInterval, privacy: .public)s")
+        onSkip?(skipInterval)
+    }
+    @objc(pipAction:setPlaying:) func pipAction(_ pip: NSViewController, setPlaying playing: Bool) {
+        playing ? onPlay?() : onPause?()
+    }
+    @objc func pipActionSkipToLive(_ pip: NSViewController) { onSkipToLive?() }
     @objc func pipActionPlay(_ pip: NSViewController) { onPlay?() }
     @objc func pipActionPause(_ pip: NSViewController) { onPause?() }
     /// The X button: pause and close, without pulling the user back to the app.

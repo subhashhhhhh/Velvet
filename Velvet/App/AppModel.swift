@@ -173,6 +173,14 @@ final class AppModel {
         pipPlayer = player
         pip.onPlay = { [weak player] in player?.play() }
         pip.onPause = { [weak player] in player?.pause() }
+        pip.onSkip = { [weak self, weak player] delta in
+            guard let player else { return }
+            player.seek(by: delta)
+            // Reflect the jump in the PiP timeline right away instead of on the next tick.
+            self?.pip.updatePlayback(duration: player.duration, elapsed: player.position, rate: player.speed,
+                                     playing: !player.isPaused, live: false)
+        }
+        pip.onSkipToLive = { [weak self] in (self?.watching ?? self?.shortsOverlay?.session)?.goLive() }
         pip.onClosed = { [weak self, weak player] in
             player?.returnFromPictureInPicture()
             player?.onPictureInPicturePauseChange = nil
@@ -479,6 +487,13 @@ final class AppModel {
                     try? await Task.sleep(for: .seconds(6))
                     enterPictureInPicture(automatic: false)
                     try? await Task.sleep(for: .seconds(3))
+                    if UserDefaults.standard.bool(forKey: "VelvetPiPSkipTest") {
+                        let before = watching?.player.position ?? 0
+                        pip.debugSimulateSkip(30)
+                        try? await Task.sleep(for: .seconds(1.5))
+                        log.info("PiP skip test: position \(Int(before), privacy: .public)s → \(Int(self.watching?.player.position ?? 0), privacy: .public)s")
+                    }
+                    try? await Task.sleep(for: .seconds(1))
                     watching?.player.pause()
                     try? await Task.sleep(for: .seconds(3))
                     exitPictureInPicture()
