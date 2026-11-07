@@ -17,6 +17,8 @@ nonisolated struct StreamFormat: Hashable, Sendable {
     let isDefaultAudio: Bool
     /// "DRC" = YouTube's dynamic-range-compressed (stable volume) variant of an audio track.
     let isDRC: Bool
+    /// Headers yt-dlp says the URL must be fetched with (notably User-Agent).
+    let httpHeaders: [String: String]
 
     var hasVideo: Bool { vcodec.map { $0 != "none" } ?? false }
     var hasAudio: Bool { acodec.map { $0 != "none" } ?? false }
@@ -157,7 +159,8 @@ extension StreamInfo {
                 language: f["language"].string,
                 // yt-dlp ranks the original track highest via language_preference.
                 isDefaultAudio: note.contains("default") || note.contains("original") || (f["language_preference"].int ?? 0) >= 10,
-                isDRC: id.hasSuffix("-drc") || note.contains("drc")
+                isDRC: id.hasSuffix("-drc") || note.contains("drc"),
+                httpHeaders: (f["http_headers"].object ?? [:]).compactMapValues(\.string)
             )
         }
         expires = earliestExpiry.isFinite
