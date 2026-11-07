@@ -68,10 +68,12 @@ nonisolated enum WatchParser {
     static func comments(from json: JSON) -> CommentsPage {
         // Comment bodies are entities in frameworkUpdates, linked by `commentKey`.
         var entities: [String: JSON] = [:]
+        // GIF attachments live on a separate "surface" entity, linked by commentSurfaceKey.
+        var surfaces: [String: JSON] = [:]
         for m in json["frameworkUpdates"]["entityBatchUpdate"]["mutations"].array {
-            if let key = m["entityKey"].string, !m["payload"]["commentEntityPayload"].isNull {
-                entities[key] = m["payload"]["commentEntityPayload"]
-            }
+            guard let key = m["entityKey"].string else { continue }
+            if !m["payload"]["commentEntityPayload"].isNull { entities[key] = m["payload"]["commentEntityPayload"] }
+            if !m["payload"]["commentSurfaceEntityPayload"].isNull { surfaces[key] = m["payload"]["commentSurfaceEntityPayload"] }
         }
 
         let items = continuationItems(json)
@@ -100,12 +102,21 @@ nonisolated enum WatchParser {
                 replyCount: Int(toolbar["replyCount"].string ?? "") ?? toolbar["replyCount"].int ?? 0,
                 isCreator: author["isCreator"].bool ?? false,
                 isVerified: author["isVerified"].bool ?? false,
-                repliesToken: thread["replies"].first("token")?.string
+                repliesToken: thread["replies"].first("token")?.string,
+                gif: vm["commentSurfaceKey"].string.flatMap { surfaces[$0] }.flatMap(gif(from:))
             ))
         }
         // The page's own "load more" is the trailing continuation item.
         let token = items.last.flatMap { $0["continuationItemRenderer"].isNull ? nil : $0["continuationItemRenderer"].first("token")?.string }
         return CommentsPage(comments: comments, continuation: token)
+    }
+
+    private static func gif(from surface: JSON) -> CommentGIF? {
+        let a = surface["imageAttachmentViewModel"]["commentImageAttachmentViewModel"]
+        guard let src = a["image"]["sources"].array.first,
+              let url = VideoParser.url(src["url"].string) else { return nil }
+        let w = a["width"].double ?? src["width"].double ?? 1, h = a["height"].double ?? src["height"].double ?? 1
+        return CommentGIF(url: url, width: w, height: h)
     }
 
     /// Items appended/reloaded by a continuation response.

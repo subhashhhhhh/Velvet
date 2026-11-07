@@ -57,6 +57,13 @@ actor ImagePipeline {
         return image
     }
 
+    /// Raw bytes (via the same disk cache), for formats decoded elsewhere such as animated WebP.
+    func data(for url: URL) async -> Data? {
+        guard let (data, response) = try? await session.data(from: url),
+              (response as? HTTPURLResponse)?.statusCode ?? 200 < 400 else { return nil }
+        return data
+    }
+
     func clearMemory() { cache.removeAllObjects() }
 
     /// Drops decoded images and the on-disk download cache.

@@ -47,6 +47,14 @@ nonisolated struct Comment: Identifiable, Hashable, Sendable {
     var isCreator: Bool
     var isVerified: Bool
     var repliesToken: String?
+    /// An attached GIF (YouTube serves them as animated WebP).
+    var gif: CommentGIF?
+}
+
+nonisolated struct CommentGIF: Hashable, Sendable {
+    let url: URL
+    let width: Double
+    let height: Double
 }
 
 nonisolated struct CommentsPage: Sendable {

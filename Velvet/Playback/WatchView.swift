@@ -421,9 +421,18 @@ private struct CommentRow: View {
                     if comment.isVerified { Image(systemName: "checkmark.seal.fill").font(.caption).foregroundStyle(.secondary) }
                     if let t = comment.published { Text(t).font(.caption).foregroundStyle(.secondary) }
                 }
-                Text(RichText.attributed(comment.text))
-                    .font(.body)
-                    .textSelection(.enabled)
+                if !comment.text.isEmpty {
+                    Text(RichText.attributed(comment.text))
+                        .font(.body)
+                        .textSelection(.enabled)
+                }
+                if let gif = comment.gif {
+                    // Fit within 200pt tall / 280pt wide, keeping the GIF's shape.
+                    let scale = min(200 / max(gif.height, 1), 280 / max(gif.width, 1), 1)
+                    AnimatedImage(url: gif.url)
+                        .frame(width: gif.width * scale, height: gif.height * scale)
+                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
                 HStack(spacing: 14) {
                     if let likes = comment.likeCount {
                         Label(likes, systemImage: "hand.thumbsup").font(.caption).foregroundStyle(.secondary)

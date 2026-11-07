@@ -440,8 +440,10 @@ final class AppModel {
                 @MainActor func scroll(to y: CGFloat) {
                     guard let content = mainWindow?.contentView,
                           let sv = Self.largestScrollView(in: content, containing: NSPoint(x: content.bounds.midX, y: content.bounds.midY)) else { return }
-                    sv.contentView.scroll(to: NSPoint(x: 0, y: y))
-                    sv.reflectScrolledClipView(sv.contentView)
+                    // Scroll like a user would (works for flipped and unflipped documents).
+                    guard let doc = sv.documentView else { return }
+                    let top = doc.isFlipped ? y : doc.bounds.height - y - sv.contentView.bounds.height
+                    doc.scrollToVisible(NSRect(x: 0, y: max(0, top), width: 1, height: sv.contentView.bounds.height))
                 }
                 try? await Task.sleep(for: .seconds(9)); scroll(to: 900)
                 try? await Task.sleep(for: .seconds(6)); scroll(to: 0)
