@@ -2,19 +2,16 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppModel.self) private var app
-    @State private var sidebarVisibility = NavigationSplitViewVisibility.automatic
 
     var body: some View {
         @Bindable var app = app
-        NavigationSplitView(columnVisibility: Binding(
-            get: { app.playerFullscreen ? .detailOnly : sidebarVisibility },
-            set: { if !app.playerFullscreen { sidebarVisibility = $0 } }
-        )) {
+        NavigationSplitView(columnVisibility: $app.sidebarVisibility) {
             SidebarView()
                 .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 280)
         } detail: {
             detail
         }
+        .overlay(alignment: .topLeading) { PlayerLayer() }
         .searchable(text: $app.searchText, placement: .toolbar, prompt: "Search YouTube")
         .onSubmit(of: .search) { app.submitSearch() }
         .sheet(isPresented: $app.showingSignIn) {
@@ -165,5 +162,42 @@ struct WindowReader: NSViewRepresentable {
             super.viewDidMoveToWindow()
             onWindow(window)
         }
+    }
+}
+
+/// Draws the watch-page player above the whole window: over its slot in the page normally,
+/// or over everything in fullscreen. One view, one animated frame — no sidebar/column changes.
+struct PlayerLayer: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        GeometryReader { geo in
+            if let session = app.watching {
+                let origin = geo.frame(in: .global).origin
+                let full = app.playerFullscreen
+                let bounds = CGRect(origin: .zero, size: geo.size)
+                let slot = app.playerSlot.offsetBy(dx: -origin.x, dy: -origin.y)
+                let frame = full ? bounds : slot
+                // Inline, keep the player inside the page's visible area (it scrolls with the page).
+                let clip = full ? bounds : app.watchViewport.offsetBy(dx: -origin.x, dy: -origin.y)
+
+                // SwiftUI can't mask native views (mpv's Metal surface renders black under .mask),
+                // so clip with a plain rectangle: a container the size of the visible part.
+                let visible = frame.intersection(clip)
+                ZStack(alignment: .topLeading) {
+                    PlayerView(session: session, isFullscreen: full) { app.togglePlayerFullscreen() }
+                        .frame(width: max(0, frame.width), height: max(0, frame.height))
+                        .clipShape(RoundedRectangle(cornerRadius: full ? 0 : 12, style: .continuous))
+                        .offset(x: frame.minX - (visible.isNull ? 0 : visible.minX),
+                                y: frame.minY - (visible.isNull ? 0 : visible.minY))
+                }
+                .frame(width: visible.isNull ? 0 : visible.width, height: visible.isNull ? 0 : visible.height, alignment: .topLeading)
+                .clipped()
+                .offset(x: visible.isNull ? 0 : visible.minX, y: visible.isNull ? 0 : visible.minY)
+                .opacity(app.playerSlot == .zero && !full ? 0 : 1)
+                .id(session.id)
+            }
+        }
+        .ignoresSafeArea()
     }
 }

@@ -185,9 +185,12 @@ final class MPVPlayer {
     init(options: Options) {
         layer.backgroundColor = NSColor.black.cgColor
         layer.framebufferOnly = true
-        // Until mpv re-renders at the new size, scale the last frame without distorting it.
+        // mpv renders at the video's own resolution; Core Animation scales the frames to whatever
+        // size the host view is (page, fullscreen, PiP). Resizing therefore never needs mpv to
+        // reconfigure, so animations stay smooth and paused frames stay correct.
         layer.contentsGravity = .resizeAspect
         layer.contentsScale = NSScreen.main?.backingScaleFactor ?? 2
+        layer.drawableSize = Self.renderSize(for: CGSize(width: 1920, height: 1080))
 
         core = MPVCore(layer: layer, options: [
             ("vo", "gpu-next"),
@@ -255,7 +258,6 @@ final class MPVPlayer {
         hasEnded = false
         isLoading = true
         playedSinceLoad = false
-        appliedDrawable = .zero
         core.set("video-aspect-override", "no")
         position = startAt
         lastPublishedPosition = -1
@@ -305,12 +307,11 @@ final class MPVPlayer {
         layerHost?.release()
         view.adopt(layer)
         layerHost = view
-        appliedDrawable = .zero // force the aspect nudge for the new size
     }
 
     /// Moves the layer into a fresh view for the PiP window.
     func makePictureInPictureView() -> MPVSurfaceView {
-        let view = MPVSurfaceView { [weak self] in self?.surfaceDidResize(to: $0) }
+        let view = MPVSurfaceView()
         isInPictureInPicture = true
         host(in: view)
         return view
@@ -322,24 +323,33 @@ final class MPVPlayer {
         if let inlineSurface { host(in: inlineSurface) }
     }
 
-    // MARK: - Surface size
+    // MARK: - Render size
 
-    @ObservationIgnored private var resizeTask: Task<Void, Never>?
-    @ObservationIgnored private var appliedDrawable: CGSize = .zero
+    @ObservationIgnored private var renderTask: Task<Void, Never>?
     @ObservationIgnored private var aspectNudge = false
 
-    /// MPVKit's MoltenVK context only reads the layer's drawable size when mpv reconfigures
-    /// the video output (its resize control is unimplemented), so mpv keeps rendering at the
-    /// old size after the view grows. Once a resize settles, nudge `video-aspect-override` by
-    /// an invisible amount (~0.001%) to force that reconfigure.
-    func surfaceDidResize(to pixels: CGSize) {
-        guard pixels.width > 1, pixels.height > 1 else { return }
-        resizeTask?.cancel()
-        resizeTask = Task {
-            try? await Task.sleep(for: .milliseconds(120))
-            guard !Task.isCancelled, pixels != appliedDrawable,
-                  let size = videoSize, size.width > 0, size.height > 0 else { return }
-            appliedDrawable = pixels
+    /// Video size capped to the largest screen (pixels), keeping its aspect ratio.
+    nonisolated static func renderSize(for video: CGSize) -> CGSize {
+        let screens = NSScreen.screens.map { CGSize(width: $0.frame.width * $0.backingScaleFactor,
+                                                     height: $0.frame.height * $0.backingScaleFactor) }
+        let screen = screens.max { $0.width * $0.height < $1.width * $1.height } ?? CGSize(width: 2880, height: 1800)
+        let scale = min(1, screen.width / video.width, screen.height / video.height)
+        return CGSize(width: (video.width * scale).rounded(), height: (video.height * scale).rounded())
+    }
+
+    /// When a new video's dimensions arrive, match the drawable to them. MPVKit's MoltenVK
+    /// context only reads the drawable size when mpv reconfigures, so nudge
+    /// `video-aspect-override` by ~0.001% to trigger that — once per video, not per resize.
+    private func videoDimensionsChanged() {
+        renderTask?.cancel()
+        renderTask = Task {
+            // w and h arrive as separate events; settle before acting.
+            try? await Task.sleep(for: .milliseconds(40))
+            guard !Task.isCancelled, let size = videoSize, size.width > 0, size.height > 0 else { return }
+            let target = Self.renderSize(for: size)
+            guard target != layer.drawableSize else { return }
+            layer.drawableSize = target
+            layerHost?.syncDrawable() // re-fit the new drawable into the current view
             aspectNudge.toggle()
             let aspect = size.width / size.height * (aspectNudge ? 1.00001 : 0.99999)
             core?.set("video-aspect-override", String(format: "%.8f", aspect))
@@ -394,8 +404,12 @@ final class MPVPlayer {
                 position = v
             }
             if isLoading { isLoading = false }
-        case ("video-params/w", .double(let w)): videoSize = CGSize(width: w, height: videoSize?.height ?? 0)
-        case ("video-params/h", .double(let h)): videoSize = CGSize(width: videoSize?.width ?? 0, height: h)
+        case ("video-params/w", .double(let w)):
+            videoSize = CGSize(width: w, height: videoSize?.height ?? 0)
+            videoDimensionsChanged()
+        case ("video-params/h", .double(let h)):
+            videoSize = CGSize(width: videoSize?.width ?? 0, height: h)
+            videoDimensionsChanged()
         default: break
         }
     }

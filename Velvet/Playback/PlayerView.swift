@@ -7,7 +7,7 @@ struct VideoSurface: NSViewRepresentable {
     let player: MPVPlayer
 
     func makeNSView(context: Context) -> MPVSurfaceView {
-        let view = MPVSurfaceView { [weak player] in player?.surfaceDidResize(to: $0) }
+        let view = MPVSurfaceView()
         player.registerInlineSurface(view)
         return view
     }
@@ -18,15 +18,15 @@ struct VideoSurface: NSViewRepresentable {
 /// player, or the Picture in Picture window); `MPVPlayer.host(in:)` moves it between them.
 final class MPVSurfaceView: NSView {
     private var metal: CAMetalLayer?
-    private let onResize: (CGSize) -> Void
+    /// Plain black backing layer; mpv's Metal layer is a sublayer we position and scale.
+    private let container = CALayer()
 
-    init(onResize: @escaping (CGSize) -> Void) {
-        self.onResize = onResize
+    init() {
         super.init(frame: .zero)
         autoresizingMask = [.width, .height]
-        let placeholder = CALayer()
-        placeholder.backgroundColor = NSColor.black.cgColor
-        layer = placeholder
+        container.backgroundColor = NSColor.black.cgColor
+        container.masksToBounds = true
+        layer = container
         wantsLayer = true
     }
 
@@ -36,17 +36,18 @@ final class MPVSurfaceView: NSView {
 
     func adopt(_ layer: CAMetalLayer) {
         metal = layer
-        self.layer = layer // layer-hosting: mpv draws into it directly
-        wantsLayer = true
-        syncDrawable(force: true)
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        layer.removeFromSuperlayer()
+        container.addSublayer(layer)
+        CATransaction.commit()
+        syncDrawable()
     }
 
     func release() {
-        guard metal != nil else { return }
-        metal = nil
-        let placeholder = CALayer()
-        placeholder.backgroundColor = NSColor.black.cgColor
-        layer = placeholder
+        guard let metal else { return }
+        if metal.superlayer === container { metal.removeFromSuperlayer() }
+        self.metal = nil
     }
 
     override func layout() {
@@ -54,8 +55,8 @@ final class MPVSurfaceView: NSView {
         syncDrawable()
     }
 
-    // The PiP window sizes its content view directly (no layout pass for a layer-hosting
-    // view without subviews), so react to frame changes too.
+    // The PiP window sizes its content view directly (no layout pass for a view without
+    // subviews), so react to frame changes too.
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
         syncDrawable()
@@ -63,7 +64,7 @@ final class MPVSurfaceView: NSView {
 
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
-        syncDrawable(force: true)
+        syncDrawable()
     }
 
     override func viewDidChangeBackingProperties() {
@@ -71,18 +72,26 @@ final class MPVSurfaceView: NSView {
         syncDrawable()
     }
 
-    private func syncDrawable(force: Bool = false) {
+    /// Aspect-fits mpv's frames into the view with a GPU transform. A CAMetalLayer shows its
+    /// drawable at native pixel size (it ignores contentsGravity), so the layer is sized to the
+    /// drawable in points and scaled to fit, centred. Cheap enough for every animation frame,
+    /// and mpv never has to reconfigure when the view resizes (page ↔ fullscreen ↔ PiP).
+    func syncDrawable() {
         guard let metal, bounds.width > 0, bounds.height > 0 else { return }
         let scale = window?.backingScaleFactor ?? NSScreen.main?.backingScaleFactor ?? 2
+        let drawable = metal.drawableSize
+        guard drawable.width > 1, drawable.height > 1 else { return }
+        let content = CGSize(width: drawable.width / scale, height: drawable.height / scale)
+        let fit = min(bounds.width / content.width, bounds.height / content.height)
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true) // follow the view exactly; no implicit lag
         metal.contentsScale = scale
-        metal.frame = bounds
-        let pixels = CGSize(width: (bounds.width * scale).rounded(), height: (bounds.height * scale).rounded())
-        guard force || pixels != metal.drawableSize else { return }
-        metal.drawableSize = pixels
-        #if DEBUG
-        Logger(subsystem: "com.subhash.Velvet", category: "PiP").debug("surface \(Int(self.bounds.width))x\(Int(self.bounds.height))pt → \(Int(pixels.width))x\(Int(pixels.height))px window=\(self.window.map { NSStringFromClass(type(of: $0)) } ?? "nil", privacy: .public)")
-        #endif
-        onResize(pixels)
+        metal.anchorPoint = CGPoint(x: 0.5, y: 0.5)
+        metal.bounds = CGRect(origin: .zero, size: content)
+        metal.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        metal.setAffineTransform(CGAffineTransform(scaleX: fit, y: fit))
+        CATransaction.commit()
     }
 }
 

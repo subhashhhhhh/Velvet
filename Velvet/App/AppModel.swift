@@ -78,6 +78,12 @@ final class AppModel {
     /// The video being watched; non-nil shows the watch page.
     private(set) var watching: PlayerSession?
     var playerFullscreen = false
+    /// Where the watch page lays out the player, and the page's visible area (root coordinates).
+    /// The player itself is drawn in a window-level layer (RootView) so fullscreen is a single
+    /// frame animation over everything, sidebar included.
+    var sidebarVisibility = NavigationSplitViewVisibility.automatic
+    var playerSlot: CGRect = .zero
+    var watchViewport: CGRect = .zero
 
     func makeSession(for video: Video) -> PlayerSession {
         PlayerSession(video: video, resolver: resolver, preferences: settings,
@@ -143,6 +149,12 @@ final class AppModel {
         let returnView = player.inlineView
         let rect = returnView.map { $0.convert($0.bounds, to: nil) }
         let view = player.makePictureInPictureView()
+        // Start PiP from where the video is on the page (not the screen's corner): put the PiP
+        // view exactly over the inline player first; PiP animates from a view's current frame.
+        if let returnView, let content = returnView.window?.contentView {
+            view.frame = returnView.convert(returnView.bounds, to: content)
+            content.addSubview(view)
+        }
         pipPlayer = player
         pip.onPlay = { [weak player] in player?.play() }
         pip.onPause = { [weak player] in player?.pause() }
@@ -207,14 +219,17 @@ final class AppModel {
     @ObservationIgnored private var playerOwnsWindowFullscreen = false
 
     func togglePlayerFullscreen() {
-        let window = NSApp.keyWindow ?? NSApp.mainWindow
+        let window = mainWindow ?? NSApp.keyWindow ?? NSApp.mainWindow
         let windowIsFullscreen = window?.styleMask.contains(.fullScreen) ?? false
+        // Sidebar collapse + player growth animate together; the video scales along smoothly.
+        let animation = Animation.smooth(duration: 0.35)
+        log.debug("player fullscreen → \(!self.playerFullscreen, privacy: .public) from \(Thread.callStackSymbols.dropFirst(1).prefix(4).map { $0.split(separator: " ", omittingEmptySubsequences: true).dropFirst(3).prefix(1).joined() }.joined(separator: " ← "), privacy: .public)")
         if !playerFullscreen {
-            playerFullscreen = true
+            withAnimation(animation) { playerFullscreen = true }
             playerOwnsWindowFullscreen = !windowIsFullscreen
             if !windowIsFullscreen { window?.toggleFullScreen(nil) }
         } else {
-            playerFullscreen = false
+            withAnimation(animation) { playerFullscreen = false }
             if playerOwnsWindowFullscreen && windowIsFullscreen { window?.toggleFullScreen(nil) }
             playerOwnsWindowFullscreen = false
         }
@@ -222,7 +237,7 @@ final class AppModel {
 
     /// The window left macOS fullscreen on its own (green button, Esc, Mission Control).
     func windowDidExitFullscreen() {
-        if playerOwnsWindowFullscreen { playerFullscreen = false }
+        if playerOwnsWindowFullscreen { withAnimation(.smooth(duration: 0.35)) { playerFullscreen = false } }
         playerOwnsWindowFullscreen = false
     }
 
@@ -296,13 +311,25 @@ final class AppModel {
         if let id = UserDefaults.standard.string(forKey: "VelvetPlay"), !id.isEmpty {
             let start = UserDefaults.standard.double(forKey: "VelvetStart")
             open(Video(id: id, title: "Debug: \(id)"), at: start > 0 ? start : nil)
-            // `-VelvetPiPTest YES`: enter PiP after 6s, leave after 14s.
+            // `-VelvetPiPTest YES`: enter PiP after 6s, pause in PiP, leave after 12s.
             if UserDefaults.standard.bool(forKey: "VelvetPiPTest") {
                 Task {
                     try? await Task.sleep(for: .seconds(6))
                     enterPictureInPicture(automatic: false)
-                    try? await Task.sleep(for: .seconds(8))
+                    try? await Task.sleep(for: .seconds(3))
+                    watching?.player.pause()
+                    try? await Task.sleep(for: .seconds(3))
                     exitPictureInPicture()
+                }
+            }
+            // `-VelvetFullscreenTest YES`: show the sidebar, player fullscreen at 6s, back at 12s.
+            if UserDefaults.standard.bool(forKey: "VelvetFullscreenTest") {
+                sidebarVisibility = .all
+                Task {
+                    try? await Task.sleep(for: .seconds(6))
+                    togglePlayerFullscreen()
+                    try? await Task.sleep(for: .seconds(6))
+                    togglePlayerFullscreen()
                 }
             }
             // `-VelvetResizeTest YES`: pause, then grow the window, to check mpv follows the new size.

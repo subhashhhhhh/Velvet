@@ -10,37 +10,34 @@ struct WatchView: View {
     private var page: WatchPageModel { session.page }
 
     var body: some View {
-        Group {
-            if app.playerFullscreen {
-                player.ignoresSafeArea()
-            } else {
-                GeometryReader { geo in
-                    let wide = geo.size.width >= 1050
-                    let size = playerSize(in: geo.size, wide: wide)
-                    ScrollView {
-                        HStack(alignment: .top, spacing: Self.columnSpacing) {
-                            VStack(alignment: .leading, spacing: 18) {
-                                player
-                                    .frame(width: size.width, height: size.height)
-                                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                                    .frame(maxWidth: .infinity)
-                                WatchInfoView(session: session)
-                                if !wide { RelatedList(page: page, columns: true) }
-                                CommentsSection(page: page, player: session.player)
-                            }
+        GeometryReader { geo in
+            let wide = geo.size.width >= 1050
+            let size = playerSize(in: geo.size, wide: wide)
+            ScrollView {
+                HStack(alignment: .top, spacing: Self.columnSpacing) {
+                    VStack(alignment: .leading, spacing: 18) {
+                        // The player's slot. The player is drawn by RootView's PlayerLayer on top.
+                        Color.clear
+                            .frame(width: size.width, height: size.height)
                             .frame(maxWidth: .infinity)
-                            if wide {
-                                RelatedList(page: page, columns: false)
-                                    .frame(width: Self.relatedWidth)
-                            }
-                        }
-                        .padding(Self.padding)
+                            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.playerSlot = $0 }
+                        WatchInfoView(session: session)
+                        if !wide { RelatedList(page: page, columns: true) }
+                        CommentsSection(page: page, player: session.player)
+                    }
+                    .frame(maxWidth: .infinity)
+                    if wide {
+                        RelatedList(page: page, columns: false)
+                            .frame(width: Self.relatedWidth)
                     }
                 }
+                .padding(Self.padding)
             }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.watchViewport = $0 }
         }
         .navigationTitle(page.details?.title ?? video.title)
         .toolbar(app.playerFullscreen ? .hidden : .visible, for: .windowToolbar)
+        .onDisappear { app.playerSlot = .zero }
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button("Back", systemImage: "chevron.backward") { app.closePlayer() }
@@ -65,10 +62,6 @@ struct WatchView: View {
             }
             return .systemAction
         })
-    }
-
-    private var player: some View {
-        PlayerView(session: session, isFullscreen: app.playerFullscreen) { app.togglePlayerFullscreen() }
     }
 
     private static let padding: CGFloat = 20

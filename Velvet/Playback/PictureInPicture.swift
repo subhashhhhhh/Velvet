@@ -1,4 +1,5 @@
 import AppKit
+import ObjectiveC
 import OSLog
 
 /// System Picture in Picture for mpv's Metal layer, via macOS's private `PIP.framework`
@@ -48,9 +49,33 @@ final class PictureInPicture: NSObject {
         self.pip = pip
         self.content = content
         isActive = true
+        isPresenting = true
+        exitRequested = false
         startedAutomatically = automatic
-        _ = pip.perform(NSSelectorFromString("presentViewControllerAsPictureInPicture:"), with: content)
+        let start = ContinuousClock.now
+        let completion: @convention(block) () -> Void = { [weak self] in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.isPresenting = false
+                self.log.info("PiP presented in \(ContinuousClock.now - start, privacy: .public)")
+                // Came back before PiP finished appearing: finish the exit now.
+                if self.exitRequested { self.exit() }
+            }
+        }
+        Self.call(pip, "presentViewControllerAsPictureInPicture:completionHandler:", content, completion)
         log.info("Entered PiP (\(automatic ? "automatic" : "manual", privacy: .public))")
+    }
+
+    private var isPresenting = false
+    private var exitRequested = false
+
+    /// objc_msgSend for `(id, block)` selectors, which `perform(_:with:)` can't express.
+    private static func call(_ target: NSObject, _ selector: String, _ object: AnyObject, _ block: @escaping @convention(block) () -> Void) {
+        let sel = NSSelectorFromString(selector)
+        guard let method = class_getInstanceMethod(type(of: target), sel) else { return }
+        typealias Fn = @convention(c) (AnyObject, Selector, AnyObject, AnyObject) -> Void
+        let imp = unsafeBitCast(method_getImplementation(method), to: Fn.self)
+        imp(target, sel, object, block as AnyObject)
     }
 
     func setPlaying(_ playing: Bool) {
@@ -65,6 +90,8 @@ final class PictureInPicture: NSObject {
     /// Ends PiP, animating back to the replacement rect.
     func exit(returnTo window: NSWindow? = nil, rect: NSRect? = nil) {
         guard isActive, let pip, let content else { return }
+        // Dismissing mid-presentation is ignored by PIP.framework; do it once it's shown.
+        if isPresenting { exitRequested = true; return }
         if let window, let rect {
             pip.setValue(window, forKey: "replacementWindow")
             pip.setValue(NSValue(rect: rect), forKey: "replacementRect")
