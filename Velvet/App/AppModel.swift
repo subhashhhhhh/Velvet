@@ -34,13 +34,15 @@ enum Destination: String, Hashable, CaseIterable, Identifiable {
 @Observable
 final class AppModel {
     let client = InnerTubeClient()
+    let settings = Settings()
 
-    var destination: Destination? = .home
+    var destination: Destination?
     var searchText = ""
     /// The submitted query; non-nil shows search results instead of the destination.
     var activeSearch: String?
 
     init() {
+        destination = settings.startPage
         #if DEBUG
         // `-VelvetSearch "query"` opens straight into results; handy for testing.
         if let q = UserDefaults.standard.string(forKey: "VelvetSearch"), !q.isEmpty {
