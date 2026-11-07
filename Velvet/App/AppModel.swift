@@ -35,6 +35,7 @@ enum Destination: String, Hashable, CaseIterable, Identifiable {
 final class AppModel {
     let client = InnerTubeClient()
     let settings = Preferences()
+    let tools = ToolManager()
 
     var destination: Destination?
     var searchText = ""
@@ -93,6 +94,7 @@ final class AppModel {
     /// Restores a saved session at launch.
     func start() async {
         guard authState == .unknown else { return }
+        prepareTools()
         if let saved = YouTubeSession.restore() {
             await activate(saved)
         } else {
@@ -136,6 +138,21 @@ final class AppModel {
             }
         } catch {
             log.error("Account fetch failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    // MARK: - Tools
+
+    /// Installs yt-dlp + the selected runtime in the background so the first video doesn't wait,
+    /// then runs the daily update check.
+    private func prepareTools() {
+        Task(priority: .utility) { [tools, settings] in
+            do {
+                _ = try await tools.ready(runtime: settings.jsRuntime)
+            } catch {
+                log.error("Tool setup failed: \(error.localizedDescription, privacy: .public)")
+            }
+            if settings.autoUpdateTools { await tools.checkForUpdates() }
         }
     }
 

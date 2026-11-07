@@ -185,6 +185,32 @@ private struct AccountPane: View {
 
 // MARK: - Advanced
 
+private struct ToolRow: View {
+    let tool: Tool
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        LabeledContent(tool.displayName) {
+            HStack(spacing: 8) {
+                switch app.tools.status[tool] ?? .notInstalled {
+                case .notInstalled:
+                    Text("Not installed").foregroundStyle(.secondary)
+                    Button("Install") { Task { try? await app.tools.install(tool) } }
+                case .working(let step):
+                    ProgressView().controlSize(.small)
+                    Text(step).foregroundStyle(.secondary)
+                case .installed(let version):
+                    Text(version).monospacedDigit().foregroundStyle(.secondary)
+                    Button("Reinstall") { Task { try? await app.tools.install(tool) } }
+                case .failed(let message):
+                    Text(message).foregroundStyle(.red).lineLimit(2)
+                    Button("Retry") { Task { try? await app.tools.install(tool) } }
+                }
+            }
+        }
+    }
+}
+
 private struct AdvancedPane: View {
     @Environment(AppModel.self) private var app
     @State private var confirmingReset = false
@@ -199,6 +225,17 @@ private struct AdvancedPane: View {
                 }
                 Text(settings.jsRuntime.detail).font(.caption).foregroundStyle(.secondary)
                 Toggle("Keep yt-dlp and the runtime up to date automatically", isOn: $settings.autoUpdateTools)
+                ToolRow(tool: .ytdlp)
+                ToolRow(tool: Tool(settings.jsRuntime))
+                LabeledContent("Updates") {
+                    HStack {
+                        if let last = app.tools.lastUpdateCheck {
+                            Text("Checked \(last, format: .relative(presentation: .named))")
+                                .foregroundStyle(.secondary)
+                        }
+                        Button("Check Now") { Task { await app.tools.checkForUpdates(force: true) } }
+                    }
+                }
             } header: {
                 Text("Stream Extraction")
             } footer: {
