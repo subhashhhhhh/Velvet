@@ -12,6 +12,7 @@ final class PlayerSession: Identifiable {
     let video: Video
     let player: MPVPlayer
     let sponsor: SponsorSkipper
+    let page: WatchPageModel
     private(set) var phase: Phase = .resolving
     private(set) var info: StreamInfo?
     private(set) var selection: StreamInfo.Selection?
@@ -25,8 +26,9 @@ final class PlayerSession: Identifiable {
     @ObservationIgnored private var loadTask: Task<Void, Never>?
     @ObservationIgnored private let log = Logger(subsystem: "com.subhash.Velvet", category: "Player")
 
-    init(video: Video, resolver: StreamResolver, preferences: Preferences) {
+    init(video: Video, resolver: StreamResolver, preferences: Preferences, client: InnerTubeClient, signedIn: Bool) {
         self.video = video
+        self.page = WatchPageModel(videoId: video.id, client: client, signedIn: signedIn)
         self.resolver = resolver
         self.prefs = preferences
         self.quality = preferences.quality
@@ -50,6 +52,7 @@ final class PlayerSession: Identifiable {
         loadTask?.cancel()
         phase = .resolving
         loadSponsorSegments()
+        Task { [page] in await page.load() }
         loadTask = Task {
             let start = ContinuousClock.now
             do {
