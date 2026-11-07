@@ -97,14 +97,14 @@ private struct PlaybackPane: View {
             }
             Section {
                 Toggle("Hardware decoding", isOn: $settings.hardwareDecoding)
-                Picker("Buffer ahead", selection: $settings.bufferMB) {
+                Picker("Maximum buffer", selection: $settings.bufferMB) {
                     ForEach([50, 100, 150, 300, 500], id: \.self) { Text("\($0) MB").tag($0) }
                 }
                 Toggle("Prepare videos when hovering", isOn: $settings.prefetchOnHover)
             } header: {
                 Text("Performance")
             } footer: {
-                Text("A bigger buffer survives network hiccups but uses more memory. Hover preparation looks up stream links in advance so playback starts faster.")
+                Text("Velvet buffers about 30 seconds ahead, up to this limit. Hover preparation looks up stream links in advance so playback starts faster.")
             }
         }
         .formStyle(.grouped)

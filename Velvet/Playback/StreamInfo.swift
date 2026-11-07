@@ -57,9 +57,10 @@ nonisolated struct StreamInfo: Sendable {
         var availableAt: Date? { [video.availableAt, audio?.availableAt].compactMap { $0 }.max() }
     }
 
-    /// Picks the streams to play for the given preferences.
-    func select(quality: VideoQuality, codec: VideoCodec) -> Selection? {
-        let maxHeight = quality.maxHeight ?? .max
+    /// Picks the streams to play for the given preferences. "Best Available" means the best
+    /// your display can show: a 4K stream on a 2880×1800 screen is decoded and then mostly thrown away.
+    func select(quality: VideoQuality, codec: VideoCodec, displayLimit: Int? = nil) -> Selection? {
+        let maxHeight = quality.maxHeight ?? displayLimit ?? .max
 
         if isLive || !formats.contains(where: { $0.hasVideo && !$0.hasAudio && !$0.isHLS }) {
             // Live (and the rare HLS-only video): HLS variants carry audio and video together.

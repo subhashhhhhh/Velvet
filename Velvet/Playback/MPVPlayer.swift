@@ -199,6 +199,8 @@ final class MPVPlayer {
     private(set) var speed: Double = 1
     private(set) var videoSize: CGSize?
     private(set) var failure: String?
+    /// mpv's active hardware decoder ("videotoolbox"), or "no"/empty for software decoding.
+    private(set) var hardwareDecoder: String?
 
     /// Fired (on the main actor) as playback time advances; used by SponsorBlock.
     @ObservationIgnored var onTimeChange: ((Double) -> Void)?
@@ -230,6 +232,9 @@ final class MPVPlayer {
         layer.drawableSize = Self.renderSize(for: CGSize(width: 1920, height: 1080))
 
         core = MPVCore(layer: layer, options: [
+            // Cheap scalers/no extra passes: we render 1:1 at the video's resolution and the
+            // final fit is a GPU transform, so mpv's high-quality scaling work would be wasted.
+            ("profile", "fast"),
             ("vo", "gpu-next"),
             ("gpu-api", "vulkan"),
             ("gpu-context", "moltenvk"),
@@ -238,12 +243,26 @@ final class MPVPlayer {
             ("idle", "yes"),
             ("keep-open", "yes"),
             ("osc", "no"),
+            // mpv's built-in Lua UI scripts (each a thread + Lua VM); Velvet draws its own UI.
+            ("load-scripts", "no"),
+            ("load-stats-overlay", "no"),
+            ("load-console", "no"),
+            ("load-select", "no"),
+            ("load-positioning", "no"),
+            ("load-commands", "no"),
+            ("load-context-menu", "no"),
+            ("load-auto-profiles", "no"),
+            // Fewer spare decoded frames held by the hardware decoder (default 6).
+            ("hwdec-extra-frames", "2"),
             ("input-default-bindings", "no"),
             ("input-vo-keyboard", "no"),
             ("input-media-keys", "no"),
             ("cache", "yes"),
+            // Buffer by time (30s ahead is plenty to ride out hiccups); the MB setting is only a
+            // ceiling. mpv's default prefetches up to an hour, i.e. always filling the cap.
+            ("cache-secs", "30"),
             ("demuxer-max-bytes", "\(options.bufferMB)MiB"),
-            ("demuxer-max-back-bytes", "50MiB"),
+            ("demuxer-max-back-bytes", "20MiB"),
             ("network-timeout", "15"),
             // YouTube throttles open-ended range requests to ~500 KB/s; 10 MB chunks get full speed.
             ("stream-lavf-o", "request_size=10485760"),
@@ -263,6 +282,7 @@ final class MPVPlayer {
             ("mute", MPV_FORMAT_FLAG), ("time-pos", MPV_FORMAT_DOUBLE), ("duration", MPV_FORMAT_DOUBLE),
             ("demuxer-cache-time", MPV_FORMAT_DOUBLE), ("volume", MPV_FORMAT_DOUBLE), ("speed", MPV_FORMAT_DOUBLE),
             ("video-params/w", MPV_FORMAT_DOUBLE), ("video-params/h", MPV_FORMAT_DOUBLE),
+            ("hwdec-current", MPV_FORMAT_STRING), ("video-codec", MPV_FORMAT_STRING),
         ] as [(String, mpv_format)] {
             core.observe(name, format)
         }
@@ -450,6 +470,11 @@ final class MPVPlayer {
         case ("video-params/h", .double(let h)):
             videoSize = CGSize(width: videoSize?.width ?? 0, height: h)
             videoDimensionsChanged()
+        case ("hwdec-current", .string(let v)):
+            hardwareDecoder = v
+            Logger(subsystem: "com.subhash.Velvet", category: "Player").info("Decoder: \(v.isEmpty || v == "no" ? "software" : v, privacy: .public)")
+        case ("video-codec", .string(let v)):
+            Logger(subsystem: "com.subhash.Velvet", category: "Player").info("Video codec: \(v, privacy: .public)")
         default: break
         }
     }

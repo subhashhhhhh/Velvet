@@ -1,4 +1,5 @@
 import Foundation
+import AppKit
 import OSLog
 
 /// One opened video: resolves streams, owns the mpv player, and applies preferences.
@@ -152,6 +153,15 @@ final class PlayerSession: Identifiable {
         player.stop()
     }
 
+    /// Tallest useful video height for the largest connected screen: a 16:9 video fit to the
+    /// screen's pixel width (e.g. 2880×1800 → 1620, so 1440p is the most worth decoding).
+    static func displayHeightLimit() -> Int {
+        let screens = NSScreen.screens.map { CGSize(width: $0.frame.width * $0.backingScaleFactor,
+                                                    height: $0.frame.height * $0.backingScaleFactor) }
+        guard let biggest = screens.max(by: { $0.width * $0.height < $1.width * $1.height }) else { return 1440 }
+        return Int(min(biggest.height, biggest.width * 9 / 16))
+    }
+
     /// Remembers the position locally (live streams have no meaningful position).
     func saveProgress() {
         guard video.kind != .live, player.duration > 0, player.position > 0 else { return }
@@ -183,7 +193,7 @@ final class PlayerSession: Identifiable {
     }
 
     private func play(_ info: StreamInfo, at time: Double, autoplay: Bool) async throws {
-        guard let selection = info.select(quality: quality, codec: prefs.codec) else {
+        guard let selection = info.select(quality: quality, codec: prefs.codec, displayLimit: Self.displayHeightLimit()) else {
             phase = .failed("No playable stream was found for this video.")
             return
         }

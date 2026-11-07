@@ -6,7 +6,7 @@ import Observation
 nonisolated enum VideoQuality: Int, CaseIterable, Identifiable, Codable, Sendable {
     case auto = 0, p2160 = 2160, p1440 = 1440, p1080 = 1080, p720 = 720, p480 = 480, p360 = 360
     var id: Int { rawValue }
-    var label: String { self == .auto ? "Best Available" : (self == .p2160 ? "2160p (4K)" : "\(rawValue)p") }
+    var label: String { self == .auto ? "Best for This Display" : (self == .p2160 ? "2160p (4K)" : "\(rawValue)p") }
     /// Max height to request; nil means no cap.
     var maxHeight: Int? { self == .auto ? nil : rawValue }
 }
