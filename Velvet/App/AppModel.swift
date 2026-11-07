@@ -165,6 +165,11 @@ final class AppModel {
             self?.pipPlayer = nil
         }
         player.onPictureInPicturePauseChange = { [weak self] paused in self?.pip.setPlaying(!paused) }
+        // PiP's "return to app" button: switch to Velvet's window (and its Space), like Safari.
+        pip.onRestoreRequested = { [weak self] in
+            NSApp.activate()
+            self?.mainWindow?.makeKeyAndOrderFront(nil)
+        }
         pip.enter(view: view, aspect: player.videoSize ?? CGSize(width: 16, height: 9), playing: !player.isPaused,
                   returnTo: returnView?.window, rect: rect, automatic: automatic)
         releaseHiddenPageMemory()

@@ -23,6 +23,12 @@ final class PictureInPicture: NSObject {
     var onPause: (() -> Void)?
     /// PiP closed (via its own buttons or `exit()`); the caller moves the video back inline.
     var onClosed: (() -> Void)?
+    /// The user pressed PiP's "return to app" button: bring the app's window forward.
+    var onRestoreRequested: (() -> Void)?
+
+    /// Why PiP is closing: our own exit(), the X button, or the restore button.
+    private var closingBecauseOfExit = false
+    private var stopPressed = false
 
     private var pip: NSViewController?
     private var content: NSViewController?
@@ -92,6 +98,7 @@ final class PictureInPicture: NSObject {
         guard isActive, let pip, let content else { return }
         // Dismissing mid-presentation is ignored by PIP.framework; do it once it's shown.
         if isPresenting { exitRequested = true; return }
+        closingBecauseOfExit = true
         if let window, let rect {
             pip.setValue(window, forKey: "replacementWindow")
             pip.setValue(NSValue(rect: rect), forKey: "replacementRect")
@@ -101,12 +108,16 @@ final class PictureInPicture: NSObject {
 
     private func finish() {
         guard isActive else { return }
+        let restore = !closingBecauseOfExit && !stopPressed
         isActive = false
         startedAutomatically = false
+        closingBecauseOfExit = false
+        stopPressed = false
         pip = nil
         content = nil
-        log.info("Left PiP")
+        log.info("Left PiP\(restore ? " (restore to app)" : "", privacy: .public)")
         onClosed?()
+        if restore { onRestoreRequested?() }
     }
 
     // MARK: - PIPViewControllerDelegate (informal; selector names as used by IINA)
@@ -116,5 +127,9 @@ final class PictureInPicture: NSObject {
     @objc func pipDidClose(_ pip: NSViewController) { finish() }
     @objc func pipActionPlay(_ pip: NSViewController) { onPlay?() }
     @objc func pipActionPause(_ pip: NSViewController) { onPause?() }
-    @objc func pipActionStop(_ pip: NSViewController) { onPause?() }
+    /// The X button: pause and close, without pulling the user back to the app.
+    @objc func pipActionStop(_ pip: NSViewController) {
+        stopPressed = true
+        onPause?()
+    }
 }

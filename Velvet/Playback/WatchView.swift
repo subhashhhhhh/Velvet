@@ -37,7 +37,6 @@ struct WatchView: View {
         }
         .navigationTitle(page.details?.title ?? video.title)
         .toolbar(app.playerFullscreen ? .hidden : .visible, for: .windowToolbar)
-        .onDisappear { app.playerSlot = .zero }
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 Button("Back", systemImage: "chevron.backward") { app.closePlayer() }
