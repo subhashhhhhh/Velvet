@@ -34,7 +34,7 @@ enum Destination: String, Hashable, CaseIterable, Identifiable {
 @Observable
 final class AppModel {
     let client = InnerTubeClient()
-    let settings = Settings()
+    let settings = Preferences()
 
     var destination: Destination?
     var searchText = ""

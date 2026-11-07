@@ -104,7 +104,7 @@ enum SponsorAction: String, CaseIterable, Identifiable, Codable, Sendable {
 
 /// All user preferences, persisted to UserDefaults on every change.
 @Observable
-final class Settings {
+final class Preferences {
     // General
     var startPage: Destination { didSet { save(startPage.rawValue, .startPage) } }
 
@@ -176,7 +176,7 @@ final class Settings {
     /// Restores every preference to its default.
     func resetAll() {
         for key in Key.allCases { defaults.removeObject(forKey: key.name) }
-        let fresh = Settings(defaults: defaults)
+        let fresh = Preferences(defaults: defaults)
         startPage = fresh.startPage
         showShortsShelf = fresh.showShortsShelf; shortsAfterRows = fresh.shortsAfterRows
         cardSize = fresh.cardSize; hideWatched = fresh.hideWatched

@@ -14,5 +14,10 @@ struct VelvetApp: App {
         .commands {
             SidebarCommands()
         }
+
+        Settings {
+            SettingsView()
+                .environment(app)
+        }
     }
 }

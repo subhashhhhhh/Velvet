@@ -59,6 +59,12 @@ actor ImagePipeline {
 
     func clearMemory() { cache.removeAllObjects() }
 
+    /// Drops decoded images and the on-disk download cache.
+    func clearAll() {
+        cache.removeAllObjects()
+        session.configuration.urlCache?.removeAllCachedResponses()
+    }
+
     private nonisolated static func downsample(_ data: Data, maxPixel: Int) -> CGImage? {
         let sourceOptions = [kCGImageSourceShouldCache: false] as CFDictionary
         guard let source = CGImageSourceCreateWithData(data as CFData, sourceOptions) else { return nil }
