@@ -222,8 +222,39 @@ final class ToolManager {
         let digest: String?
     }
 
+    /// GitHub's API and download CDN sometimes answer 502/503/504 or drop the connection for a
+    /// few seconds. Retry those (1 s, 3 s, 7 s) instead of leaving the tools uninstalled.
+    @concurrent
+    nonisolated static func retrying<T: Sendable>(_ what: String, _ body: @Sendable () async throws -> T) async throws -> T {
+        let delays: [Duration] = [.seconds(1), .seconds(3), .seconds(7)]
+        for attempt in 0... {
+            do {
+                return try await body()
+            } catch let error where attempt < delays.count && isTransient(error) {
+                Logger(subsystem: "com.subhash.Velvet", category: "Tools")
+                    .info("\(what, privacy: .public) failed (\(error.localizedDescription, privacy: .public)); retrying")
+                try await Task.sleep(for: delays[attempt])
+            }
+        }
+        fatalError("unreachable")
+    }
+
+    private nonisolated static func isTransient(_ error: Error) -> Bool {
+        if case ToolError.github(let code) = error { return code == 0 || code == 429 || code >= 500 }
+        if let url = error as? URLError {
+            return [.timedOut, .networkConnectionLost, .notConnectedToInternet, .cannotConnectToHost,
+                    .dnsLookupFailed, .cannotFindHost, .secureConnectionFailed].contains(url.code)
+        }
+        return false
+    }
+
     @concurrent
     nonisolated static func latestRelease(_ tool: Tool) async throws -> Release {
+        try await retrying("Release lookup for \(tool.rawValue)") { try await fetchLatestRelease(tool) }
+    }
+
+    @concurrent
+    private nonisolated static func fetchLatestRelease(_ tool: Tool) async throws -> Release {
         var request = URLRequest(url: URL(string: "https://api.github.com/repos/\(tool.repo)/releases/latest")!)
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         request.setValue("Velvet", forHTTPHeaderField: "User-Agent")
@@ -241,6 +272,11 @@ final class ToolManager {
 
     @concurrent
     private nonisolated static func download(_ url: URL) async throws -> URL {
+        try await retrying("Download of \(url.lastPathComponent)") { try await downloadOnce(url) }
+    }
+
+    @concurrent
+    private nonisolated static func downloadOnce(_ url: URL) async throws -> URL {
         let (temp, response) = try await URLSession.shared.download(from: url)
         let code = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(code) else { throw ToolError.github(code) }
