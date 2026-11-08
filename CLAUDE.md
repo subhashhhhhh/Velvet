@@ -77,7 +77,7 @@ CAUTION: Do not quit or kill the Velvet app that the user operates. The script i
 1. Use the local git repository.
 2. Make a commit after each small part of a feature. Do not make one large commit for a full feature.
 3. Write a short subject line. Write the reason for the change in the body.
-4. Do not push. There is no remote.
+4. Push to `origin` (private GitHub repository `subhashhhhhh/Velvet`) after each commit. The computer can stop without a warning. Unpushed work can be lost.
 
 ## 7. Tests
 
