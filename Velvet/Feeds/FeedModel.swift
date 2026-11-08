@@ -41,23 +41,32 @@ final class FeedModel {
         if n > 0, n < chips.count {
             log.info("Test: selecting chip \(self.chips[n].title, privacy: .public)")
             await select(chips[n])
+            let first = videos.first?.id
             log.info("Test: chip feed has \(self.videos.count) videos")
+            await select(nil)
+            log.info("Test: back to All, \(self.videos.count) videos")
+            await select(chips[n])
+            log.info("Test: chip again, same feed: \(self.videos.first?.id == first)")
         }
         #endif
     }
 
+    /// Explicit refresh (button / ⌘R): refetches the topic on screen. Refreshing "All" also
+    /// refreshes the topic list, so every cached topic is dropped too.
     func reload() async {
         guard !isLoading else { return }
+        if shownChip == nil { topicCache.removeAll() } else { topicCache[shownChip!.id] = nil }
+        await fetchFresh()
+    }
+
+    private func fetchFresh() async {
         videos = []; shorts = []; seen = []; continuation = nil
-        if let token = selectedChip?.token {
-            await load(continuation: token)
-        } else {
-            await load(continuation: nil)
-        }
+        await load(continuation: shownChip?.token)
         hasLoaded = true
     }
 
-    /// Shows one topic (nil = "All"). The chip's token loads that topic's feed in place.
+    /// Shows one topic (nil = "All"). Each topic's feed is fetched once and kept until an
+    /// explicit refresh, so flipping between topics is instant and doesn't reshuffle them.
     func select(_ chip: FeedChip?) async {
         let chip = chip?.token == nil ? nil : chip
         guard chip != selectedChip else { return }
@@ -65,12 +74,30 @@ final class FeedModel {
         chipTask?.cancel()
         chipTask = Task {
             while isLoading { try? await Task.sleep(for: .milliseconds(50)) }
-            guard !Task.isCancelled, selectedChip == chip else { return }
-            await reload()
+            guard !Task.isCancelled, selectedChip == chip, shownChip != chip else { return }
+            topicCache[shownChip?.id ?? ""] = TopicFeed(videos: videos, shorts: shorts, seen: seen, continuation: continuation)
+            shownChip = chip
+            if let cached = topicCache[chip?.id ?? ""] {
+                videos = cached.videos; shorts = cached.shorts; seen = cached.seen; continuation = cached.continuation
+                error = nil
+            } else {
+                await fetchFresh()
+            }
         }
         await chipTask?.value
     }
+
+    /// The topic whose videos are in `videos` (lags `selectedChip` while a switch is pending).
+    @ObservationIgnored private var shownChip: FeedChip?
+    @ObservationIgnored private var topicCache: [String: TopicFeed] = [:]
     @ObservationIgnored private var chipTask: Task<Void, Never>?
+
+    private struct TopicFeed {
+        let videos: [Video]
+        let shorts: [Video]
+        let seen: Set<String>
+        let continuation: String?
+    }
 
     func loadMore() async {
         guard let token = continuation, !isLoading else { return }
