@@ -593,6 +593,17 @@ final class AppModel {
                     togglePlayerFullscreen()
                 }
             }
+            // `-VelvetWindowWidth N`: resize the window to N points wide (layout checks).
+            let width = UserDefaults.standard.double(forKey: "VelvetWindowWidth")
+            if width > 0 {
+                Task {
+                    try? await Task.sleep(for: .seconds(3))
+                    if let w = NSApp.windows.first(where: { $0.isVisible && $0.styleMask.contains(.titled) }) {
+                        if w.styleMask.contains(.fullScreen) { w.toggleFullScreen(nil); try? await Task.sleep(for: .seconds(2)) }
+                        w.setFrame(NSRect(x: 60, y: 60, width: width, height: 760), display: true, animate: false)
+                    }
+                }
+            }
             // `-VelvetResizeTest YES`: pause, then grow the window, to check mpv follows the new size.
             if UserDefaults.standard.bool(forKey: "VelvetResizeTest") {
                 Task {

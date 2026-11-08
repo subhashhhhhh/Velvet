@@ -113,11 +113,24 @@ private struct WatchInfoView: View {
                 .help(branding?.title != nil ? "Original: \(original)" : "")
                 .task(id: DeArrowKey(videoId: video.id, prefs: app.settings)) { branding = await app.branding(for: video) }
 
-            HStack(alignment: .center, spacing: 12) {
-                channel
-                Spacer(minLength: 12)
-                actions
+            // Wide: channel and actions on one row. Narrower: actions under the channel.
+            // Narrowest: icon-only buttons. Never squeeze (labels would wrap mid-word).
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .center, spacing: 12) {
+                    channel
+                    Spacer(minLength: 12)
+                    actions(compact: false)
+                }
+                VStack(alignment: .leading, spacing: 12) {
+                    channel
+                    actions(compact: false)
+                }
+                VStack(alignment: .leading, spacing: 12) {
+                    channel
+                    actions(compact: true)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             descriptionBox
         }
@@ -137,7 +150,7 @@ private struct WatchInfoView: View {
                 .frame(width: 40, height: 40)
                 .clipShape(Circle())
             VStack(alignment: .leading, spacing: 2) {
-                Text(page.details?.channel?.name ?? video.channelName ?? "").font(.headline)
+                Text(page.details?.channel?.name ?? video.channelName ?? "").font(.headline).lineLimit(1)
                 if let subs = page.details?.channel?.subscribers {
                     Text(subs).font(.subheadline).foregroundStyle(.secondary)
                 }
@@ -145,7 +158,7 @@ private struct WatchInfoView: View {
         }
     }
 
-    private var actions: some View {
+    private func actions(compact: Bool) -> some View {
         HStack(spacing: 8) {
             HStack(spacing: 0) {
                 Button { page.toggleLike() } label: {
@@ -163,7 +176,9 @@ private struct WatchInfoView: View {
 
             Button { page.toggleWatchLater() } label: {
                 Label("Watch Later", systemImage: page.isInWatchLater ? "clock.fill" : "clock")
+                    .labelStyle(CompactableLabelStyle(compact: compact))
             }
+            .help("Watch Later")
             .buttonStyle(PillButtonStyle())
             .background(.quaternary, in: Capsule())
 
@@ -179,7 +194,9 @@ private struct WatchInfoView: View {
                 }
             } label: {
                 Label("Save", systemImage: "text.badge.plus")
+                    .labelStyle(CompactableLabelStyle(compact: compact))
             }
+            .help("Save to playlist")
             .menuStyle(.button)
             .buttonStyle(PillButtonStyle())
             .background(.quaternary, in: Capsule())
@@ -252,6 +269,8 @@ private struct WatchInfoView: View {
 struct PillButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .lineLimit(1)
+            .fixedSize()
             .font(.callout.weight(.medium))
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
@@ -502,5 +521,17 @@ enum RichText {
             out[range].link = URL(string: "velvet-seek://\(seconds)")
         }
         return out
+    }
+}
+
+/// Icon and title, or just the icon when space is tight.
+private struct CompactableLabelStyle: LabelStyle {
+    var compact: Bool
+    func makeBody(configuration: Configuration) -> some View {
+        if compact {
+            configuration.icon
+        } else {
+            HStack(spacing: 6) { configuration.icon; configuration.title }
+        }
     }
 }
