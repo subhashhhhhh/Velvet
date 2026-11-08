@@ -25,6 +25,19 @@ struct FeedView: View {
     }
 
     var body: some View {
+        VStack(spacing: 0) {
+            if !feed.chips.isEmpty {
+                ChipBar(chips: feed.chips, selected: feed.selectedChip) { chip in
+                    Task { await feed.select(chip) }
+                }
+            }
+            content
+        }
+        .task { await feed.loadIfNeeded() }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         Group {
             if feed.videos.isEmpty && feed.shorts.isEmpty {
                 emptyState
@@ -43,9 +56,9 @@ struct FeedView: View {
                     .padding(Self.padding)
                 }
                 .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 }
+                .id(feed.selectedChip?.id) // a new topic starts at the top
             }
         }
-        .task { await feed.loadIfNeeded() }
     }
 
     /// Explicit column count (instead of `.adaptive`) so "after N rows" is exact.
@@ -100,6 +113,37 @@ struct FeedView: View {
             }
             .frame(maxWidth: .infinity)
         }
+    }
+}
+
+/// YouTube's topic chips: "All", "Music", "Formula 1", … scrolled sideways.
+struct ChipBar: View {
+    let chips: [FeedChip]
+    let selected: FeedChip?
+    var onSelect: (FeedChip?) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(chips) { chip in
+                    let isOn = chip.token == nil ? selected == nil : chip == selected
+                    Button { onSelect(chip) } label: {
+                        Text(chip.title)
+                            .font(.callout.weight(.medium))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .foregroundStyle(isOn ? Color(nsColor: .windowBackgroundColor) : .primary)
+                            .background(isOn ? AnyShapeStyle(.primary) : AnyShapeStyle(.quaternary),
+                                        in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 10)
+        }
+        .scrollClipDisabled(false)
     }
 }
 
