@@ -145,10 +145,13 @@ final class FloatingPiP: NSObject, NSWindowDelegate {
     private var restingFrame: NSRect?
 
     func windowDidEndLiveResize(_ notification: Notification) {
-        if let panel { restingFrame = panel.frame; saveFrame(panel.frame) }
+        // Animated setFrame (our fly-back) also counts as a live resize; ignore those.
+        guard !animating, !isClosing, let panel else { return }
+        restingFrame = panel.frame
+        saveFrame(panel.frame)
     }
 
-    /// Our own animations move the panel too; only user moves should snap.
+    /// Our own animations move/resize the panel too; only the user's changes are remembered.
     private var animating = false
     func windowDidMove(_ notification: Notification) {
         guard !animating, !isClosing, let panel else { return }
