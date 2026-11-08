@@ -176,6 +176,10 @@ final class PictureInPicture: NSObject {
         let sel = NSSelectorFromString("updatePlaybackStateUsingBlock:")
         guard let method = class_getInstanceMethod(type(of: pip), sel) else { return }
         let block: @convention(block) (NSObject) -> Void = { state in
+            // PIPContentType: 1 = VideoOnDemand (seekable scrubber), 2 = LiveBroadcast.
+            // Left at 0 ("unspecified"), the system shows progress but won't let you scrub.
+            state.setValue(live ? 2 : 1, forKey: "contentType")
+            state.setValue(false, forKey: "requiresLinearPlayback")
             if !live, duration > 0 {
                 state.setValue(duration, forKey: "contentDuration")
             }
