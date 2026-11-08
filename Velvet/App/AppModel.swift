@@ -68,7 +68,7 @@ final class AppModel {
     }
 
     func submitSearch() {
-        closePlayer()
+        leaveWatchPage()
         channel = nil
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         activeSearch = q.isEmpty ? nil : q
@@ -76,8 +76,12 @@ final class AppModel {
 
     // MARK: - Playback
 
-    /// The video being watched; non-nil shows the watch page.
+    /// The video being watched; non-nil shows the watch page (unless `watchPageHidden`).
     private(set) var watching: PlayerSession?
+    /// The user browsed away from the watch page while its video carries on in PiP.
+    private(set) var watchPageHidden = false
+    /// The watch page is what the window shows right now.
+    var isShowingWatchPage: Bool { watching != nil && !watchPageHidden }
     var playerFullscreen = false
     /// Where the watch page lays out the player, and the page's visible area (root coordinates).
     /// The player itself is drawn in a window-level layer (RootView) so fullscreen is a single
@@ -116,6 +120,12 @@ final class AppModel {
             openShorts(startingWith: video)
             return
         }
+        // The video already playing in PiP: just bring its page back.
+        if let watching, watching.video.id == video.id, watchPageHidden, position == nil {
+            showWatchPage()
+            return
+        }
+        watchPageHidden = false
         if pip.isActive { exitPictureInPicture() }
         watching?.close()
         shortsOverlay?.close(); shortsOverlay = nil
@@ -131,6 +141,7 @@ final class AppModel {
     }
 
     func closePlayer() {
+        watchPageHidden = false
         if pip.isActive { exitPictureInPicture() }
         if playerFullscreen { togglePlayerFullscreen() }
         watching?.close()
@@ -163,7 +174,7 @@ final class AppModel {
     }
 
     /// Why PiP started, which decides what ends it.
-    enum PiPReason { case manual, windowHidden, scrolledPast }
+    enum PiPReason { case manual, windowHidden, scrolledPast, navigatedAway }
     @ObservationIgnored private var pipReason: PiPReason = .manual
 
     func enterPictureInPicture(automatic: Bool, reason: PiPReason? = nil) {
@@ -191,10 +202,15 @@ final class AppModel {
                                      playing: !player.isPaused, live: false)
         }
         pip.onSkipToLive = { [weak self] in (self?.watching ?? self?.shortsOverlay?.session)?.goLive() }
-        pip.onClosed = { [weak self, weak player] in
+        pip.onClosed = { [weak self, weak player] restored in
             player?.returnFromPictureInPicture()
             player?.onPictureInPicturePauseChange = nil
-            self?.pipPlayer = nil
+            guard let self else { return }
+            self.pipPlayer = nil
+            // PiP was carrying a video whose page is gone: X ends it, "return" reopens the page.
+            if self.watchPageHidden, let watching = self.watching, watching.player === player {
+                if restored { self.watchPageHidden = false } else { self.closePlayer() }
+            }
         }
         player.onPictureInPicturePauseChange = { [weak self] paused in self?.pip.setPlaying(!paused) }
         let live = session?.isLive ?? false
@@ -208,10 +224,43 @@ final class AppModel {
             }
         }
         // PiP's "return to app" button: switch to Velvet's window (and its Space), like Safari.
-        pip.onRestoreRequested = { [weak self] in self?.bringToFront() }
+        pip.onRestoreRequested = { [weak self] in
+            guard let self else { return }
+            self.bringToFront()
+            // Reopen the page now so it's there when PiP flies back into it.
+            if self.watchPageHidden { self.watchPageHidden = false }
+        }
         pip.enter(view: view, aspect: player.videoSize ?? CGSize(width: 16, height: 9), playing: !player.isPaused,
                   returnTo: returnView?.window, rect: rect, automatic: automatic)
         if pipReason != .scrolledPast { releaseHiddenPageMemory() }
+    }
+
+    /// Leaving the watch page (sidebar, search, channel, Back): keep the video going in PiP
+    /// if enabled, otherwise close it.
+    func leaveWatchPage() {
+        guard let watching, !watchPageHidden else {
+            if shortsOverlay != nil { closePlayer() }
+            return
+        }
+        guard settings.pipOnNavigate, PictureInPicture.isAvailable, watching.phase == .ready else {
+            closePlayer()
+            return
+        }
+        if playerFullscreen { togglePlayerFullscreen() }
+        if !pip.isActive { enterPictureInPicture(automatic: false, reason: .navigatedAway) }
+        pipReason = .navigatedAway
+        watchPageHidden = true
+    }
+
+    /// Back to the page of the video playing in PiP.
+    func showWatchPage() {
+        guard watchPageHidden else { return }
+        watchPageHidden = false
+        // Let the page lay out its player so PiP can animate back into it.
+        Task {
+            try? await Task.sleep(for: .milliseconds(150))
+            exitPictureInPicture()
+        }
     }
 
     func exitPictureInPicture() {
@@ -223,7 +272,7 @@ final class AppModel {
     /// Scrolling the watch page: move the video into PiP once the player is mostly out of view,
     /// and back once it's mostly visible again (hysteresis avoids flicker at the edge).
     private func playerVisibilityChanged() {
-        guard settings.pipOnScroll, watching != nil, !playerFullscreen,
+        guard settings.pipOnScroll, isShowingWatchPage, !playerFullscreen,
               mainWindow?.occlusionState.contains(.visible) ?? true else { return }
         let fraction = playerVisibleFraction
         if !pip.isActive {
@@ -261,7 +310,7 @@ final class AppModel {
             // Local monitors run on the main thread; NSEvent just isn't marked Sendable.
             nonisolated(unsafe) let event = event
             let consumed = MainActor.assumeIsolated { () -> Bool in
-                guard let self, self.watching != nil, !self.playerFullscreen,
+                guard let self, self.isShowingWatchPage, !self.playerFullscreen,
                       let window = self.mainWindow, event.window === window,
                       let content = window.contentView else { return false }
                 // SwiftUI's .global space here is the content view with a top-left origin.
@@ -317,7 +366,7 @@ final class AppModel {
             suppressAutoPiPUntil = .distantPast
             // Coming back: end a window-hidden PiP, unless the player is scrolled out of view
             // (then it stays in PiP, as if it had been scrolled past).
-            if pip.isActive && pip.startedAutomatically {
+            if pip.isActive && pip.startedAutomatically && !watchPageHidden {
                 if playerVisibleFraction > 0.5 { exitPictureInPicture() } else { pipReason = .scrolledPast }
             }
         }
@@ -339,8 +388,8 @@ final class AppModel {
     private(set) var channel: ChannelModel?
 
     func openChannel(_ channelId: String) {
-        guard channel?.id != channelId || watching != nil || shortsOverlay != nil else { return }
-        closePlayer()
+        guard channel?.id != channelId || isShowingWatchPage || shortsOverlay != nil else { return }
+        leaveWatchPage()
         shortsTab?.pause()
         if channel?.id != channelId {
             channel = ChannelModel(channelId: channelId, client: client,
@@ -358,6 +407,8 @@ final class AppModel {
     private(set) var shortsTab: ShortsController?
 
     func openShorts(startingWith video: Video) {
+        watchPageHidden = false
+        if pip.isActive { exitPictureInPicture() }
         watching?.close(); watching = nil
         shortsTab?.pause()
         shortsOverlay?.close()
@@ -401,7 +452,9 @@ final class AppModel {
     }
 
     func navigate(to destination: Destination) {
-        closePlayer()
+        // Shorts autoplay, so a video carried along in PiP would talk over them.
+        if destination == .shorts { closePlayer() } else { leaveWatchPage() }
+        shortsOverlay?.close(); shortsOverlay = nil
         channel = nil
         if destination != .shorts { shortsTab?.pause() }
         activeSearch = nil
@@ -465,6 +518,16 @@ final class AppModel {
         }
         #if DEBUG
         if let id = UserDefaults.standard.string(forKey: "VelvetChannel"), !id.isEmpty { openChannel(id) }
+        // `-VelvetNavigateTest YES` (with -VelvetPlay): sidebar to History at 10s, reopen the video at 18s.
+        if UserDefaults.standard.bool(forKey: "VelvetNavigateTest") {
+            Task {
+                try? await Task.sleep(for: .seconds(10))
+                log.info("Test: navigating to History")
+                navigate(to: .history)
+                try? await Task.sleep(for: .seconds(8))
+                if let v = watching?.video { log.info("Test: reopening video"); open(v) }
+            }
+        }
         // `-VelvetScrollPiPTest YES` (with -VelvetPlay): scroll the page down at 9s, back up at 15s.
         if UserDefaults.standard.bool(forKey: "VelvetScrollPiPTest") {
             Task {

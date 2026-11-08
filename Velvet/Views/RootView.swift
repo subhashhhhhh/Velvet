@@ -26,7 +26,7 @@ struct RootView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let session = app.watching {
+        if let session = app.watching, !app.watchPageHidden {
             WatchView(session: session).id(session.id)
         } else if let shorts = app.shortsOverlay {
             ShortsPlayerView(controller: shorts, showsBack: true).id(ObjectIdentifier(shorts))
@@ -82,7 +82,10 @@ struct SidebarView: View {
 
     var body: some View {
         List(selection: Binding(
-            get: { app.activeSearch == nil ? app.destination : nil },
+            // Nothing selected while a video, Short or channel covers the page, so clicking the
+            // current destination (e.g. Home under a video) still counts as a navigation.
+            get: { app.activeSearch == nil && !app.isShowingWatchPage && app.shortsOverlay == nil && app.channel == nil
+                ? app.destination : nil },
             set: { if let d = $0 { app.navigate(to: d) } }
         )) {
             Section {
@@ -177,7 +180,7 @@ struct PlayerLayer: View {
 
     var body: some View {
         GeometryReader { geo in
-            if let session = app.watching {
+            if let session = app.watching, !app.watchPageHidden {
                 let origin = geo.frame(in: .global).origin
                 let full = app.playerFullscreen
                 let bounds = CGRect(origin: .zero, size: geo.size)

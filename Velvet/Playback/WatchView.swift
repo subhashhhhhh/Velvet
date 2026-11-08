@@ -42,7 +42,7 @@ struct WatchView: View {
         .toolbar(app.playerFullscreen ? .hidden : .visible, for: .windowToolbar)
         .toolbar {
             ToolbarItem(placement: .navigation) {
-                Button("Back", systemImage: "chevron.backward") { app.closePlayer() }
+                Button("Back", systemImage: "chevron.backward") { app.leaveWatchPage() }
                     .keyboardShortcut("[", modifiers: .command)
             }
         }

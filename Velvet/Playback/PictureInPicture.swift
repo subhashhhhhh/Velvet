@@ -25,7 +25,8 @@ final class PictureInPicture: NSObject {
     var onSkip: ((Double) -> Void)?
     var onSkipToLive: (() -> Void)?
     /// PiP closed (via its own buttons or `exit()`); the caller moves the video back inline.
-    var onClosed: (() -> Void)?
+    /// The flag is true for the "return to app" button, false for X or `exit()`.
+    var onClosed: ((_ restored: Bool) -> Void)?
     /// The user pressed PiP's "return to app" button: bring the app's window forward.
     var onRestoreRequested: (() -> Void)?
 
@@ -137,7 +138,7 @@ final class PictureInPicture: NSObject {
         pip = nil
         content = nil
         log.info("Left PiP\(restore ? " (restore to app)" : "", privacy: .public)")
-        onClosed?()
+        onClosed?(restore)
         // Fallback if the framework skipped pipWillClose.
         if restore && !restoreSignalled { onRestoreRequested?() }
         restoreSignalled = false
