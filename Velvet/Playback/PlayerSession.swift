@@ -101,6 +101,14 @@ final class PlayerSession: Identifiable {
         loadTask = Task { try? await play(info, at: position, autoplay: playing) }
     }
 
+    // MARK: Chapters
+
+    var chapters: [Chapter] { info?.chapters ?? [] }
+
+    func chapter(at time: Double) -> Chapter? {
+        chapters.last { $0.start <= time + 0.25 }
+    }
+
     // MARK: Captions
 
     var captionTracks: [CaptionTrack] { info?.captions ?? [] }

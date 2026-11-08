@@ -234,7 +234,7 @@ struct PlayerControls: View {
             VStack(spacing: 8) {
                 SeekBar(position: scrubbing ?? player.position, buffered: player.bufferedUntil,
                         duration: player.duration, isLive: session.isLive,
-                        segments: session.sponsor.segments) { value, done in
+                        segments: session.sponsor.segments, chapters: session.chapters) { value, done in
                     scrubbing = done ? nil : value
                     if done { player.seek(to: value) }
                     onInteract()
@@ -250,6 +250,7 @@ struct PlayerControls: View {
                         LiveBadge(behind: session.isBehindLive) { session.goLive() }
                     } else {
                         Text(timeLabel).monospacedDigit().font(.callout).foregroundStyle(.white.opacity(0.85))
+                        if let chapter = session.chapter(at: scrubbing ?? player.position) { chapterMenu(current: chapter) }
                     }
                     Spacer()
                     if !session.captionTracks.isEmpty { captionsMenu }
@@ -295,6 +296,30 @@ struct PlayerControls: View {
         .menuStyle(.button)
         .menuIndicator(.hidden)
         .fixedSize()
+    }
+
+    private func chapterMenu(current: Chapter) -> some View {
+        Menu {
+            ForEach(session.chapters) { c in
+                Button { player.seek(to: c.start) } label: {
+                    let text = "\(Self.format(c.start))  \(c.title)"
+                    if c == current { Label(text, systemImage: "checkmark") } else { Text(text) }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text("·")
+                Text(current.title).lineLimit(1)
+                Image(systemName: "chevron.right").font(.caption2.weight(.bold))
+            }
+            .font(.callout)
+            .foregroundStyle(.white.opacity(0.85))
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .frame(maxWidth: 280, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .help("Chapters")
     }
 
     private var captionsMenu: some View {
@@ -370,9 +395,11 @@ struct SeekBar: View {
     let duration: Double
     var isLive = false
     var segments: [SponsorSegment] = []
+    var chapters: [Chapter] = []
     var onScrub: (Double, Bool) -> Void
 
     @State private var hovering = false
+    @State private var hoverX: CGFloat?
 
     var body: some View {
         GeometryReader { geo in
@@ -392,12 +419,33 @@ struct SeekBar: View {
                     .offset(x: frac(position) - (hovering ? 6.5 : 0))
             }
             .frame(height: hovering ? 6 : 4)
+            .mask { ChapterGaps(chapters: chapters, duration: duration) }
             .frame(maxHeight: .infinity)
+            .overlay(alignment: .bottomLeading) {
+                if let x = hoverX, duration > 0, !isLive {
+                    let t = value(at: x, width: w)
+                    let title = chapters.last { $0.start <= t }?.title
+                    VStack(spacing: 2) {
+                        if let title { Text(title).lineLimit(1).font(.caption.weight(.semibold)) }
+                        Text(PlayerControls.format(t)).monospacedDigit().font(.caption)
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 8).padding(.vertical, 4)
+                    .background(.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 6))
+                    .fixedSize()
+                    .alignmentGuide(.leading) { d in d.width / 2 - min(max(x, d.width / 2), w - d.width / 2) }
+                    .alignmentGuide(.bottom) { d in d.height + 14 }
+                    .allowsHitTesting(false)
+                }
+            }
             .contentShape(Rectangle())
             .gesture(DragGesture(minimumDistance: 0)
                 .onChanged { onScrub(value(at: $0.location.x, width: w), false) }
                 .onEnded { onScrub(value(at: $0.location.x, width: w), true) })
             .onHover { h in withAnimation(.easeOut(duration: 0.12)) { hovering = h } }
+            .onContinuousHover { phase in
+                if case .active(let p) = phase { hoverX = p.x } else { hoverX = nil }
+            }
         }
         .frame(height: 16)
         .opacity(isLive || duration <= 0 ? 0.4 : 1)
@@ -407,6 +455,24 @@ struct SeekBar: View {
     private func value(at x: CGFloat, width: CGFloat) -> Double {
         guard width > 0 else { return 0 }
         return Double(min(max(x / width, 0), 1)) * duration
+    }
+}
+
+/// Bar mask with a small gap at each chapter boundary, like YouTube's segmented bar.
+private struct ChapterGaps: View {
+    let chapters: [Chapter]
+    let duration: Double
+
+    var body: some View {
+        Canvas { ctx, size in
+            ctx.fill(Path(CGRect(origin: .zero, size: size)), with: .color(.black))
+            guard duration > 0 else { return }
+            ctx.blendMode = .clear
+            for c in chapters where c.start > 0.5 && c.start < duration - 0.5 {
+                let x = CGFloat(c.start / duration) * size.width
+                ctx.fill(Path(CGRect(x: x - 1, y: 0, width: 2, height: size.height)), with: .color(.black))
+            }
+        }
     }
 }
 
