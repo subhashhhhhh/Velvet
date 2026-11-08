@@ -356,15 +356,32 @@ final class AppModel {
         occlusionObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didChangeOcclusionStateNotification, object: mainWindow, queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated { self?.windowVisibilityChanged() }
+            MainActor.assumeIsolated {
+                guard let self, let window = self.mainWindow else { return }
+                let visible = window.occlusionState.contains(.visible)
+                self.log.info("Occlusion changed: visible=\(visible)")
+                self.windowVisibilityChanged(visible: visible)
+            }
+        }
+        // Occlusion updates can trail a Space swipe by 2–3 s (seen on macOS 15). The Space
+        // change itself is announced as soon as the swipe lands, so react to that too.
+        if let spaceObserver { NSWorkspace.shared.notificationCenter.removeObserver(spaceObserver) }
+        spaceObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.activeSpaceDidChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, let window = self.mainWindow, !window.isMiniaturized, window.isVisible else { return }
+                let onSpace = window.isOnActiveSpace
+                self.log.info("Space changed: window on active space=\(onSpace)")
+                self.windowVisibilityChanged(visible: onSpace)
+            }
         }
     }
+    @ObservationIgnored private var spaceObserver: NSObjectProtocol?
 
     /// Swiping to another Space (or minimizing/covering the window) hides it: continue the
     /// playing video in PiP. Coming back ends an automatic PiP.
-    private func windowVisibilityChanged() {
-        guard let window = mainWindow else { return }
-        let visible = window.occlusionState.contains(.visible)
+    private func windowVisibilityChanged(visible: Bool) {
         if !visible {
             guard settings.autoPictureInPicture, !pip.isActive, Date() > suppressAutoPiPUntil,
                   let player = activePlayer, !player.isPaused, player.duration > 0 || player.position > 0 else { return }
