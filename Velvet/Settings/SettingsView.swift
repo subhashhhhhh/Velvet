@@ -84,6 +84,10 @@ private struct PlaybackPane: View {
             }
             Section {
                 Toggle("Start playing when a video opens", isOn: $settings.autoplay)
+                Picker("Picture in Picture style", selection: $settings.pipStyle) {
+                    ForEach(PiPStyle.allCases) { Text($0.label).tag($0) }
+                }
+                .disabled(!PictureInPicture.isSystemAvailable)
                 Toggle("Picture in Picture when switching away", isOn: $settings.autoPictureInPicture)
                     .disabled(!PictureInPicture.isAvailable)
                 Toggle("Picture in Picture when scrolling past the player", isOn: $settings.pipOnScroll)

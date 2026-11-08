@@ -131,6 +131,7 @@ final class Preferences {
     var autoPictureInPicture: Bool { didSet { save(autoPictureInPicture, .autoPictureInPicture) } }
     var pipOnScroll: Bool { didSet { save(pipOnScroll, .pipOnScroll) } }
     var pipOnNavigate: Bool { didSet { save(pipOnNavigate, .pipOnNavigate) } }
+    var pipStyle: PiPStyle { didSet { save(pipStyle.rawValue, .pipStyle) } }
     var autoCaptions: Bool { didSet { save(autoCaptions, .autoCaptions) } }
 
     // SponsorBlock
@@ -174,6 +175,7 @@ final class Preferences {
         autoPictureInPicture = get(.autoPictureInPicture, true)
         pipOnScroll = get(.pipOnScroll, true)
         pipOnNavigate = get(.pipOnNavigate, true)
+        pipStyle = PiPStyle(rawValue: get(.pipStyle, "")) ?? .floating
         autoCaptions = get(.autoCaptions, false)
 
         sponsorBlockEnabled = get(.sponsorBlockEnabled, true)
@@ -209,7 +211,7 @@ final class Preferences {
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
         autoPictureInPicture = fresh.autoPictureInPicture; pipOnScroll = fresh.pipOnScroll
-        autoCaptions = fresh.autoCaptions; pipOnNavigate = fresh.pipOnNavigate
+        autoCaptions = fresh.autoCaptions; pipOnNavigate = fresh.pipOnNavigate; pipStyle = fresh.pipStyle
         sponsorBlockEnabled = fresh.sponsorBlockEnabled; sponsorActions = fresh.sponsorActions
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
         deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
@@ -221,7 +223,7 @@ final class Preferences {
 
     private enum Key: CaseIterable {
         case startPage, showShortsShelf, shortsAfterRows, cardSize, hideWatched, hideMembersOnly
-        case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions, pipOnNavigate
+        case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions, pipOnNavigate, pipStyle
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
         case jsRuntime, autoUpdateTools
@@ -234,4 +236,13 @@ final class Preferences {
     private func saveCodable(_ value: some Encodable, _ key: Key) {
         defaults.set(try? JSONEncoder().encode(value), forKey: key.name)
     }
+}
+
+enum PiPStyle: String, CaseIterable, Identifiable {
+    /// Velvet's own floating window: instant, with a seek bar.
+    case floating
+    /// macOS's Picture in Picture window.
+    case system
+    var id: String { rawValue }
+    var label: String { self == .floating ? "Velvet floating window" : "macOS Picture in Picture" }
 }

@@ -10,10 +10,21 @@ import OSLog
 /// Everything is resolved at runtime: if the framework or class ever disappears, `isAvailable`
 /// is false and the PiP UI simply doesn't show.
 final class PictureInPicture: NSObject {
-    static let isAvailable: Bool = {
+    /// Some form of PiP always exists: Velvet's floating window needs nothing from the system.
+    static var isAvailable: Bool { true }
+
+    /// The system PiP (private PIP.framework) can be used.
+    static let isSystemAvailable: Bool = {
         guard dlopen("/System/Library/PrivateFrameworks/PIP.framework/PIP", RTLD_NOW) != nil else { return false }
         return NSClassFromString("PIPViewController") != nil
     }()
+
+    /// Use Velvet's floating window instead of the system PiP.
+    var useFloatingWindow = true
+    private let floating = FloatingPiP()
+    private var usingFloating = false
+    /// Screen rect of the inline player, for the floating window's fly-back on "return".
+    var returnRectProvider: (() -> NSRect?)?
 
     private(set) var isActive = false
     /// True when PiP started because the window was hidden (so showing it again should end PiP).
@@ -44,8 +55,14 @@ final class PictureInPicture: NSObject {
     /// Shows `view` in a system PiP window. `returnRect` (window coordinates) is where the
     /// video animates back to when PiP closes.
     @discardableResult
-    func enter(view: NSView, aspect: CGSize, playing: Bool, returnTo window: NSWindow?, rect: NSRect?, automatic: Bool) -> Bool {
-        guard Self.isAvailable, !isActive,
+    func enter(view: NSView, aspect: CGSize, playing: Bool, returnTo window: NSWindow?, rect: NSRect?, automatic: Bool,
+               player: MPVPlayer? = nil, isLive: Bool = false) -> Bool {
+        if (useFloatingWindow || !Self.isSystemAvailable), let player, !isActive {
+            return enterFloating(view: view, aspect: aspect, player: player, isLive: isLive,
+                                 from: rect.flatMap { r in window?.convertToScreen(r) }, screen: window?.screen,
+                                 automatic: automatic)
+        }
+        guard Self.isSystemAvailable, !isActive,
               let cls = NSClassFromString("PIPViewController") as? NSViewController.Type else { return false }
         let pip = cls.init()
         let content = NSViewController()
@@ -108,17 +125,45 @@ final class PictureInPicture: NSObject {
         return true
     }
 
+    private func enterFloating(view: NSView, aspect: CGSize, player: MPVPlayer, isLive: Bool,
+                               from: NSRect?, screen: NSScreen?, automatic: Bool) -> Bool {
+        floating.onPause = { [weak self] in self?.onPause?() }
+        floating.onPlay = { [weak self] in self?.onPlay?() }
+        floating.onSkipToLive = { [weak self] in self?.onSkipToLive?() }
+        floating.onRestoreRequested = { [weak self] in self?.onRestoreRequested?() }
+        floating.returnRect = { [weak self] in self?.returnRectProvider?() }
+        floating.onClosed = { [weak self] restored in
+            guard let self else { return }
+            self.isActive = false
+            self.usingFloating = false
+            self.startedAutomatically = false
+            self.log.info("Left floating PiP\(restored ? " (restore to app)" : "", privacy: .public)")
+            self.onClosed?(restored)
+        }
+        isActive = true
+        usingFloating = true
+        startedAutomatically = automatic
+        floating.enter(view: view, aspect: aspect, player: player, isLive: isLive, from: from, screen: screen)
+        log.info("Entered floating PiP (\(automatic ? "automatic" : "manual", privacy: .public))")
+        return true
+    }
+
     func setPlaying(_ playing: Bool) {
         pip?.setValue(playing, forKey: "playing")
     }
 
     func setAspect(_ aspect: CGSize) {
+        if usingFloating { floating.setAspect(aspect); return }
         guard aspect.width > 0, aspect.height > 0 else { return }
         pip?.setValue(NSValue(size: aspect), forKey: "aspectRatio")
     }
 
     /// Ends PiP, animating back to the replacement rect.
     func exit(returnTo window: NSWindow? = nil, rect: NSRect? = nil) {
+        if usingFloating {
+            floating.exit(to: rect.flatMap { r in window?.convertToScreen(r) })
+            return
+        }
         guard isActive, let pip, let content else { return }
         // Dismissing mid-presentation is ignored by PIP.framework; do it once it's shown.
         if isPresenting { exitRequested = true; return }

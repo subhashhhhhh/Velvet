@@ -230,8 +230,14 @@ final class AppModel {
             // Reopen the page now so it's there when PiP flies back into it.
             if self.watchPageHidden { self.watchPageHidden = false }
         }
+        pip.useFloatingWindow = settings.pipStyle == .floating
+        pip.returnRectProvider = { [weak player] in
+            guard let inline = player?.inlineView, let window = inline.window else { return nil }
+            return window.convertToScreen(inline.convert(inline.bounds, to: nil))
+        }
         let entered = pip.enter(view: view, aspect: player.videoSize ?? CGSize(width: 16, height: 9), playing: !player.isPaused,
-                                returnTo: returnView?.window, rect: rect, automatic: automatic)
+                                returnTo: returnView?.window, rect: rect, automatic: automatic,
+                                player: player, isLive: live)
         guard entered else {
             // Never leave the video in an orphaned PiP view over the page.
             view.removeFromSuperview()
