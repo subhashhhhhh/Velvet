@@ -204,6 +204,7 @@ struct PlayerView: View {
             case "m": player.toggleMute()
             case "f": onToggleFullscreen()
             case "p": app.togglePictureInPicture()
+            case "c": session.toggleCaptions()
             case ",": player.setSpeed(player.speed - 0.25)
             case ".": player.setSpeed(player.speed + 0.25)
             case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
@@ -251,6 +252,7 @@ struct PlayerControls: View {
                         Text(timeLabel).monospacedDigit().font(.callout).foregroundStyle(.white.opacity(0.85))
                     }
                     Spacer()
+                    if !session.captionTracks.isEmpty { captionsMenu }
                     speedMenu
                     qualityMenu
                     if PictureInPicture.isAvailable {
@@ -293,6 +295,26 @@ struct PlayerControls: View {
         .menuStyle(.button)
         .menuIndicator(.hidden)
         .fixedSize()
+    }
+
+    private var captionsMenu: some View {
+        Menu {
+            Button { session.selectCaption(nil) } label: {
+                if session.selectedCaption == nil { Label("Off", systemImage: "checkmark") } else { Text("Off") }
+            }
+            Divider()
+            ForEach(session.captionTracks) { t in
+                Button { session.selectCaption(t) } label: {
+                    if session.selectedCaption == t { Label(t.label, systemImage: "checkmark") } else { Text(t.label) }
+                }
+            }
+        } label: {
+            Image(systemName: session.selectedCaption == nil ? "captions.bubble" : "captions.bubble.fill")
+        }
+        .menuStyle(.button)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Captions (C)")
     }
 
     private var qualityMenu: some View {

@@ -270,6 +270,14 @@ final class MPVPlayer {
             ("loop-file", options.loop ? "inf" : "no"),
             ("volume", "100"),
             ("volume-max", "150"),
+            // Captions: YouTube-like translucent box, clear of the controls.
+            ("sub-font", "SF Pro Display"),
+            ("sub-font-size", "40"),
+            ("sub-border-style", "background-box"),
+            ("sub-back-color", "#B3000000"),
+            ("sub-color", "#FFFFFFFF"),
+            ("sub-margin-y", "48"),
+            ("sub-auto", "no"),
         ])
         guard let core else {
             failure = "Couldn't start the video engine."
@@ -441,6 +449,17 @@ final class MPVPlayer {
     func setSpeed(_ value: Double) { core?.setDouble("speed", max(0.25, min(4, value))) }
 
     func stop() { core?.command(["stop"]) }
+
+    /// Shows a local caption file (replacing any current one).
+    func showCaptions(file: URL, title: String, language: String) {
+        core?.command(["sub-remove"])
+        core?.command(["sub-add", file.path, "select", title, language])
+    }
+
+    func hideCaptions() {
+        core?.command(["sub-remove"])
+        core?.set("sid", "no")
+    }
 
     // MARK: - State updates
 

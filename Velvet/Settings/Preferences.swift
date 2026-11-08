@@ -124,6 +124,7 @@ final class Preferences {
     var prefetchOnHover: Bool { didSet { save(prefetchOnHover, .prefetchOnHover) } }
     var autoPictureInPicture: Bool { didSet { save(autoPictureInPicture, .autoPictureInPicture) } }
     var pipOnScroll: Bool { didSet { save(pipOnScroll, .pipOnScroll) } }
+    var autoCaptions: Bool { didSet { save(autoCaptions, .autoCaptions) } }
 
     // SponsorBlock
     var sponsorBlockEnabled: Bool { didSet { save(sponsorBlockEnabled, .sponsorBlockEnabled) } }
@@ -164,6 +165,7 @@ final class Preferences {
         prefetchOnHover = get(.prefetchOnHover, true)
         autoPictureInPicture = get(.autoPictureInPicture, true)
         pipOnScroll = get(.pipOnScroll, true)
+        autoCaptions = get(.autoCaptions, false)
 
         sponsorBlockEnabled = get(.sponsorBlockEnabled, true)
         var actions = Dictionary(uniqueKeysWithValues: SponsorCategory.allCases.map { ($0, $0.defaultAction) })
@@ -198,6 +200,7 @@ final class Preferences {
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
         autoPictureInPicture = fresh.autoPictureInPicture; pipOnScroll = fresh.pipOnScroll
+        autoCaptions = fresh.autoCaptions
         sponsorBlockEnabled = fresh.sponsorBlockEnabled; sponsorActions = fresh.sponsorActions
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
         deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
@@ -209,7 +212,7 @@ final class Preferences {
 
     private enum Key: CaseIterable {
         case startPage, showShortsShelf, shortsAfterRows, cardSize, hideWatched
-        case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll
+        case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
         case jsRuntime, autoUpdateTools

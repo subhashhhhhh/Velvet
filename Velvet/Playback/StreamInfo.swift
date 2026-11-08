@@ -45,6 +45,9 @@ nonisolated struct StreamInfo: Sendable {
     let formats: [StreamFormat]
     /// Links stop working after this (YouTube's `expire` parameter).
     let expires: Date
+    /// Caption tracks worth offering (manual, original auto-generated, auto-translated to the user's language).
+    var captions: [CaptionTrack] = []
+    var chapters: [Chapter] = []
 
     var isExpired: Bool { Date() > expires.addingTimeInterval(-10 * 60) }
 
@@ -170,8 +173,20 @@ extension StreamInfo {
                 availableAt: f["available_at"].double.map { Date(timeIntervalSince1970: $0) }
             )
         }
+        captions = CaptionParser.tracks(from: json, preferredLanguage: Locale.current.language.languageCode?.identifier ?? "en")
+        chapters = json["chapters"].array.compactMap { c in
+            guard let start = c["start_time"].double, let title = c["title"].string else { return nil }
+            return Chapter(start: start, end: c["end_time"].double, title: title)
+        }
         expires = earliestExpiry.isFinite
             ? Date(timeIntervalSince1970: earliestExpiry)
             : Date().addingTimeInterval(isLive ? 30 * 60 : 5 * 60 * 60)
     }
+}
+
+nonisolated struct Chapter: Hashable, Sendable, Identifiable {
+    var id: Double { start }
+    let start: Double
+    let end: Double?
+    let title: String
 }

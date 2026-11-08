@@ -87,6 +87,7 @@ private struct PlaybackPane: View {
                     .disabled(!PictureInPicture.isAvailable)
                 Toggle("Picture in Picture when scrolling past the player", isOn: $settings.pipOnScroll)
                     .disabled(!PictureInPicture.isAvailable)
+                Toggle("Show captions automatically", isOn: $settings.autoCaptions)
                 Picker("Default speed", selection: $settings.defaultSpeed) {
                     ForEach([0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0], id: \.self) {
                         Text($0 == 1 ? "Normal" : "\($0.formatted())×").tag($0)
