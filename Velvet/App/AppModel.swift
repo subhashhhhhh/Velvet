@@ -93,6 +93,16 @@ final class AppModel {
         return visible.isNull ? 0 : visible.height / playerSlot.height
     }
 
+    /// The session whose video is on screen (watch page, Shorts overlay, Shorts tab).
+    var currentSession: PlayerSession? {
+        if let watching { return watching }
+        if let shortsOverlay { return shortsOverlay.session }
+        if destination == .shorts, activeSearch == nil { return shortsTab?.session }
+        return nil
+    }
+
+    @ObservationIgnored lazy var nowPlaying = NowPlaying { [weak self] in self?.currentSession }
+
     func makeSession(for video: Video) -> PlayerSession {
         PlayerSession(video: video, resolver: resolver, preferences: settings,
                       client: client, session: authState == .signedIn ? session : nil,
@@ -445,6 +455,7 @@ final class AppModel {
     /// Restores a saved session at launch.
     func start() async {
         guard authState == .unknown else { return }
+        nowPlaying.start()
         prepareTools()
         if let saved = YouTubeSession.restore() {
             await activate(saved)
