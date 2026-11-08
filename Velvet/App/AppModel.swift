@@ -230,8 +230,17 @@ final class AppModel {
             // Reopen the page now so it's there when PiP flies back into it.
             if self.watchPageHidden { self.watchPageHidden = false }
         }
-        pip.enter(view: view, aspect: player.videoSize ?? CGSize(width: 16, height: 9), playing: !player.isPaused,
-                  returnTo: returnView?.window, rect: rect, automatic: automatic)
+        let entered = pip.enter(view: view, aspect: player.videoSize ?? CGSize(width: 16, height: 9), playing: !player.isPaused,
+                                returnTo: returnView?.window, rect: rect, automatic: automatic)
+        guard entered else {
+            // Never leave the video in an orphaned PiP view over the page.
+            view.removeFromSuperview()
+            player.returnFromPictureInPicture()
+            player.onPictureInPicturePauseChange = nil
+            pipPlayer = nil
+            pipTimelineTask?.cancel()
+            return
+        }
         if pipReason != .scrolledPast { releaseHiddenPageMemory() }
     }
 

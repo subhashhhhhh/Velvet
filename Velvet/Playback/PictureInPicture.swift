@@ -43,9 +43,10 @@ final class PictureInPicture: NSObject {
 
     /// Shows `view` in a system PiP window. `returnRect` (window coordinates) is where the
     /// video animates back to when PiP closes.
-    func enter(view: NSView, aspect: CGSize, playing: Bool, returnTo window: NSWindow?, rect: NSRect?, automatic: Bool) {
+    @discardableResult
+    func enter(view: NSView, aspect: CGSize, playing: Bool, returnTo window: NSWindow?, rect: NSRect?, automatic: Bool) -> Bool {
         guard Self.isAvailable, !isActive,
-              let cls = NSClassFromString("PIPViewController") as? NSViewController.Type else { return }
+              let cls = NSClassFromString("PIPViewController") as? NSViewController.Type else { return false }
         let pip = cls.init()
         let content = NSViewController()
         content.view = view
@@ -75,20 +76,36 @@ final class PictureInPicture: NSObject {
                 if self.exitRequested { self.exit() }
             }
         }
-        Self.call(pip, "presentViewControllerAsPictureInPicture:completionHandler:", content, completion)
-        log.info("Entered PiP (\(automatic ? "automatic" : "manual", privacy: .public))")
+        if Self.call(pip, "presentViewControllerAsPictureInPicture:completionHandler:", content, completion) {
+            log.info("Entered PiP (\(automatic ? "automatic" : "manual", privacy: .public))")
+        } else {
+            // macOS 15 has only the variant without a completion handler; it presents synchronously.
+            let sel = NSSelectorFromString("presentViewControllerAsPictureInPicture:")
+            guard pip.responds(to: sel) else {
+                log.error("PIPViewController can't present on this macOS")
+                isActive = false; isPresenting = false
+                self.pip = nil; self.content = nil
+                return false
+            }
+            pip.perform(sel, with: content)
+            isPresenting = false
+            log.info("Entered PiP (\(automatic ? "automatic" : "manual", privacy: .public), legacy)")
+        }
+        return true
     }
 
     private var isPresenting = false
     private var exitRequested = false
 
     /// objc_msgSend for `(id, block)` selectors, which `perform(_:with:)` can't express.
-    private static func call(_ target: NSObject, _ selector: String, _ object: AnyObject, _ block: @escaping @convention(block) () -> Void) {
+    @discardableResult
+    private static func call(_ target: NSObject, _ selector: String, _ object: AnyObject, _ block: @escaping @convention(block) () -> Void) -> Bool {
         let sel = NSSelectorFromString(selector)
-        guard let method = class_getInstanceMethod(type(of: target), sel) else { return }
+        guard let method = class_getInstanceMethod(type(of: target), sel) else { return false }
         typealias Fn = @convention(c) (AnyObject, Selector, AnyObject, AnyObject) -> Void
         let imp = unsafeBitCast(method_getImplementation(method), to: Fn.self)
         imp(target, sel, object, block as AnyObject)
+        return true
     }
 
     func setPlaying(_ playing: Bool) {
