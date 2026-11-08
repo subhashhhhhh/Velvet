@@ -144,21 +144,6 @@ final class PictureInPicture: NSObject {
     }
 
     #if DEBUG
-    /// Discovery aid: log every optional delegate method PIP.framework asks about.
-    nonisolated override func responds(to aSelector: Selector!) -> Bool {
-        let name = NSStringFromSelector(aSelector)
-        if name.lowercased().contains("pip") || name.lowercased().contains("skip") || name.lowercased().contains("seek") {
-            Logger(subsystem: "com.subhash.Velvet", category: "PiP").debug("PIP asks delegate: \(name, privacy: .public)")
-        }
-        return super.responds(to: aSelector)
-    }
-
-    /// Catches messages sent without a responds(to:) check, so their names show up too.
-    nonisolated override func forwardingTarget(for aSelector: Selector!) -> Any? {
-        Logger(subsystem: "com.subhash.Velvet", category: "PiP").debug("PIP sent unhandled: \(NSStringFromSelector(aSelector), privacy: .public)")
-        return super.forwardingTarget(for: aSelector)
-    }
-
     /// Debug: simulate the system's skip message (what scrubbing/skip buttons send).
     func debugSimulateSkip(_ seconds: Double) {
         guard let pip else { return }
