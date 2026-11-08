@@ -407,6 +407,7 @@ struct SeekBar: View {
 
     @State private var hovering = false
     @State private var hoverX: CGFloat?
+    @State private var tipWidth: CGFloat = 0
 
     var body: some View {
         GeometryReader { geo in
@@ -440,8 +441,9 @@ struct SeekBar: View {
                     .padding(.horizontal, 8).padding(.vertical, 4)
                     .background(.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 6))
                     .fixedSize()
-                    .alignmentGuide(.leading) { d in d.width / 2 - min(max(x, d.width / 2), w - d.width / 2) }
-                    .alignmentGuide(.bottom) { d in d.height + 14 }
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { tipWidth = $0 }
+                    // Centred over the cursor, kept inside the bar's ends.
+                    .offset(x: min(max(x - tipWidth / 2, 0), max(0, w - tipWidth)), y: -18)
                     .allowsHitTesting(false)
                 }
             }

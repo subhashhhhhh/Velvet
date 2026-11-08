@@ -377,12 +377,20 @@ final class MPVPlayer {
     /// Moves the layer into a fresh view for the PiP window. The page's player keeps a still of
     /// the current frame, so the window doesn't show a black hole while it slides away (Spaces).
     func makePictureInPictureView() -> MPVSurfaceView {
-        let still = core?.snapshot()
         let view = MPVSurfaceView()
         isInPictureInPicture = true
         host(in: view)
-        inlineSurface?.showStill(still)
         return view
+    }
+
+    /// Leaves a still of the current frame on the page while the video is in PiP. Grabbing
+    /// it takes mpv a few hundred ms, so it runs after the PiP window is already up.
+    func leaveStillOnPage() {
+        Task { @MainActor [weak self] in
+            await Task.yield()
+            guard let self, self.isInPictureInPicture else { return }
+            self.inlineSurface?.showStill(self.core?.snapshot())
+        }
     }
 
     /// PiP ended: give the layer back to the page's player view.

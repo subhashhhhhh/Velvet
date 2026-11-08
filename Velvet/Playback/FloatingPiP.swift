@@ -18,7 +18,7 @@ final class FloatingPiP: NSObject, NSWindowDelegate {
 
     private static let frameKey = "floatingPiP.frame"
     private static let margin: CGFloat = 16
-    private static let defaultWidth: CGFloat = 420
+    private static let defaultWidth: CGFloat = 320
 
     var isActive: Bool { panel != nil }
 
@@ -31,7 +31,8 @@ final class FloatingPiP: NSObject, NSWindowDelegate {
         let screen = screen ?? NSScreen.main ?? NSScreen.screens[0]
         let target = Self.restoredFrame(aspect: aspect, on: screen)
 
-        let panel = FloatingPiPPanel(contentRect: from ?? target)
+        _ = from // fly-in from the page looked oversized; appear in place instead
+        let panel = FloatingPiPPanel(contentRect: target)
         panel.delegate = self
         panel.contentAspectRatio = aspect
         panel.minSize = NSSize(width: 240, height: 240 * aspect.height / aspect.width)
@@ -59,10 +60,10 @@ final class FloatingPiP: NSObject, NSWindowDelegate {
         panel.contentView = root
 
         self.panel = panel
+        restingFrame = target
+        panel.alphaValue = 0
         panel.orderFrontRegardless()
-        if from != nil {
-            animate(0.32) { _ in panel.animator().setFrame(target, display: true) }
-        }
+        animate(0.18) { _ in panel.animator().alphaValue = 1 }
     }
 
     /// Ends PiP from the app (e.g. back on the watch page): fly back to `to` (screen rect).
@@ -85,7 +86,7 @@ final class FloatingPiP: NSObject, NSWindowDelegate {
     private func finish(restored: Bool, to: NSRect?) {
         guard let panel, !isClosing else { return }
         isClosing = true
-        saveFrame(panel.frame)
+        if let restingFrame { saveFrame(restingFrame) }
         let done = { [weak self] in
             guard let self else { return }
             panel.orderOut(nil)
@@ -94,7 +95,6 @@ final class FloatingPiP: NSObject, NSWindowDelegate {
             self.isClosing = false
             self.onClosed?(restored)
         }
-        snapTask?.cancel()
         guard let to else {
             animate(0.18, { _ in panel.animator().alphaValue = 0 }, completion: done)
             return
@@ -108,22 +108,27 @@ final class FloatingPiP: NSObject, NSWindowDelegate {
         var f = panel.frame
         f.size.height = f.width * aspect.height / aspect.width
         panel.setFrame(f, display: true)
+        restingFrame = f
     }
 
     // MARK: - Placement
 
-    /// Last size/corner the user left it at, else bottom-right of the screen.
+    /// Exactly where and how big the user last left it (kept on screen), else bottom-right.
     private static func restoredFrame(aspect: CGSize, on screen: NSScreen) -> NSRect {
-        let visible = screen.visibleFrame
-        var width = defaultWidth
-        var corner = CGPoint(x: 1, y: 0) // right, bottom
-        if let saved = UserDefaults.standard.string(forKey: frameKey).map(NSRectFromString), saved.width > 0 {
-            width = saved.width
-            corner = CGPoint(x: saved.midX > visible.midX ? 1 : 0, y: saved.midY > visible.midY ? 1 : 0)
-        }
-        width = min(max(width, 240), visible.width / 2)
+        let saved = UserDefaults.standard.string(forKey: frameKey).map(NSRectFromString)
+        // Use the screen the saved frame was on, if it's still connected.
+        let home = saved.flatMap { f in NSScreen.screens.first { $0.frame.intersects(f) } } ?? screen
+        let visible = home.visibleFrame
+        let width = min(max(saved?.width ?? defaultWidth, 200), visible.width * 0.6)
         let size = NSSize(width: width, height: width * aspect.height / aspect.width)
-        return frame(size: size, corner: corner, in: visible)
+        guard let saved, saved.width > 0 else {
+            return frame(size: size, corner: CGPoint(x: 1, y: 0), in: visible)
+        }
+        // Keep the top-left corner where it was (resizing changes height with aspect ratio).
+        var origin = CGPoint(x: saved.minX, y: saved.maxY - size.height)
+        origin.x = min(max(origin.x, visible.minX), visible.maxX - size.width)
+        origin.y = min(max(origin.y, visible.minY), visible.maxY - size.height)
+        return NSRect(origin: origin, size: size)
     }
 
     private static func frame(size: NSSize, corner: CGPoint, in visible: NSRect) -> NSRect {
@@ -132,39 +137,27 @@ final class FloatingPiP: NSObject, NSWindowDelegate {
         return NSRect(origin: CGPoint(x: x, y: y), size: size)
     }
 
-    /// After a drag, glide to the nearest corner of the screen it was dropped on.
-    func snapToCorner() {
-        guard let panel, let screen = panel.screen ?? NSScreen.main else { return }
-        let visible = screen.visibleFrame
-        let f = panel.frame
-        let corner = CGPoint(x: f.midX > visible.midX ? 1 : 0, y: f.midY > visible.midY ? 1 : 0)
-        let target = Self.frame(size: f.size, corner: corner, in: visible)
-        guard target != f else { saveFrame(f); return }
-        animate(0.25) { _ in panel.animator().setFrame(target, display: true) }
-        saveFrame(target)
-    }
-
     private func saveFrame(_ frame: NSRect) {
         UserDefaults.standard.set(NSStringFromRect(frame), forKey: Self.frameKey)
     }
 
+    /// The frame the user chose (not mid-animation), saved when PiP closes.
+    private var restingFrame: NSRect?
+
     func windowDidEndLiveResize(_ notification: Notification) {
-        if let panel { saveFrame(panel.frame) }
+        if let panel { restingFrame = panel.frame; saveFrame(panel.frame) }
     }
 
     /// Our own animations move the panel too; only user moves should snap.
     private var animating = false
-    private var snapTask: Task<Void, Never>?
-
     func windowDidMove(_ notification: Notification) {
-        guard !animating, !isClosing else { return }
-        snapTask?.cancel()
-        snapTask = Task { [weak self] in
-            // Wait for the drag to end: mouse released and no movement for a moment.
-            repeat { try? await Task.sleep(for: .milliseconds(120)) } while NSEvent.pressedMouseButtons != 0 && !Task.isCancelled
-            guard !Task.isCancelled else { return }
-            self?.snapToCorner()
-        }
+        guard !animating, !isClosing, let panel else { return }
+        restingFrame = panel.frame
+    }
+
+    func windowDidResize(_ notification: Notification) {
+        guard !animating, !isClosing, let panel else { return }
+        restingFrame = panel.frame
     }
 
     private func animate(_ duration: Double, _ changes: @escaping (NSAnimationContext) -> Void, completion: (() -> Void)? = nil) {

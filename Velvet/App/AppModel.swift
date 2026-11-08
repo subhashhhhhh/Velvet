@@ -247,6 +247,7 @@ final class AppModel {
             pipTimelineTask?.cancel()
             return
         }
+        player.leaveStillOnPage()
         if pipReason != .scrolledPast { releaseHiddenPageMemory() }
     }
 
