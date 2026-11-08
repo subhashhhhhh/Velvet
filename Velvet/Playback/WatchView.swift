@@ -297,22 +297,27 @@ private struct RelatedList: View {
     var columns: Bool
     @Environment(AppModel.self) private var app
 
+    /// Related videos minus members-only ones when those are hidden (watched ones stay: rewatching is common here).
+    private var related: [Video] {
+        app.settings.hideMembersOnly ? page.related.filter { !$0.isMembersOnly } : page.related
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             if columns {
                 Text("Up Next").font(.headline)
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 14, alignment: .top)], spacing: 14) {
-                    ForEach(page.related) { v in
+                    ForEach(related) { v in
                         Button { app.open(v) } label: { VideoCard(video: v) }.buttonStyle(.plain)
                     }
                 }
             } else {
                 LazyVStack(alignment: .leading, spacing: 10) {
-                    ForEach(page.related) { v in
+                    ForEach(related) { v in
                         Button { app.open(v) } label: { RelatedRow(video: v) }
                             .buttonStyle(.plain)
                             .onAppear {
-                                if v.id == page.related.last?.id { Task { await page.loadMoreRelated() } }
+                                if v.id == related.last?.id { Task { await page.loadMoreRelated() } }
                             }
                     }
                 }

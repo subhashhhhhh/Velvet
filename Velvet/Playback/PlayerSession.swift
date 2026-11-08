@@ -86,6 +86,7 @@ final class PlayerSession: Identifiable {
                 try await play(info, at: startPosition, autoplay: prefs.autoplay)
             } catch is CancellationError {
             } catch {
+                restriction = error as? PlaybackRestriction
                 phase = .failed(error.localizedDescription)
                 player.fail(error.localizedDescription)
             }
@@ -100,6 +101,9 @@ final class PlayerSession: Identifiable {
         loadTask?.cancel()
         loadTask = Task { try? await play(info, at: position, autoplay: playing) }
     }
+
+    /// Why YouTube won't play this video for us (members-only, private, …), when that's the failure.
+    private(set) var restriction: PlaybackRestriction?
 
     // MARK: Chapters
 
@@ -196,7 +200,8 @@ final class PlayerSession: Identifiable {
                     try await play(fresh, at: position, autoplay: true)
                 } catch is CancellationError {
                 } catch {
-                    phase = .failed(error.localizedDescription)
+                    restriction = error as? PlaybackRestriction
+                phase = .failed(error.localizedDescription)
                 }
             }
         default:

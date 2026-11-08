@@ -112,7 +112,13 @@ final class Preferences {
     var showShortsShelf: Bool { didSet { save(showShortsShelf, .showShortsShelf) } }
     var shortsAfterRows: Int { didSet { save(shortsAfterRows, .shortsAfterRows) } }
     var cardSize: CardSize { didSet { save(cardSize.rawValue, .cardSize) } }
+    /// Filters what the feeds show (watched, members-only).
+    func shows(_ v: Video) -> Bool {
+        !(hideWatched && (v.watchedFraction ?? 0) >= 0.9) && !(hideMembersOnly && v.isMembersOnly)
+    }
+
     var hideWatched: Bool { didSet { save(hideWatched, .hideWatched) } }
+    var hideMembersOnly: Bool { didSet { save(hideMembersOnly, .hideMembersOnly) } }
 
     // Playback
     var quality: VideoQuality { didSet { save(quality.rawValue, .quality) } }
@@ -155,6 +161,7 @@ final class Preferences {
         shortsAfterRows = get(.shortsAfterRows, 3)
         cardSize = CardSize(rawValue: get(.cardSize, "")) ?? .regular
         hideWatched = get(.hideWatched, false)
+        hideMembersOnly = get(.hideMembersOnly, false)
 
         quality = VideoQuality(rawValue: get(.quality, 1080)) ?? .p1080
         codec = VideoCodec(rawValue: get(.codec, "")) ?? .auto
@@ -195,7 +202,7 @@ final class Preferences {
         let fresh = Preferences(defaults: defaults)
         startPage = fresh.startPage
         showShortsShelf = fresh.showShortsShelf; shortsAfterRows = fresh.shortsAfterRows
-        cardSize = fresh.cardSize; hideWatched = fresh.hideWatched
+        cardSize = fresh.cardSize; hideWatched = fresh.hideWatched; hideMembersOnly = fresh.hideMembersOnly
         quality = fresh.quality; codec = fresh.codec; defaultSpeed = fresh.defaultSpeed
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
@@ -211,7 +218,7 @@ final class Preferences {
     // MARK: Persistence
 
     private enum Key: CaseIterable {
-        case startPage, showShortsShelf, shortsAfterRows, cardSize, hideWatched
+        case startPage, showShortsShelf, shortsAfterRows, cardSize, hideWatched, hideMembersOnly
         case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover

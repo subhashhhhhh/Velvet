@@ -19,9 +19,9 @@ struct FeedView: View {
 
     private var prefs: Preferences { app.settings }
 
-    /// Videos after applying the "hide watched" preference.
+    /// Videos after applying the "hide watched" / "hide members-only" preferences.
     private var visible: [Video] {
-        prefs.hideWatched ? feed.videos.filter { ($0.watchedFraction ?? 0) < 0.9 } : feed.videos
+        prefs.hideWatched || prefs.hideMembersOnly ? feed.videos.filter(prefs.shows) : feed.videos
     }
 
     var body: some View {

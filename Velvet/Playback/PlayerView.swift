@@ -162,9 +162,16 @@ struct PlayerView: View {
             }
         case .failed(let message):
             VStack(spacing: 12) {
-                Image(systemName: "exclamationmark.triangle").font(.largeTitle)
+                Image(systemName: session.restriction?.symbol ?? "exclamationmark.triangle").font(.largeTitle)
                 Text(message).multilineTextAlignment(.center).frame(maxWidth: 420)
-                Button("Try Again") { session.retry() }.buttonStyle(.borderedProminent)
+                if session.restriction == nil {
+                    Button("Try Again") { session.retry() }.buttonStyle(.borderedProminent)
+                } else if session.restriction == .membersOnly {
+                    Button("Open on YouTube") {
+                        NSWorkspace.shared.open(URL(string: "https://www.youtube.com/watch?v=\(session.video.id)")!)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
             }
             .foregroundStyle(.white)
             .padding()

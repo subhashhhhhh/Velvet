@@ -56,6 +56,7 @@ private struct FeedPane: View {
             }
             Section {
                 Toggle("Hide videos I've already watched", isOn: $settings.hideWatched)
+                Toggle("Hide members-only videos", isOn: $settings.hideMembersOnly)
             } footer: {
                 Text("Hides videos YouTube reports as mostly watched (90% or more).")
             }

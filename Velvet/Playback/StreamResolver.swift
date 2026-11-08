@@ -142,7 +142,8 @@ actor StreamResolver {
         let result = try await ProcessRunner.run(paths.ytdlp, arguments: args, timeout: .seconds(45))
         try Task.checkCancellation()
         guard result.status == 0 else {
-            throw ProcessError.failed("yt-dlp", result.status, Self.cleanError(result.stderrText))
+            let message = Self.cleanError(result.stderrText)
+            throw PlaybackRestriction(ytdlpError: message) ?? ProcessError.failed("yt-dlp", result.status, message)
         }
         let json = try JSON(data: result.stdout)
         guard let info = StreamInfo(ytdlp: json),
@@ -160,5 +161,43 @@ actor StreamResolver {
             return String(error.dropFirst("ERROR:".count)).trimmingCharacters(in: .whitespaces)
         }
         return lines.last ?? "Unknown error"
+    }
+}
+
+/// Videos YouTube won't play for this viewer, with a readable explanation instead of yt-dlp's.
+nonisolated enum PlaybackRestriction: LocalizedError, Equatable {
+    case membersOnly, ageRestricted, privateVideo, unavailable
+
+    init?(ytdlpError message: String) {
+        let m = message.lowercased()
+        if m.contains("members-only") || m.contains("members only") || m.contains("join this channel") {
+            self = .membersOnly
+        } else if m.contains("confirm your age") || m.contains("age-restricted") || m.contains("inappropriate for some users") {
+            self = .ageRestricted
+        } else if m.contains("private video") {
+            self = .privateVideo
+        } else if m.contains("video unavailable") || m.contains("this video has been removed") {
+            self = .unavailable
+        } else {
+            return nil
+        }
+    }
+
+    var errorDescription: String? {
+        switch self {
+        case .membersOnly: "This video is for channel members only. Join the channel on YouTube to watch it here."
+        case .ageRestricted: "This video is age-restricted. Sign in with an account that can watch it."
+        case .privateVideo: "This video is private."
+        case .unavailable: "This video isn't available anymore."
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .membersOnly: "star.circle"
+        case .ageRestricted: "person.badge.shield.checkmark"
+        case .privateVideo: "lock"
+        case .unavailable: "video.slash"
+        }
     }
 }
