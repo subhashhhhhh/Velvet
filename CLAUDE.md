@@ -11,7 +11,8 @@ The primary goal is low memory usage. Each change must keep memory usage low.
 
 Velvet uses these items:
 
-- macOS 27 only.
+- macOS 15 (Sequoia) or later. Do not use APIs that need a later macOS without an `#available` check.
+- Two project files: `Velvet.xcodeproj` (Xcode 27 format) and `project.yml` (xcodegen, for Xcode 26). Keep the build settings the same in the two files. `install.sh` selects the correct one.
 - Swift 6 and SwiftUI. The default actor isolation is the main actor.
 - mpv (MPVKit 1.0.0) for playback.
 - yt-dlp and a JavaScript runtime (deno) to get the stream URLs. ToolManager downloads and updates these tools.

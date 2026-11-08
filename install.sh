@@ -5,7 +5,17 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 DD="${VELVET_DERIVED_DATA:-$HOME/Library/Developer/Xcode/DerivedData/Velvet-install}"
-xcodebuild -project Velvet.xcodeproj -scheme Velvet -configuration Release -derivedDataPath "$DD" build 2>&1 \
+# Xcode 27+ opens Velvet.xcodeproj (new format). Older Xcode (26, on macOS 15) uses a classic
+# project generated from project.yml.
+PROJECT=Velvet.xcodeproj
+XCODE_MAJOR=$(xcodebuild -version 2>/dev/null | awk '/^Xcode/ { split($2, v, "."); print v[1] }')
+if [ -z "$XCODE_MAJOR" ]; then echo "Xcode is not installed (xcodebuild not found)."; exit 1; fi
+if [ "$XCODE_MAJOR" -lt 27 ]; then
+  command -v xcodegen >/dev/null || { echo "Install xcodegen: brew install xcodegen"; exit 1; }
+  xcodegen generate --quiet
+  PROJECT=Velvet-Xcode26.xcodeproj
+fi
+xcodebuild -project "$PROJECT" -scheme Velvet -configuration Release -derivedDataPath "$DD" build 2>&1 \
   | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
 APP="$DD/Build/Products/Release/Velvet.app"
 [ -d "$APP" ] || { echo "build failed"; exit 1; }

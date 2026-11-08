@@ -50,8 +50,8 @@ Each of these behaviors has a setting.
 
 ## 2. Requirements
 
-- macOS 27 or later.
-- Xcode, to build the app.
+- macOS 15 (Sequoia) or later.
+- Xcode 26 or later, to build the app. Xcode 26 also needs xcodegen (`brew install xcodegen`). The install script uses it to make a project that Xcode 26 can open.
 - An internet connection. On the first start, Velvet downloads yt-dlp and a JavaScript runtime (deno).
 
 ## 3. Install
