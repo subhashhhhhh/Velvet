@@ -1061,6 +1061,7 @@ final class AppModel {
 
     /// Restores a saved session at launch.
     func start() async {
+        settings.appearance.apply()
         Task { await aiFilter.refreshIfNeeded() }
         guard authState == .unknown else { return }
         nowPlaying.start()

@@ -157,15 +157,89 @@ private struct GeneralPane: View {
     var body: some View {
         @Bindable var settings = app.settings
         Form {
-            Picker("Open at launch", selection: $settings.startPage) {
-                ForEach(Destination.allCases.filter { $0 != .queue }) { Label($0.title, systemImage: $0.symbol).tag($0) }
+            Section {
+                Picker("Appearance", selection: $settings.appearance) {
+                    ForEach(AppearanceMode.allCases) { Text($0.label).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Picker("Open at launch", selection: $settings.startPage) {
+                    ForEach(Destination.allCases.filter { $0 != .queue }) { Label($0.title, systemImage: $0.symbol).tag($0) }
+                }
+                Toggle("Show the sidebar as icons only", isOn: Binding(
+                    get: { app.isSidebarCollapsed },
+                    set: { if $0 != app.isSidebarCollapsed { app.toggleSidebar() } }
+                ))
             }
-            Toggle("Show the sidebar as icons only", isOn: Binding(
-                get: { app.isSidebarCollapsed },
-                set: { if $0 != app.isSidebarCollapsed { app.toggleSidebar() } }
-            ))
+            Section("Keyboard Shortcuts") {
+                ShortcutGrid(rows: [
+                    ("Play / Pause", "Space or K"), ("Back / ahead 10 s", "J  L"), ("Back / ahead 5 s", "←  →"),
+                    ("Volume", "↑  ↓"), ("Mute", "M"), ("Captions", "C"), ("Loop", "R"),
+                    ("Slower / faster", ",  ."), ("Jump to 0–90%", "0 – 9"), ("Next in queue", "⇧N"),
+                    ("Full screen", "F"), ("Theater mode", "T"), ("Picture in Picture", "P"),
+                    ("Back to the page, video in PiP", "I"),
+                ])
+            }
+            Section("App") {
+                ShortcutGrid(rows: [
+                    ("Search", "⌘K  or  ⌘F"), ("Back / Forward", "⌘[  ⌘]  or swipe"), ("Refresh", "⌘R"),
+                    ("Collapse sidebar", "⌘S"), ("Settings", "⌘,"),
+                ])
+            }
+            Section {
+                LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "–")
+                MemoryRow()
+            } header: {
+                Text("About")
+            } footer: {
+                Text("Velvet's memory as macOS counts it (Activity Monitor's Memory column), including the video being played.")
+            }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// Shortcut names on the left, keys on the right.
+private struct ShortcutGrid: View {
+    let rows: [(String, String)]
+
+    var body: some View {
+        ForEach(rows, id: \.0) { name, keys in
+            LabeledContent(name) {
+                Text(keys)
+                    .font(.system(size: 12, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
+        }
+    }
+}
+
+/// Live memory use, refreshed every two seconds while visible.
+private struct MemoryRow: View {
+    @State private var bytes: UInt64?
+
+    var body: some View {
+        LabeledContent("Memory in use") {
+            Text(bytes.map { ByteCountFormatter.string(fromByteCount: Int64($0), countStyle: .memory) } ?? "–")
+                .monospacedDigit()
+        }
+        .task {
+            while !Task.isCancelled {
+                bytes = Self.footprint()
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
+    }
+
+    /// The same figure as Activity Monitor's Memory column.
+    private static func footprint() -> UInt64? {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+            }
+        }
+        return result == KERN_SUCCESS ? info.phys_footprint : nil
     }
 }
 
