@@ -195,11 +195,16 @@ private struct WatchInfoView: View {
 
     private var channel: some View {
         HStack(spacing: 16) {
-            Button {
-                if let id = page.details?.channel?.id ?? video.channelId { app.openChannel(id) }
-            } label: { channelLabel }
-            .buttonStyle(.plain)
-            .help("Go to channel")
+            if let details = page.details, !details.collaborators.isEmpty {
+                CollaboratorsButton(title: details.collaborationTitle ?? details.collaborators[0].name,
+                                    channels: details.collaborators)
+            } else {
+                Button {
+                    if let id = page.details?.channel?.id ?? video.channelId { app.openChannel(id) }
+                } label: { channelLabel }
+                .buttonStyle(.plain)
+                .help("Go to channel")
+            }
             subscribeButton
         }
     }
@@ -254,10 +259,11 @@ private struct WatchInfoView: View {
             .background(.quaternary, in: Capsule())
 
             Button { page.toggleWatchLater() } label: {
+                // Icon only, like Share: the row stays short (the tooltip names it).
                 Label("Watch Later", systemImage: page.isInWatchLater ? "clock.fill" : "clock")
-                    .labelStyle(CompactableLabelStyle(compact: compact))
+                    .labelStyle(CompactableLabelStyle(compact: true))
             }
-            .help("Watch Later")
+            .help(page.isInWatchLater ? "Remove from Watch Later" : "Save to Watch Later")
             .buttonStyle(PillButtonStyle())
             .background(.quaternary, in: Capsule())
 
@@ -282,7 +288,7 @@ private struct WatchInfoView: View {
             .fixedSize()
 
             if app.settings.downloadsEnabled, session.video.kind == .video {
-                DownloadPill(video: session.video, compact: compact)
+                DownloadPill(video: session.video, compact: true)
             }
 
             Menu {
@@ -988,6 +994,76 @@ private struct LinkTextView: NSViewRepresentable {
             openURL?(url)
             return true
         }
+    }
+}
+
+/// A collaboration's channels ("Warner Bros. and 2 more"): their avatars overlapping, and a
+/// list of them to choose from, as on youtube.com. Subscribe applies to the first.
+private struct CollaboratorsButton: View {
+    let title: String
+    let channels: [ChannelInfo]
+    @Environment(AppModel.self) private var app
+    @State private var showing = false
+
+    var body: some View {
+        Button { showing = true } label: {
+            HStack(spacing: 10) {
+                HStack(spacing: -14) {
+                    ForEach(Array(channels.prefix(3).enumerated()), id: \.offset) { index, channel in
+                        RemoteImage(url: channel.avatar)
+                            .frame(width: 32, height: 32)
+                            .clipShape(Circle())
+                            .overlay(Circle().strokeBorder(Color(nsColor: .windowBackgroundColor), lineWidth: 2))
+                            .zIndex(Double(3 - index))
+                    }
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title).font(.headline).lineLimit(1)
+                    Text("\(channels.count) channels").font(.subheadline).foregroundStyle(.secondary)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help("Collaborators")
+        .popover(isPresented: $showing, arrowEdge: .bottom) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Collaborators").font(.headline).padding(.horizontal, 8).padding(.bottom, 4)
+                ForEach(Array(channels.enumerated()), id: \.offset) { _, channel in
+                    CollaboratorRow(channel: channel) {
+                        showing = false
+                        if let id = channel.id { app.openChannel(id) }
+                    }
+                }
+            }
+            .padding(12)
+            .frame(width: 300, alignment: .leading)
+        }
+    }
+}
+
+private struct CollaboratorRow: View {
+    let channel: ChannelInfo
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                RemoteImage(url: channel.avatar).frame(width: 36, height: 36).clipShape(Circle())
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(channel.name).font(.body.weight(.semibold)).lineLimit(1)
+                    Text([channel.handlePath.map { String($0.dropFirst()) }, channel.subscribers].compactMap { $0 }.joined(separator: " · "))
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(8)
+            .background(hovering ? AnyShapeStyle(.primary.opacity(0.08)) : AnyShapeStyle(.clear), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
     }
 }
 

@@ -122,6 +122,7 @@ struct DownloadPill: View {
                 } label: {
                     Label("Downloaded", systemImage: "checkmark.circle.fill")
                         .labelStyle(CompactableLabelStyle(compact: compact))
+                        .foregroundStyle(Color.velvetLink)
                 }
                 .menuStyle(.button)
                 .menuIndicator(.hidden)
@@ -131,11 +132,21 @@ struct DownloadPill: View {
                 switch downloads.active[video.id] {
                 case .downloading(let fraction):
                     Button { downloads.cancel(video.id) } label: {
-                        Label("\(Int(fraction * 100))%", systemImage: "stop.circle").monospacedDigit()
+                        // A ring that fills, icon-sized like the other pills.
+                        ZStack {
+                            Circle().stroke(.primary.opacity(0.2), lineWidth: 2)
+                            Circle().trim(from: 0, to: max(0.02, fraction))
+                                .stroke(Color.velvetLink, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                                .rotationEffect(.degrees(-90))
+                        }
+                        .frame(width: 15, height: 15)
+                        .animation(.linear(duration: 0.2), value: fraction)
                     }
-                    .help("Downloading. Click to cancel.")
+                    .help("Downloading: \(Int(fraction * 100))%. Click to cancel.")
                 case .waiting:
-                    Button { downloads.cancel(video.id) } label: { Label("Waiting", systemImage: "clock") }
+                    Button { downloads.cancel(video.id) } label: {
+                        Label("Waiting", systemImage: "clock").labelStyle(CompactableLabelStyle(compact: compact))
+                    }
                         .help("Waiting for another download. Click to cancel.")
                 case .failed(let message):
                     Button { downloads.retry(video.id) } label: {
