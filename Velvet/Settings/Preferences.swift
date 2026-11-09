@@ -133,6 +133,7 @@ final class Preferences {
     var pipOnNavigate: Bool { didSet { save(pipOnNavigate, .pipOnNavigate) } }
     var pipStyle: PiPStyle { didSet { save(pipStyle.rawValue, .pipStyle) } }
     var autoCaptions: Bool { didSet { save(autoCaptions, .autoCaptions) } }
+    var queueAutoAdvance: Bool { didSet { save(queueAutoAdvance, .queueAutoAdvance) } }
 
     // SponsorBlock
     var sponsorBlockEnabled: Bool { didSet { save(sponsorBlockEnabled, .sponsorBlockEnabled) } }
@@ -177,6 +178,7 @@ final class Preferences {
         pipOnNavigate = get(.pipOnNavigate, true)
         pipStyle = PiPStyle(rawValue: get(.pipStyle, "")) ?? .floating
         autoCaptions = get(.autoCaptions, false)
+        queueAutoAdvance = get(.queueAutoAdvance, true)
 
         sponsorBlockEnabled = get(.sponsorBlockEnabled, true)
         var actions = Dictionary(uniqueKeysWithValues: SponsorCategory.allCases.map { ($0, $0.defaultAction) })
@@ -211,7 +213,7 @@ final class Preferences {
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
         autoPictureInPicture = fresh.autoPictureInPicture; pipOnScroll = fresh.pipOnScroll
-        autoCaptions = fresh.autoCaptions; pipOnNavigate = fresh.pipOnNavigate; pipStyle = fresh.pipStyle
+        autoCaptions = fresh.autoCaptions; queueAutoAdvance = fresh.queueAutoAdvance; pipOnNavigate = fresh.pipOnNavigate; pipStyle = fresh.pipStyle
         sponsorBlockEnabled = fresh.sponsorBlockEnabled; sponsorActions = fresh.sponsorActions
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
         deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
@@ -223,7 +225,7 @@ final class Preferences {
 
     private enum Key: CaseIterable {
         case startPage, showShortsShelf, shortsAfterRows, cardSize, hideWatched, hideMembersOnly
-        case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions, pipOnNavigate, pipStyle
+        case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions, pipOnNavigate, pipStyle, queueAutoAdvance
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
         case jsRuntime, autoUpdateTools

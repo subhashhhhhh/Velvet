@@ -208,6 +208,8 @@ final class MPVPlayer {
     @ObservationIgnored var onPauseChange: ((Bool) -> Void)?
     /// Fired when a load fails before any frame played (e.g. HTTP 403), so the owner can retry.
     @ObservationIgnored var onLoadFailure: ((String) -> Void)?
+    /// Fired once when playback reaches the end (keep-open holds the last frame).
+    @ObservationIgnored var onEnded: (() -> Void)?
     @ObservationIgnored private var playedSinceLoad = false
 
     @ObservationIgnored private let core: MPVCore?
@@ -476,7 +478,9 @@ final class MPVPlayer {
         case ("pause", .flag(let v)):
             if v != isPaused { isPaused = v; onPauseChange?(v); onPictureInPicturePauseChange?(v) }
         case ("paused-for-cache", .flag(let v)): isBuffering = v
-        case ("eof-reached", .flag(let v)): hasEnded = v
+        case ("eof-reached", .flag(let v)):
+            if v && !hasEnded { onEnded?() }
+            hasEnded = v
         case ("mute", .flag(let v)): isMuted = v
         case ("volume", .double(let v)): volume = v
         case ("speed", .double(let v)): speed = v

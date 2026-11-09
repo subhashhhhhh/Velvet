@@ -3,7 +3,7 @@ import OSLog
 
 /// Sidebar destinations.
 enum Destination: String, Hashable, CaseIterable, Identifiable {
-    case home, shorts, live, history, watchLater, playlists
+    case home, shorts, live, history, watchLater, playlists, queue
 
     var id: String { rawValue }
 
@@ -15,6 +15,7 @@ enum Destination: String, Hashable, CaseIterable, Identifiable {
         case .history: "History"
         case .watchLater: "Watch Later"
         case .playlists: "Playlists"
+        case .queue: "Queue"
         }
     }
 
@@ -26,6 +27,7 @@ enum Destination: String, Hashable, CaseIterable, Identifiable {
         case .history: "clock.arrow.circlepath"
         case .watchLater: "clock"
         case .playlists: "list.bullet.rectangle"
+        case .queue: "list.number"
         }
     }
 }
@@ -114,11 +116,16 @@ final class AppModel {
                               isSignedIn: { [weak self] in self?.authState == .signedIn })
         s.page.accountName = { [weak self] in self?.account?.name }
         s.page.accountPhoto = { [weak self] in self?.account?.photo }
+        s.player.onEnded = { [weak self, weak s] in
+            guard let self, let s, s === self.watching, self.settings.queueAutoAdvance else { return }
+            self.playNextInQueue()
+        }
         return s
     }
 
     /// Opens a video. Shorts open in the vertical Shorts player; other videos resume where you left off.
     func open(_ video: Video, at position: Double? = nil) {
+        pipHandoff = nil // a queued video still loading for PiP is dropped (its task closes it)
         if video.kind == .short && position == nil {
             openShorts(startingWith: video)
             return
@@ -144,6 +151,7 @@ final class AppModel {
     }
 
     func closePlayer() {
+        pipHandoff = nil
         watchPageHidden = false
         if pip.isActive { exitPictureInPicture() }
         if playerFullscreen { togglePlayerFullscreen() }
@@ -499,6 +507,71 @@ final class AppModel {
         self.destination = destination
     }
 
+    // MARK: - Queue
+
+    let queue = PlaybackQueue()
+    /// The next video, loading while the current one stays in PiP (see `continueInPictureInPicture`).
+    @ObservationIgnored private var pipHandoff: PlayerSession?
+
+    func addToQueue(_ video: Video) {
+        queue.add(video)
+        showToast("Added to queue")
+    }
+
+    func playNextQueued(_ video: Video) {
+        queue.playNext(video)
+        showToast("Will play next")
+    }
+
+    /// Plays the queue's first video. If the current one is in PiP while you browse, the
+    /// next one continues there instead of taking over the window.
+    func playNextInQueue() {
+        guard let next = queue.popFirst() else { return }
+        if watchPageHidden, pip.isActive, let current = watching {
+            continueInPictureInPicture(with: next, replacing: current)
+        } else {
+            open(next)
+        }
+    }
+
+    /// Plays a queued video now (from the Queue page), taking it out of the queue.
+    func playFromQueue(_ video: Video) {
+        queue.remove(video.id)
+        open(video)
+    }
+
+    /// Loads `next` while `current` holds the PiP window, then swaps them, so there's
+    /// only a short gap and the page you're browsing is left alone.
+    private func continueInPictureInPicture(with next: Video, replacing current: PlayerSession) {
+        current.player.pause()
+        let session = makeSession(for: next)
+        pipHandoff = session
+        session.start()
+        Task {
+            // Ready once the streams are loaded and mpv knows the length (≈ the first frame).
+            for _ in 0..<300 {
+                if case .failed = session.phase { break }
+                if session.phase == .ready && session.player.duration > 0 { break }
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+            guard pipHandoff === session else { session.close(); return }
+            pipHandoff = nil
+            // The PiP window still belongs to the old player: its close must not end the new one.
+            watching = session
+            exitPictureInPicture()
+            for _ in 0..<40 where pip.isActive { try? await Task.sleep(for: .milliseconds(50)) }
+            current.close()
+            guard watching === session, watchPageHidden else { return }
+            if case .failed = session.phase {
+                // Nothing to show in PiP; open the page so the error is visible.
+                watchPageHidden = false
+                return
+            }
+            log.info("Queue: continuing in PiP with \(next.id, privacy: .public)")
+            enterPictureInPicture(automatic: false, reason: .navigatedAway)
+        }
+    }
+
     // MARK: - Video actions (context menus)
 
     /// A short confirmation shown at the bottom of the window ("Saved to Watch Later").
@@ -648,6 +721,10 @@ final class AppModel {
                 try? await Task.sleep(for: .seconds(8))
                 if let v = watching?.video { log.info("Test: reopening video"); open(v) }
             }
+        }
+        // `-VelvetQueue id1,id2`: start with these videos queued.
+        for id in (UserDefaults.standard.string(forKey: "VelvetQueue") ?? "").split(separator: ",") {
+            queue.add(Video(id: String(id), title: "Queued \(id)"))
         }
         // `-VelvetMinimizeTest YES` (with -VelvetPlay): what the I key does, at 8s.
         if UserDefaults.standard.bool(forKey: "VelvetMinimizeTest") {

@@ -25,7 +25,7 @@ private struct GeneralPane: View {
         @Bindable var settings = app.settings
         Form {
             Picker("Open at launch", selection: $settings.startPage) {
-                ForEach(Destination.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
+                ForEach(Destination.allCases.filter { $0 != .queue }) { Label($0.title, systemImage: $0.symbol).tag($0) }
             }
         }
         .formStyle(.grouped)
@@ -95,6 +95,7 @@ private struct PlaybackPane: View {
                 Toggle("Keep playing in Picture in Picture when leaving the video", isOn: $settings.pipOnNavigate)
                     .disabled(!PictureInPicture.isAvailable)
                 Toggle("Show captions automatically", isOn: $settings.autoCaptions)
+                Toggle("Play the next video in the queue when one ends", isOn: $settings.queueAutoAdvance)
                 Picker("Default speed", selection: $settings.defaultSpeed) {
                     ForEach([0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0], id: \.self) {
                         Text($0 == 1 ? "Normal" : "\($0.formatted())×").tag($0)
