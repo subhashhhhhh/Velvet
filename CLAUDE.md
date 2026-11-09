@@ -119,6 +119,8 @@ Start the Debug build with these arguments to test a feature:
 
 ### 7.2 Procedure
 
+0. Always add `-ApplePersistenceIgnoreState YES`. The Debug app shares the installed app's saved window state, and some saved states open no window at all, so no test runs.
+
 1. Use a 1080p video. A 4K video can hide scaling defects.
 2. Test with the sidebar visible and with the sidebar hidden.
 3. Read the logs with `/usr/bin/log stream`. In zsh, `log` is a different command. Debug-level messages show only in `log stream`.
