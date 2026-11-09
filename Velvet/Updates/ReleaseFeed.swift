@@ -24,7 +24,6 @@ nonisolated enum ReleaseFeed {
     static let repositoryURL = URL(string: "https://github.com/\(repository)")!
     static let releasesPage = URL(string: "https://github.com/\(repository)/releases")!
     static let newIssue = URL(string: "https://github.com/\(repository)/issues/new")!
-    static let brewCommand = "brew install --cask subhashhhhhh/velvet/velvet"
 
     /// Release notes end the in-app changelog at this marker; what follows is for people
     /// downloading by hand.

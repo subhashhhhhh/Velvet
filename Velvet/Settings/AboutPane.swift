@@ -4,7 +4,6 @@ import SwiftUI
 /// Settings › About: who makes Velvet, where to report problems, and its own updates.
 struct AboutPane: View {
     @Environment(AppModel.self) private var app
-    @State private var copiedBrew = false
 
     private static let developerURL = URL(string: "https://github.com/subhashhhhhh")!
 
@@ -44,22 +43,6 @@ struct AboutPane: View {
                 LinkRow(title: "Source code", detail: "GitHub", url: ReleaseFeed.repositoryURL)
                 LinkRow(title: "Report a problem or suggest a feature", detail: "GitHub Issues", url: ReleaseFeed.newIssue)
                 LinkRow(title: "Release notes", detail: "All versions", url: ReleaseFeed.releasesPage)
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Install with Homebrew")
-                    HStack(spacing: 8) {
-                        Text(ReleaseFeed.brewCommand)
-                            .font(.system(size: 12, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                            .textSelection(.enabled)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        Button(copiedBrew ? "Copied" : "Copy") {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(ReleaseFeed.brewCommand, forType: .string)
-                            copiedBrew = true
-                        }
-                    }
-                }
             } header: {
                 Text("Links")
             }
