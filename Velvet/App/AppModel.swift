@@ -62,7 +62,8 @@ final class AppModel {
     let deArrow = DeArrowService()
     @ObservationIgnored private(set) lazy var aiFilter = AIChannelFilter(preferences: settings)
     @ObservationIgnored private(set) lazy var series = SeriesTracker(client: client)
-    @ObservationIgnored private(set) lazy var searchAssist = SearchAssist(client: client, preferences: settings)
+    @ObservationIgnored private(set) lazy var searchAssist = SearchAssist(client: client, preferences: settings,
+                                                                      account: { [weak self] in await self?.signedInSession })
 
     /// A suggestion clicked (or picked with ↑/↓ and Return): search for it.
     func pickSuggestion(_ text: String) {
@@ -219,6 +220,7 @@ final class AppModel {
         channel = nil
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         activeSearch = q.isEmpty ? nil : q
+        searchAssist.searched(q)
     }
 
     // MARK: - Playback
@@ -1064,6 +1066,7 @@ final class AppModel {
     private(set) var authState: AuthState = .unknown
     private(set) var account: Account?
     private(set) var session: YouTubeSession?
+    var signedInSession: YouTubeSession? { authState == .signedIn ? session : nil }
     var showingSignIn = false
     /// Bumped on sign-in/out so account-dependent feeds rebuild.
     private(set) var authRevision = 0 {
@@ -1308,6 +1311,15 @@ final class AppModel {
                     let data = (try? await client.get(c.url!)) ?? Data()
                     FileHandle.standardError.write(Data("SUGGEST[\(q)]: \(String(decoding: data, as: UTF8.self).prefix(1500))\n".utf8))
                 }
+                // What the dropdown shows for an empty box and for "4k", with My Activity merged in.
+                for q in ["", "4k"] {
+                    searchAssist.isActive = true
+                    searchAssist.queryChanged(q)
+                    try? await Task.sleep(for: .seconds(6))
+                    let rows = searchAssist.rows.map { ($0.isHistory ? "🕘 " : "") + $0.text }.joined(separator: " | ")
+                    FileHandle.standardError.write(Data("DROPDOWN[\(q)]: \(rows)\n".utf8))
+                }
+                searchAssist.isActive = false
             }
         }
         // `-VelvetSearchClickTest YES`: click the search field three times, then elsewhere, logging

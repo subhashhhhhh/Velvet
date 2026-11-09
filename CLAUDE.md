@@ -112,7 +112,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetAIFilterTest YES` | With `-settings.hideAIChannels '<true/>'`: logs the AiSList list sizes, how many home videos have a channel handle, and how many are hidden. |
 | `-VelvetRelatedChipTest YES` | With `-VelvetPlay`: logs the related-video chips, selects the second, then All again, logging the list each time. |
 | `-VelvetSubscriptionsTest YES` | Opens Subscriptions and logs its sections, video and Shorts counts. |
-| `-VelvetSuggestTest YES` | Prints YouTube's signed-in search suggestions (raw) for an empty box and "s" to stderr. Your own past searches are the items without subtype 512. The key test also logs the dropdown's rows (`-VelvetKeyTest "cmd+k,s"`). |
+| `-VelvetSuggestTest YES` | Prints YouTube's signed-in search suggestions (raw) for an empty box and "s" to stderr. Your own past searches are the items without subtype 512. Then logs the dropdown's rows for an empty box and for "4k" (with the My Activity history merged in; reading My Activity is read-only). The key test also logs the dropdown's rows (`-VelvetKeyTest "cmd+k,s"`). |
 | `-VelvetSearchClickTest YES` | Clicks the search field three times, then the page, and logs whether the suggestions show after each (expected: show, hide, show, hide). The test window must be frontmost: a background window uses the first click to activate. |
 | `-VelvetResolveAccount YES` | Always resolves streams through the signed-in path (to compare stream speeds with the default visionos path). |
 | `-VelvetHistoryTest YES` | Goes History → a video → a channel, then Back, Back, Forward, and logs the page and whether Back/Forward are available after each step. Trackpad swipes can't be sent from a script; the user must test them. |

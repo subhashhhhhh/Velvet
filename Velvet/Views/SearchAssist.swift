@@ -29,12 +29,37 @@ final class SearchAssist {
 
     @ObservationIgnored private let client: InnerTubeClient
     @ObservationIgnored private let prefs: Preferences
+    @ObservationIgnored private let account: () async -> YouTubeSession?
     @ObservationIgnored private var fetch: Task<Void, Never>?
     @ObservationIgnored private var lastQuery = ""
+    /// Reads the full history from My Activity, for the signed-in account it was made for.
+    @ObservationIgnored private var myActivity: (account: YouTubeSession, reader: MyActivitySearches)?
+    /// Searches made in Velvet this run, newest first: shown before My Activity has caught up.
+    @ObservationIgnored private var justSearched: [String] = []
 
-    init(client: InnerTubeClient, preferences: Preferences) {
+    init(client: InnerTubeClient, preferences: Preferences, account: @escaping () async -> YouTubeSession?) {
         self.client = client
         prefs = preferences
+        self.account = account
+    }
+
+    /// A search was made: it goes to the top of your history now, and My Activity is read
+    /// again next time.
+    func searched(_ query: String) {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return }
+        justSearched.removeAll { $0.caseInsensitiveCompare(q) == .orderedSame }
+        justSearched.insert(q, at: 0)
+        if justSearched.count > 10 { justSearched.removeLast() }
+        if let reader = myActivity?.reader { Task { await reader.invalidate() } }
+    }
+
+    private func myActivityReader() async -> MyActivitySearches? {
+        guard prefs.searchHistoryFromMyActivity, let session = await account() else { return nil }
+        if let myActivity, myActivity.account === session { return myActivity.reader }
+        let reader = MyActivitySearches(account: session)
+        myActivity = (session, reader)
+        return reader
     }
 
     struct Row: Hashable {
@@ -54,9 +79,12 @@ final class SearchAssist {
         fetch = Task {
             try? await Task.sleep(for: .milliseconds(q.isEmpty ? 0 : 120))
             guard !Task.isCancelled else { return }
-            let found = await Self.suggestions(for: q, client: client)
+            let reader = await myActivityReader()
+            async let mine = reader?.recent() ?? []
+            async let found = Self.suggestions(for: q, client: client)
+            let merged = Self.merge(query: q, history: justSearched + (await mine), suggestions: await found)
             guard !Task.isCancelled else { return }
-            rows = found
+            rows = merged
         }
     }
 
@@ -65,6 +93,20 @@ final class SearchAssist {
         guard !rows.isEmpty else { return }
         let next = (highlighted ?? (delta > 0 ? -1 : rows.count)) + delta
         highlighted = next < 0 || next >= rows.count ? nil : next
+    }
+
+    /// Your own searches first (all of them with an empty box; those starting with what's
+    /// typed otherwise), then YouTube's list, without repeats.
+    nonisolated private static func merge(query: String, history: [String], suggestions: [Row]) -> [Row] {
+        let q = query.lowercased()
+        var seen = Set<String>(), rows: [Row] = []
+        func add(_ row: Row) {
+            if seen.insert(row.text.lowercased()).inserted { rows.append(row) }
+        }
+        let mine = history.filter { q.isEmpty || ($0.lowercased().hasPrefix(q) && $0.count > q.count) }
+        for text in mine.prefix(q.isEmpty ? 10 : 4) { add(Row(text: text, isHistory: true)) }
+        for row in suggestions { add(row) }
+        return Array(rows.prefix(10))
     }
 
     /// youtube.com's suggestion service, with the account's cookies:

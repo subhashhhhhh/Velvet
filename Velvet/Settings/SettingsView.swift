@@ -185,8 +185,10 @@ private struct GeneralPane: View {
             }
             Section {
                 Toggle("Search suggestions and history", isOn: $settings.searchSuggestions)
+                Toggle("Full search history from Google My Activity", isOn: $settings.searchHistoryFromMyActivity)
+                    .disabled(!settings.searchSuggestions)
             } footer: {
-                Text("Suggestions come from YouTube as you type (what you type is sent to it, as on youtube.com). Signed in, your account's past searches, from any device, are listed first with a clock.")
+                Text("Suggestions come from YouTube as you type (what you type is sent to it, as on youtube.com). Signed in, your account's past searches, from any device, are listed first with a clock. YouTube's suggestions include only a few of them; My Activity has them all, as the YouTube apps show them.")
             }
             Section("Keyboard Shortcuts") {
                 ShortcutGrid(rows: [
