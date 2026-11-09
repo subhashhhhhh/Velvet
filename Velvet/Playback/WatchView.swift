@@ -41,7 +41,7 @@ struct WatchView: View {
                             playerSlot(width: size.width, height: size.height, theater: false)
                                 .frame(maxWidth: .infinity)
                         }
-                        WatchInfoView(session: session)
+                        WatchInfoView(session: session, wide: wide)
                         if !wide, let chat = page.liveChat {
                             LiveChatPanel(chat: chat).frame(height: 420)
                         }
@@ -153,6 +153,9 @@ struct WatchView: View {
 
 private struct WatchInfoView: View {
     let session: PlayerSession
+    /// The related column is beside the video: Subscribe goes to the far right, and the
+    /// actions share out the full width.
+    let wide: Bool
     @Environment(AppModel.self) private var app
     @State private var descriptionExpanded = false
     @State private var branding: DeArrowBranding?
@@ -170,21 +173,39 @@ private struct WatchInfoView: View {
                 .help(branding?.title != nil ? "Original: \(original)" : "")
                 .task(id: DeArrowKey(videoId: video.id, prefs: app.settings)) { branding = await app.branding(for: video) }
 
-            // Wide: channel and actions on one row. Narrower: actions under the channel.
-            // Narrowest: icon-only buttons. Never squeeze (labels would wrap mid-word).
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .center, spacing: 12) {
-                    channel
-                    Spacer(minLength: 12)
-                    actions(compact: false)
-                }
-                VStack(alignment: .leading, spacing: 12) {
-                    channel
-                    actions(compact: false)
-                }
-                VStack(alignment: .leading, spacing: 12) {
-                    channel
-                    actions(compact: true)
+            Group {
+                if wide {
+                    // The channel on the left, Subscribe on the right; under them the actions,
+                    // which share the full width. Labels when they fit, else icons.
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .center, spacing: 12) {
+                            channel
+                            Spacer(minLength: 12)
+                            subscribeButton
+                        }
+                        ViewThatFits(in: .horizontal) {
+                            actions(compact: false, fill: true)
+                            actions(compact: true, fill: true)
+                        }
+                    }
+                } else {
+                    // Channel and actions on one row when they fit; else actions under the channel;
+                    // narrowest, icon-only buttons. Never squeezed (labels would wrap mid-word).
+                    ViewThatFits(in: .horizontal) {
+                        HStack(alignment: .center, spacing: 12) {
+                            channelAndSubscribe
+                            Spacer(minLength: 12)
+                            actions(compact: false, fill: false)
+                        }
+                        VStack(alignment: .leading, spacing: 12) {
+                            channelAndSubscribe
+                            actions(compact: false, fill: false)
+                        }
+                        VStack(alignment: .leading, spacing: 12) {
+                            channelAndSubscribe
+                            actions(compact: true, fill: false)
+                        }
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -205,6 +226,12 @@ private struct WatchInfoView: View {
                 .buttonStyle(.plain)
                 .help("Go to channel")
             }
+        }
+    }
+
+    private var channelAndSubscribe: some View {
+        HStack(spacing: 16) {
+            channel
             subscribeButton
         }
     }
@@ -234,7 +261,9 @@ private struct WatchInfoView: View {
         }
     }
 
-    private func actions(compact: Bool) -> some View {
+    /// `fill`: the wide layout, every button labelled (unless `compact`) and stretched. Else
+    /// Watch Later, Download and Share are icons, so the row fits beside the channel.
+    private func actions(compact: Bool, fill: Bool) -> some View {
         HStack(spacing: 8) {
             HStack(spacing: 0) {
                 Button { page.toggleLike() } label: {
@@ -255,16 +284,15 @@ private struct WatchInfoView: View {
                     if app.settings.showDislikes { await page.loadDislikes() }
                 }
             }
-            .buttonStyle(PillButtonStyle())
+            .buttonStyle(PillButtonStyle(fill: fill))
             .background(.quaternary, in: Capsule())
 
             Button { page.toggleWatchLater() } label: {
-                // Icon only, like Share: the row stays short (the tooltip names it).
                 Label("Watch Later", systemImage: page.isInWatchLater ? "clock.fill" : "clock")
-                    .labelStyle(CompactableLabelStyle(compact: true))
+                    .labelStyle(CompactableLabelStyle(compact: compact || !fill))
             }
             .help(page.isInWatchLater ? "Remove from Watch Later" : "Save to Watch Later")
-            .buttonStyle(PillButtonStyle(iconOnly: true))
+            .buttonStyle(PillButtonStyle(fill: fill, iconOnly: true))
             .background(.quaternary, in: Capsule())
 
             Menu {
@@ -283,12 +311,13 @@ private struct WatchInfoView: View {
             }
             .help("Save to playlist")
             .menuStyle(.button)
-            .buttonStyle(PillButtonStyle(iconOnly: compact))
+            .menuIndicator(.hidden)
+            .buttonStyle(PillButtonStyle(fill: fill, iconOnly: compact))
             .background(.quaternary, in: Capsule())
-            .fixedSize()
+            .fixedSize(horizontal: !fill, vertical: false)
 
             if app.settings.downloadsEnabled, session.video.kind == .video {
-                DownloadPill(video: session.video, compact: true)
+                DownloadPill(video: session.video, compact: compact || !fill, fill: fill)
             }
 
             Menu {
@@ -297,13 +326,14 @@ private struct WatchInfoView: View {
                 Divider()
                 Button("Open in Browser") { NSWorkspace.shared.open(watchURL(at: session.player.position)) }
             } label: {
-                Image(systemName: "square.and.arrow.up")
+                Label("Share", systemImage: "square.and.arrow.up")
+                    .labelStyle(CompactableLabelStyle(compact: compact || !fill))
             }
             .menuStyle(.button)
             .menuIndicator(.hidden)
-            .buttonStyle(PillButtonStyle(iconOnly: true))
+            .buttonStyle(PillButtonStyle(fill: fill, iconOnly: true))
             .background(.quaternary, in: Capsule())
-            .fixedSize()
+            .fixedSize(horizontal: !fill, vertical: false)
         }
         .labelStyle(.titleAndIcon)
     }
@@ -356,12 +386,14 @@ private struct WatchInfoView: View {
 }
 
 struct PillButtonStyle: ButtonStyle {
+    /// Stretch to the width it's given (the wide watch page's action row shares out its width).
+    var fill = false
     /// An icon without a title: a circle as tall as the pills with text, so a row of both
     /// lines up.
     var iconOnly = false
 
     func makeBody(configuration: Configuration) -> some View {
-        if iconOnly {
+        if iconOnly && !fill {
             configuration.label
                 .font(.system(size: 14, weight: .medium))
                 .frame(width: 18, height: 18)
@@ -372,6 +404,7 @@ struct PillButtonStyle: ButtonStyle {
             configuration.label
                 .lineLimit(1)
                 .fixedSize()
+                .frame(maxWidth: fill ? .infinity : nil)
                 .font(.callout.weight(.medium))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)

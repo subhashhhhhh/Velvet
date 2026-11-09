@@ -110,6 +110,8 @@ private struct ActiveDownloadRow: View {
 struct DownloadPill: View {
     let video: Video
     var compact: Bool
+    /// Stretched to share the wide watch page's action row; else icon-sized when compact.
+    var fill = false
     @Environment(AppModel.self) private var app
 
     var body: some View {
@@ -126,21 +128,25 @@ struct DownloadPill: View {
                 }
                 .menuStyle(.button)
                 .menuIndicator(.hidden)
-                .fixedSize()
                 .help("Downloaded: plays offline")
             } else {
                 switch downloads.active[video.id] {
                 case .downloading(let fraction):
                     Button { downloads.cancel(video.id) } label: {
                         // A ring that fills, icon-sized like the other pills.
-                        ZStack {
-                            Circle().stroke(.primary.opacity(0.2), lineWidth: 2)
-                            Circle().trim(from: 0, to: max(0.02, fraction))
-                                .stroke(Color.velvetLink, style: StrokeStyle(lineWidth: 2, lineCap: .round))
-                                .rotationEffect(.degrees(-90))
+                        HStack(spacing: 6) {
+                            ZStack {
+                                Circle().stroke(.primary.opacity(0.2), lineWidth: 2)
+                                Circle().trim(from: 0, to: max(0.02, fraction))
+                                    .stroke(Color.velvetLink, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                                    .rotationEffect(.degrees(-90))
+                            }
+                            .frame(width: 15, height: 15)
+                            .animation(.linear(duration: 0.2), value: fraction)
+                            if !compact {
+                                Text("\(Int(fraction * 100)) %").monospacedDigit()
+                            }
                         }
-                        .frame(width: 16, height: 16)
-                        .animation(.linear(duration: 0.2), value: fraction)
                     }
                     .help("Downloading: \(Int(fraction * 100))%. Click to cancel.")
                 case .waiting:
@@ -163,7 +169,7 @@ struct DownloadPill: View {
                 }
             }
         }
-        .buttonStyle(PillButtonStyle(iconOnly: compact))
+        .buttonStyle(PillButtonStyle(fill: fill, iconOnly: compact))
         .background(.quaternary, in: Capsule())
     }
 }
