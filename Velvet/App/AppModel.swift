@@ -89,6 +89,18 @@ final class AppModel {
     /// The player itself is drawn in a window-level layer (RootView) so fullscreen is a single
     /// frame animation over everything, sidebar included.
     var sidebarVisibility = NavigationSplitViewVisibility.automatic
+    /// The sidebar is (or is animating to being) hidden. Grids pick their column count from this.
+    var isSidebarCollapsed: Bool { sidebarVisibility == .detailOnly }
+    /// How much wider the page gets when the sidebar hides, reported by the sidebar.
+    var sidebarWidth: CGFloat = 220
+    /// Close to the split view's own slide, so grids move in step with the sidebar.
+    static let sidebarAnimation: Animation = {
+        #if DEBUG
+        // `-VelvetSlowSidebar YES`: 10× slower grid animation, to inspect it frame by frame.
+        if UserDefaults.standard.bool(forKey: "VelvetSlowSidebar") { return .smooth(duration: 3) }
+        #endif
+        return .smooth(duration: 0.3)
+    }()
     var playerSlot: CGRect = .zero { didSet { playerVisibilityChanged() } }
     var watchViewport: CGRect = .zero { didSet { playerVisibilityChanged() } }
 
@@ -723,6 +735,16 @@ final class AppModel {
                 navigate(to: .history)
                 try? await Task.sleep(for: .seconds(8))
                 if let v = watching?.video { log.info("Test: reopening video"); open(v) }
+            }
+        }
+        // `-VelvetSidebarTest YES`: hide the sidebar at 8s and show it at 12s, like the toolbar button.
+        if UserDefaults.standard.bool(forKey: "VelvetSidebarTest") {
+            Task {
+                for delay in [8.0, 4.0] {
+                    try? await Task.sleep(for: .seconds(delay))
+                    log.info("Test: toggling the sidebar")
+                    withAnimation { sidebarVisibility = isSidebarCollapsed ? .all : .detailOnly }
+                }
             }
         }
         // `-VelvetQueue id1,id2`: start with these videos queued.

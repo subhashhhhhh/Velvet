@@ -32,19 +32,6 @@ nonisolated enum VideoCodec: String, CaseIterable, Identifiable, Codable, Sendab
     }
 }
 
-nonisolated enum CardSize: String, CaseIterable, Identifiable, Codable, Sendable {
-    case compact, regular, large
-    var id: String { rawValue }
-    var label: String { rawValue.capitalized }
-    var minWidth: Double {
-        switch self {
-        case .compact: 210
-        case .regular: 260
-        case .large: 330
-        }
-    }
-}
-
 nonisolated enum JSRuntime: String, CaseIterable, Identifiable, Codable, Sendable {
     case deno, bun, quickjs
     var id: String { rawValue }
@@ -111,7 +98,9 @@ final class Preferences {
     // Feed
     var showShortsShelf: Bool { didSet { save(showShortsShelf, .showShortsShelf) } }
     var shortsAfterRows: Int { didSet { save(shortsAfterRows, .shortsAfterRows) } }
-    var cardSize: CardSize { didSet { save(cardSize.rawValue, .cardSize) } }
+    /// Videos per row in grids while the sidebar shows, and while it's hidden.
+    var videosPerRow: Int { didSet { save(videosPerRow, .videosPerRow) } }
+    var videosPerRowSidebarHidden: Int { didSet { save(videosPerRowSidebarHidden, .videosPerRowSidebarHidden) } }
     /// Filters what the feeds show (watched, members-only).
     func shows(_ v: Video) -> Bool {
         !(hideWatched && (v.watchedFraction ?? 0) >= 0.9) && !(hideMembersOnly && v.isMembersOnly)
@@ -163,7 +152,8 @@ final class Preferences {
         startPage = Destination(rawValue: get(.startPage, "")) ?? .home
         showShortsShelf = get(.showShortsShelf, true)
         shortsAfterRows = get(.shortsAfterRows, 3)
-        cardSize = CardSize(rawValue: get(.cardSize, "")) ?? .regular
+        videosPerRow = get(.videosPerRow, 3)
+        videosPerRowSidebarHidden = get(.videosPerRowSidebarHidden, 4)
         hideWatched = get(.hideWatched, false)
         hideMembersOnly = get(.hideMembersOnly, false)
         hidePromotions = get(.hidePromotions, true)
@@ -210,7 +200,7 @@ final class Preferences {
         let fresh = Preferences(defaults: defaults)
         startPage = fresh.startPage
         showShortsShelf = fresh.showShortsShelf; shortsAfterRows = fresh.shortsAfterRows
-        cardSize = fresh.cardSize; hideWatched = fresh.hideWatched; hideMembersOnly = fresh.hideMembersOnly; hidePromotions = fresh.hidePromotions
+        videosPerRow = fresh.videosPerRow; videosPerRowSidebarHidden = fresh.videosPerRowSidebarHidden; hideWatched = fresh.hideWatched; hideMembersOnly = fresh.hideMembersOnly; hidePromotions = fresh.hidePromotions
         quality = fresh.quality; codec = fresh.codec; defaultSpeed = fresh.defaultSpeed
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
@@ -226,7 +216,7 @@ final class Preferences {
     // MARK: Persistence
 
     private enum Key: CaseIterable {
-        case startPage, showShortsShelf, shortsAfterRows, cardSize, hideWatched, hideMembersOnly, hidePromotions
+        case startPage, showShortsShelf, shortsAfterRows, videosPerRow, videosPerRowSidebarHidden, hideWatched, hideMembersOnly, hidePromotions
         case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions, pipOnNavigate, pipStyle, queueAutoAdvance
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover

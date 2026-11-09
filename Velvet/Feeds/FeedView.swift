@@ -8,14 +8,11 @@ struct FeedView: View {
     var onOpen: (Video) -> Void = { _ in }
 
     @Environment(AppModel.self) private var app
-    @State private var gridWidth: CGFloat = 0
+    @State private var layout = GridLayout()
+    @State private var tracker = GridTracker()
+    @State private var scroll = ScrollPosition()
 
-    private var columnCount: Int {
-        Self.columns(for: gridWidth - Self.padding * 2, minCard: prefs.cardSize.minWidth)
-    }
-
-    private nonisolated static let spacing: CGFloat = 14
-    private nonisolated static let padding: CGFloat = 20
+    private var columnCount: Int { VideoGrid.columns(layout, prefs: prefs) }
 
     private var prefs: Preferences { app.settings }
 
@@ -47,35 +44,32 @@ struct FeedView: View {
                     LazyVStack(alignment: .leading, spacing: 24) {
                         let videos = visible
                         let split = min(videos.count, columnCount * prefs.shortsAfterRows)
-                        grid(videos[..<split], all: videos)
+                        let _ = tracker.split = split
+                        grid(videos[..<split], all: videos, index: 0)
                         if allowsShortsShelf && prefs.showShortsShelf && !feed.shorts.isEmpty {
                             ShortsShelf(shorts: feed.shorts, onOpen: onOpen)
                         }
-                        grid(videos[split...], all: videos)
+                        grid(videos[split...], all: videos, index: 1)
                         footer
                     }
-                    .padding(Self.padding)
+                    .padding(VideoGrid.padding)
+                    .coordinateSpace(.named(GridTracker.space))
+                    .gridWidth(layout)
                 }
-                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 }
+                .trackedGridScroll($scroll, tracker: tracker)
+                .sidebarStableLayout($layout) { tracker.keepReadingPosition(order: visible, scroll: $scroll) }
                 .id(feed.selectedChip?.id) // a new topic starts at the top
             }
         }
     }
 
-    /// Explicit column count (instead of `.adaptive`) so "after N rows" is exact.
-    private nonisolated static func columns(for width: CGFloat, minCard: CGFloat) -> Int {
-        max(1, Int((width + spacing) / (minCard + spacing)))
-    }
-
-    private func grid(_ videos: ArraySlice<Video>, all: [Video]) -> some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: Self.spacing, alignment: .top), count: columnCount),
-            alignment: .leading,
-            spacing: 18
-        ) {
+    // Explicit column count (instead of `.adaptive`) so "after N rows" is exact.
+    private func grid(_ videos: ArraySlice<Video>, all: [Video], index: Int) -> some View {
+        LazyVGrid(columns: VideoGrid.gridItems(columnCount), alignment: .leading, spacing: 18) {
             ForEach(videos) { video in
                 Button { onOpen(video) } label: { VideoCard(video: video) }
                     .buttonStyle(.plain)
+                    .trackedInGrid(video.id, grid: index, by: tracker)
                     .onAppear {
                         // Fetch the next page when one of the last few visible cards appears.
                         if all.suffix(8).contains(where: { $0.id == video.id }) {

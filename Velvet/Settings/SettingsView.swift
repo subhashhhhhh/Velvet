@@ -40,11 +40,17 @@ private struct FeedPane: View {
     var body: some View {
         @Bindable var settings = app.settings
         Form {
-            Section("Layout") {
-                Picker("Card size", selection: $settings.cardSize) {
-                    ForEach(CardSize.allCases) { Text($0.label).tag($0) }
+            Section {
+                Stepper(value: $settings.videosPerRow, in: 1...8) {
+                    LabeledContent("Videos per row with the sidebar", value: "\(settings.videosPerRow)")
                 }
-                .pickerStyle(.segmented)
+                Stepper(value: $settings.videosPerRowSidebarHidden, in: 1...8) {
+                    LabeledContent("Videos per row without the sidebar", value: "\(settings.videosPerRowSidebarHidden)")
+                }
+            } header: {
+                Text("Layout")
+            } footer: {
+                Text("A narrow window shows fewer, so cards stay readable.")
             }
             Section("Shorts") {
                 Toggle("Show Shorts shelf in feeds", isOn: $settings.showShortsShelf)

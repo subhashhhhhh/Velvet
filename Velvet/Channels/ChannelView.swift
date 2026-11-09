@@ -3,6 +3,7 @@ import SwiftUI
 struct ChannelView: View {
     let model: ChannelModel
     @Environment(AppModel.self) private var app
+    @State private var layout = GridLayout()
 
     var body: some View {
         NavigationStack {
@@ -32,11 +33,13 @@ struct ChannelView: View {
                         tabBar(header.tabs)
                     }
                     if let tab = model.currentTab {
-                        ChannelTabGrid(content: tab).id(tab.tab.id)
+                        ChannelTabGrid(content: tab, columns: VideoGrid.columns(layout, prefs: app.settings)).id(tab.tab.id)
                     }
                 }
-                .padding(20)
+                .padding(VideoGrid.padding)
+                .gridWidth(layout)
             }
+            .sidebarStableLayout($layout)
         } else if let error = model.error {
             ContentUnavailableView {
                 Label("Couldn't Load Channel", systemImage: "person.crop.circle.badge.exclamationmark")
@@ -124,6 +127,8 @@ private struct ChannelHeaderView: View {
 
 private struct ChannelTabGrid: View {
     let content: ChannelTabContent
+    /// Video columns, per the "videos per row" settings.
+    let columns: Int
     @Environment(AppModel.self) private var app
 
     var body: some View {
@@ -153,7 +158,7 @@ private struct ChannelTabGrid: View {
                         }
                     }
                 case .videos, .live:
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: app.settings.cardSize.minWidth, maximum: 420), spacing: 14, alignment: .top)], spacing: 18) {
+                    LazyVGrid(columns: VideoGrid.gridItems(columns), alignment: .leading, spacing: 18) {
                         ForEach(content.videos) { v in
                             Button { app.open(v) } label: { VideoCard(video: v) }.buttonStyle(.plain)
                                 .onAppear { if v.id == content.videos.last?.id { Task { await content.loadMore() } } }

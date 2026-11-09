@@ -124,6 +124,7 @@ struct SidebarView: View {
         }
         .listStyle(.sidebar)
         .safeAreaInset(edge: .bottom) { AccountFooter().padding(10) }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { if $0 > 0 { app.sidebarWidth = $0 } }
     }
 
     private func row(_ d: Destination) -> some View {

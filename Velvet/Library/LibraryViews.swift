@@ -5,15 +5,11 @@ struct SectionedFeedView: View {
     let feed: SectionedFeedModel
     var emptyMessage = "Nothing here yet."
     @Environment(AppModel.self) private var app
-    @State private var gridWidth: CGFloat = 0
+    @State private var layout = GridLayout()
+    @State private var tracker = GridTracker()
+    @State private var scroll = ScrollPosition()
 
-    private nonisolated static let spacing: CGFloat = 14
-    private nonisolated static let padding: CGFloat = 20
-
-    private var columnCount: Int {
-        let w = gridWidth - Self.padding * 2
-        return max(1, Int((w + Self.spacing) / (app.settings.cardSize.minWidth + Self.spacing)))
-    }
+    private var columnCount: Int { VideoGrid.columns(layout, prefs: app.settings) }
 
     var body: some View {
         Group {
@@ -43,9 +39,14 @@ struct SectionedFeedView: View {
                         }
                         if feed.isLoading { ProgressView().frame(maxWidth: .infinity).padding() }
                     }
-                    .padding(Self.padding)
+                    .padding(VideoGrid.padding)
+                    .coordinateSpace(.named(GridTracker.space))
+                    .gridWidth(layout)
                 }
-                .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { gridWidth = $0 }
+                .trackedGridScroll($scroll, tracker: tracker)
+                .sidebarStableLayout($layout) {
+                    tracker.keepReadingPosition(order: feed.sections.flatMap(\.videos), scroll: $scroll)
+                }
             }
         }
         .task { await feed.loadIfNeeded() }
@@ -56,11 +57,11 @@ struct SectionedFeedView: View {
     }
 
     private func grid(_ videos: [Video]) -> some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Self.spacing, alignment: .top), count: columnCount),
-                  alignment: .leading, spacing: 18) {
+        LazyVGrid(columns: VideoGrid.gridItems(columnCount), alignment: .leading, spacing: 18) {
             ForEach(videos) { video in
                 Button { app.open(video) } label: { VideoCard(video: video) }
                     .buttonStyle(.plain)
+                    .trackedInGrid(video.id, by: tracker)
                     .onAppear {
                         if video.id == feed.sections.last?.videos.last?.id { Task { await feed.loadMore() } }
                     }
