@@ -65,7 +65,7 @@ xcodebuild -project Velvet.xcodeproj -scheme Velvet -derivedDataPath <scratchpad
 
 Show only the errors. Use `grep -E "error:|BUILD"` on the output.
 
-Sign Debug builds with the release certificate, as above. The session cookies are in the login keychain, and its access list admits only builds with the release signature. A Debug build signed in another way makes macOS show a keychain prompt on the user's screen, and the test does not continue.
+Sign Debug builds with the release certificate, as above, so that they have the same identity as the installed app.
 
 ## 5. Install
 
@@ -173,3 +173,4 @@ CAUTION: Do not do account actions (like, subscribe, Watch Later, playlists) in 
 - On macOS 27, mpv's Core Audio output fails for planar audio formats (mpv#18384) and mpv falls back to AVFoundation, which plays mute, volume and speed changes 3–4 s late. Keep `audio-format=float` and `audio-channels=stereo` in `MPVPlayer`.
 - YouTube's suggestion service gives a web sign-in only a few past searches. The full search history comes from the Google My Activity page (`MyActivity.swift`), which is a web page, not an API. If it stops to work, the search box falls back to the suggestion service.
 - Posted key and mouse events from a test reach the app only when its window is frontmost. When the user's own Velvet is frontmost, they go to the wrong app (macOS beeps). Ask the user to test typing and clicks.
+- Do not keep the session in the keychain. Velvet is signed with a self-signed certificate (no Apple team ID), so macOS records each build's code hash in a keychain item's partition list: after every update, macOS asks for the login password before Velvet can read the item. The data-protection keychain needs a team ID. The session stays a 0600 file (`SessionStore`).
