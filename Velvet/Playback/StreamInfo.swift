@@ -7,7 +7,12 @@ nonisolated struct StreamFormat: Hashable, Sendable {
     let url: URL
     let ext: String?
     let protocolName: String
+    let width: Int?
     let height: Int?
+    /// YouTube's quality tier ("1080p60" → 1080), from yt-dlp's format note.
+    let qualityLabel: Int?
+    /// YouTube's audio quality class (high 3, medium 2, low 1), from the format note.
+    let audioClass: Int
     let fps: Double?
     let vcodec: String?
     let acodec: String?
@@ -21,6 +26,27 @@ nonisolated struct StreamFormat: Hashable, Sendable {
     let httpHeaders: [String: String]
     /// YouTube embargoes fresh links for a few seconds (403 until then).
     let availableAt: Date?
+
+    /// The quality tier this stream belongs to, as YouTube labels it. Not the pixel height:
+    /// a 2.39:1 "2160p" stream is 3840×1608 and a vertical "720p" one is 720×1280, so
+    /// comparing raw heights picked 4K streams under a 1620p cap and missed every tier.
+    var tier: Int? {
+        if let qualityLabel { return qualityLabel }
+        guard let height else { return nil }
+        guard let width else { return height }
+        // YouTube's rule: the short side, or the 16:9 height for the long side, whichever is larger.
+        let short = min(width, height), long = max(width, height)
+        let raw = max(short, long * 9 / 16)
+        // Snap to the nearest standard tier.
+        return VideoQuality.allCases.compactMap(\.maxHeight).min { abs($0 - raw) < abs($1 - raw) } ?? raw
+    }
+
+    /// "1440p (2560×1080)" when the shape isn't 16:9, else "1440p".
+    var resolutionLabel: String {
+        guard let tier else { return "" }
+        guard let width, let height, height != tier else { return "\(tier)p" }
+        return "\(tier)p (\(width)×\(height))"
+    }
 
     var hasVideo: Bool { vcodec.map { $0 != "none" } ?? false }
     var hasAudio: Bool { acodec.map { $0 != "none" } ?? false }
@@ -68,18 +94,18 @@ nonisolated struct StreamInfo: Sendable {
         if isLive || !formats.contains(where: { $0.hasVideo && !$0.hasAudio && !$0.isHLS }) {
             // Live (and the rare HLS-only video): HLS variants carry audio and video together.
             let hls = formats.filter { $0.isHLS && $0.hasVideo }
-            let pick = hls.filter { ($0.height ?? 0) <= maxHeight }.max(by: Self.byQuality)
-                ?? hls.min(by: { ($0.height ?? 0) < ($1.height ?? 0) })
+            let pick = hls.filter { ($0.tier ?? 0) <= maxHeight }.max(by: Self.byQuality)
+                ?? hls.min(by: { ($0.tier ?? 0) < ($1.tier ?? 0) })
             if let pick { return Selection(video: pick, audio: nil) }
         }
 
         let videoOnly = formats.filter { $0.hasVideo && !$0.hasAudio && !$0.isHLS }
         let order = Self.codecPreference(codec)
-        let withinCap = videoOnly.filter { ($0.height ?? 0) <= maxHeight }
+        let withinCap = videoOnly.filter { ($0.tier ?? 0) <= maxHeight }
         let pool = withinCap.isEmpty ? videoOnly : withinCap
         // Highest resolution first; among equals, the preferred codec; then fps, bitrate.
         let video = pool.max { a, b in
-            if (a.height ?? 0) != (b.height ?? 0) { return (a.height ?? 0) < (b.height ?? 0) }
+            if (a.tier ?? 0) != (b.tier ?? 0) { return (a.tier ?? 0) < (b.tier ?? 0) }
             let ra = order.firstIndex(of: a.codecFamily ?? .h264) ?? order.count
             let rb = order.firstIndex(of: b.codecFamily ?? .h264) ?? order.count
             if ra != rb { return ra > rb }
@@ -102,12 +128,14 @@ nonisolated struct StreamInfo: Sendable {
         return (nonDRC.isEmpty ? pool : nonDRC).max { a, b in
             let oa = a.acodec?.hasPrefix("opus") == true, ob = b.acodec?.hasPrefix("opus") == true
             if oa != ob { return !oa }
+            // YouTube's own class first: some videos report the same bitrate for every track.
+            if a.audioClass != b.audioClass { return a.audioClass < b.audioClass }
             return (a.bitrate ?? 0) < (b.bitrate ?? 0)
         }
     }
 
     private static func byQuality(_ a: StreamFormat, _ b: StreamFormat) -> Bool {
-        if (a.height ?? 0) != (b.height ?? 0) { return (a.height ?? 0) < (b.height ?? 0) }
+        if (a.tier ?? 0) != (b.tier ?? 0) { return (a.tier ?? 0) < (b.tier ?? 0) }
         if (a.fps ?? 0) != (b.fps ?? 0) { return (a.fps ?? 0) < (b.fps ?? 0) }
         return (a.bitrate ?? 0) < (b.bitrate ?? 0)
     }
@@ -160,7 +188,10 @@ extension StreamInfo {
                 url: url,
                 ext: f["ext"].string,
                 protocolName: f["protocol"].string ?? "https",
+                width: f["width"].int,
                 height: f["height"].int,
+                qualityLabel: note.firstMatch(of: /^(\d{3,4})p/).flatMap { Int($0.1) },
+                audioClass: note.hasPrefix("high") ? 3 : note.hasPrefix("medium") ? 2 : note.hasPrefix("low") ? 1 : 0,
                 fps: f["fps"].double,
                 vcodec: f["vcodec"].string,
                 acodec: f["acodec"].string,

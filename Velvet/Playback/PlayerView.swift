@@ -368,7 +368,7 @@ struct PlayerControls: View {
                 }
             }
         } label: {
-            Text(session.selection?.video.height.map { String($0) + "p" } ?? "Auto")
+            Text(session.selection?.video.tier.map { String($0) + "p" } ?? "Auto")
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)

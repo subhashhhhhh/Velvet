@@ -286,7 +286,7 @@ private struct WatchInfoView: View {
     }
 
     private func streamLabel(_ s: StreamInfo.Selection) -> String {
-        let v = [s.video.height.map { String($0) + "p" }, s.video.fps.map { String(Int($0)) + "fps" }, s.video.codecFamily?.label]
+        let v = [s.video.resolutionLabel, s.video.fps.map { String(Int($0)) + "fps" }, s.video.codecFamily?.label]
             .compactMap { $0 }.joined(separator: " ")
         let a = s.audio?.acodec?.components(separatedBy: ".").first ?? ""
         return a.isEmpty ? v : "\(v) · \(a)"

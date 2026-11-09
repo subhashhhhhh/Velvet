@@ -165,7 +165,7 @@ final class PlayerSession: Identifiable {
 
     /// Qualities this video actually offers.
     var availableQualities: [VideoQuality] {
-        let heights = Set(info?.formats.filter(\.hasVideo).compactMap(\.height) ?? [])
+        let heights = Set(info?.formats.filter(\.hasVideo).compactMap(\.tier) ?? [])
         return VideoQuality.allCases.filter { q in q == .auto || heights.contains(q.rawValue) }
     }
 
@@ -271,7 +271,7 @@ final class PlayerSession: Identifiable {
             try await Task.sleep(for: .seconds(wait))
         }
         log.info("Starting at \(time, format: .fixed(precision: 1), privacy: .public)s\(self.resumedFrom != nil ? " (resumed)" : "", privacy: .public)")
-        log.info("Playing \(selection.video.id, privacy: .public) \(selection.video.height ?? 0)p \(selection.video.vcodec ?? "", privacy: .public) + \(selection.audio?.id ?? "muxed", privacy: .public)")
+        log.info("Playing \(selection.video.id, privacy: .public) \(selection.video.resolutionLabel, privacy: .public) \(selection.video.vcodec ?? "", privacy: .public) + \(selection.audio?.id ?? "muxed", privacy: .public)")
         player.load(selection, startAt: time, autoplay: autoplay)
         phase = .ready
         log.debug("Captions: \(info.captions.map(\.id), privacy: .public)")
