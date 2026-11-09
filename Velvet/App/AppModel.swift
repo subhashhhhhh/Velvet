@@ -960,6 +960,19 @@ final class AppModel {
                 }
             }
         }
+        // `-VelvetPlaylistTest YES`: open your first playlist (after Watch Later) once they've loaded.
+        if UserDefaults.standard.bool(forKey: "VelvetPlaylistTest") {
+            Task {
+                for _ in 0..<40 {
+                    try? await Task.sleep(for: .milliseconds(500))
+                    if let p = playlistsModel?.playlists.first(where: { $0.id != "WL" }) {
+                        log.info("Test: opening playlist \(p.title, privacy: .public)")
+                        open(p)
+                        return
+                    }
+                }
+            }
+        }
         // `-VelvetWindowFullscreenTest YES`: macOS fullscreen (not the player's) from 6 s to 12 s.
         if UserDefaults.standard.bool(forKey: "VelvetWindowFullscreenTest") {
             Task {

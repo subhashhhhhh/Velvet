@@ -7,7 +7,8 @@ struct RootView: View {
         @Bindable var app = app
         HStack(spacing: 0) {
             Sidebar()
-            detail
+            // The page area keeps its place even while a page has nothing to show yet.
+            ZStack { Color.clear; detail }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .padding(.top, TopBar.height)
                 .withTopBar()

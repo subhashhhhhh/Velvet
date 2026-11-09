@@ -212,7 +212,12 @@ struct PlaylistDetailView: View {
 
     var body: some View {
         Group {
-            if let feed { SectionedFeedView(feed: feed, emptyMessage: "This playlist is empty.") }
+            if let feed {
+                SectionedFeedView(feed: feed, emptyMessage: "This playlist is empty.")
+            } else {
+                // Not empty: an empty view takes no space and never runs its .task.
+                ProgressView().controlSize(.large).frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
         .navigationTitle(feed?.title ?? summary.title)
         .topBarTitle(feed?.title ?? summary.title)
