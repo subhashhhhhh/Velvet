@@ -824,6 +824,13 @@ final class AppModel {
                             let bell = ChannelParser.header(from: page, channelId: channel)?.bell
                             log.info("Dump: channel bell \(bell?.setting?.label ?? "-", privacy: .public), \(bell?.params.count ?? 0) choices")
                         }
+                        var token: String?
+                        for page in 0..<6 {
+                            let json = try await client.notificationMenu(continuation: token)
+                            save(json, "inbox\(page).json")
+                            token = NotificationParser.inbox(from: json).continuation
+                            if token == nil { break }
+                        }
                         let inbox = NotificationParser.inbox(from: try await client.notificationMenu())
                         log.info("Dump: inbox \(inbox.items.count) items, \(inbox.items.filter { $0.videoId != nil }.count) with video, \(inbox.items.filter { $0.readToken != nil }.count) with read token, more: \(inbox.continuation != nil)")
                     }

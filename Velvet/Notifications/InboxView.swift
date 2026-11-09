@@ -35,18 +35,54 @@ private struct InboxPopover: View {
 
     private var inbox: InboxModel { app.inbox }
 
+    /// YouTube's inbox mixes new videos (uploads, live, premieres) with activity on your comments.
+    private enum Tab: Hashable { case videos, comments }
+    @State private var tab: Tab = {
+        #if DEBUG
+        // `-VelvetInboxTab comments` (with -VelvetInboxTest) opens on the Comments tab.
+        if UserDefaults.standard.string(forKey: "VelvetInboxTab") == "comments" { return .comments }
+        #endif
+        return .videos
+    }()
+
+    private var shown: [InboxNotification] {
+        inbox.items.filter { $0.isComment == (tab == .comments) }
+    }
+
+    private func unread(_ tab: Tab) -> Int {
+        inbox.items.filter { !$0.isRead && $0.isComment == (tab == .comments) }.count
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            Text("Notifications")
-                .font(.headline)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 12)
+            HStack {
+                Text("Notifications").font(.headline)
+                Spacer()
+                Button("Mark All as Read", systemImage: "checkmark.circle") { inbox.markAllRead() }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .disabled(!inbox.hasUnread)
+                    .help("Mark all as read")
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            Picker("", selection: $tab) {
+                Text(label("Videos", unread(.videos))).tag(Tab.videos)
+                Text(label("Comments", unread(.comments))).tag(Tab.comments)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
             Divider()
             content
         }
         .frame(width: 440, height: 540)
         .task { await inbox.open() }
+    }
+
+    private func label(_ title: String, _ unread: Int) -> String {
+        unread > 0 ? "\(title) (\(unread))" : title
     }
 
     @ViewBuilder
@@ -70,16 +106,28 @@ private struct InboxPopover: View {
         } else {
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(inbox.items) { n in
+                    ForEach(shown) { n in
                         InboxRow(notification: n) { open(n) }
-                            .onAppear {
-                                if n.id == inbox.items.last?.id { Task { await inbox.loadMore() } }
-                            }
                     }
-                    if inbox.isLoading { ProgressView().controlSize(.small).padding() }
+                    footer
                 }
                 .padding(.vertical, 6)
             }
+            .id(tab) // each tab starts at the top
+        }
+    }
+
+    /// Loads older pages while the end of the list is on screen: comment notifications are
+    /// rarer, so their tab may need several pages to fill.
+    @ViewBuilder
+    private var footer: some View {
+        if inbox.canLoadMore {
+            ProgressView().controlSize(.small).padding()
+                .task(id: inbox.items.count) { await inbox.loadMore() }
+        } else if shown.isEmpty {
+            Text(tab == .comments ? "No replies or hearts on your comments." : "No new videos.")
+                .foregroundStyle(.secondary)
+                .padding(.top, 40)
         }
     }
 

@@ -130,7 +130,27 @@ final class InboxModel {
         guard let i = items.firstIndex(where: { $0.id == notification.id }), !items[i].isRead else { return }
         items[i].isRead = true
         guard let token = notification.readToken else { return }
-        Task { try? await client.recordNotificationInteraction(token) }
+        Task { try? await client.recordNotificationInteractions([token]) }
+    }
+
+    var hasUnread: Bool { items.contains { !$0.isRead } }
+
+    /// Marks every loaded notification read, in one request; put back if YouTube refuses.
+    func markAllRead() {
+        let unread = items.indices.filter { !items[$0].isRead }
+        guard !unread.isEmpty else { return }
+        let tokens = unread.compactMap { items[$0].readToken }
+        for i in unread { items[i].isRead = true }
+        badge = 0
+        Task {
+            do {
+                try await client.recordNotificationInteractions(tokens)
+            } catch {
+                let ids = Set(unread.map { items[$0].id })
+                for i in items.indices where ids.contains(items[i].id) { items[i].isRead = false }
+                self.error = "Couldn't mark them as read: \(error.localizedDescription)"
+            }
+        }
     }
 
     // MARK: Helpers

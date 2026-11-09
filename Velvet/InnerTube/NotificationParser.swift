@@ -46,6 +46,8 @@ nonisolated struct InboxNotification: Identifiable, Hashable, Sendable {
     /// The video it's about (nil for a few kinds, e.g. community posts).
     var videoId: String?
     var isShort: Bool
+    /// About your comments (a reply, a heart) rather than a new video.
+    var isComment: Bool
     /// Marks it read on YouTube when opened.
     var readToken: String?
 
@@ -116,6 +118,8 @@ nonisolated enum NotificationParser {
             guard let id = n["notificationId"].string, let message = n["shortMessage"].text else { return nil }
             let nav = n["navigationEndpoint"]
             let reel = nav.first("reelWatchEndpoint")?["videoId"].string
+            // Replies and hearts open the video's comments with the reply linked.
+            let comment = nav.first("getCommentsFromInboxCommand")
             return InboxNotification(
                 id: id,
                 message: message,
@@ -123,8 +127,9 @@ nonisolated enum NotificationParser {
                 isRead: n["read"].bool ?? false,
                 channelAvatar: VideoParser.thumbnails(n["thumbnail"]["thumbnails"]).max { $0.width < $1.width }?.url,
                 thumbnail: VideoParser.thumbnails(n["videoThumbnail"]["thumbnails"]).max { $0.width < $1.width }?.url,
-                videoId: reel ?? nav.first("watchEndpoint")?["videoId"].string,
+                videoId: reel ?? nav.first("watchEndpoint")?["videoId"].string ?? comment?["videoId"].string,
                 isShort: reel != nil,
+                isComment: comment != nil,
                 readToken: n["recordClickEndpoint"].first("serializedInteractionsRequest")?.string
             )
         }
