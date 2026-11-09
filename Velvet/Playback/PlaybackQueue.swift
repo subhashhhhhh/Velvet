@@ -81,6 +81,13 @@ final class PlaybackQueue {
         return all[i]
     }
 
+    /// Dragging in the list: moves a queued video to where another one is.
+    func move(_ id: String, to targetId: String) {
+        guard let from = items.firstIndex(where: { $0.id == id }),
+              let to = items.firstIndex(where: { $0.id == targetId }), from != to else { return }
+        items.move(fromOffsets: [from], toOffset: to > from ? to + 1 : to)
+    }
+
     /// Shuffles what's still to play.
     func shuffle() { items.shuffle() }
 }

@@ -1,6 +1,7 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
-/// The Queue page: what plays next, in order. Drag to reorder.
+/// The Queue page: the same list as the watch page's panel, full height. Drag to reorder.
 struct QueueView: View {
     @Environment(AppModel.self) private var app
 
@@ -8,33 +9,21 @@ struct QueueView: View {
 
     var body: some View {
         Group {
-            if queue.isEmpty {
+            if !queue.hasContent {
                 ContentUnavailableView("Queue Is Empty", systemImage: "list.number",
                                        description: Text("Right-click a video and choose Play Next or Add to Queue."))
             } else {
-                List {
-                    ForEach(queue.items) { video in
-                        QueueRow(video: video)
-                            .contentShape(Rectangle())
-                            .onTapGesture { app.playFromQueue(video) }
-                            .contextMenu {
-                                Button("Play Now", systemImage: "play") { app.playFromQueue(video) }
-                                Button("Move to Top", systemImage: "arrow.up.to.line") { queue.playNext(video) }
-                                Divider()
-                                Button("Remove from Queue", systemImage: "minus.circle", role: .destructive) { queue.remove(video.id) }
-                            }
-                    }
-                    .onMove { queue.move(from: $0, to: $1) }
-                    .onDelete { offsets in offsets.map { queue.items[$0].id }.forEach(queue.remove) }
-                }
-                .listStyle(.inset)
+                QueuePreview(fullPage: true)
+                    .frame(maxWidth: 760)
+                    .padding(20)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             }
         }
         .navigationTitle("Queue")
         .topBarTitle("Queue")
         .topBarActions([
             TopBarAction(id: "Play the Queue", symbol: "play.fill", disabled: queue.isEmpty) { app.playNextInQueue() },
-            TopBarAction(id: "Clear the Queue", symbol: "trash", disabled: queue.isEmpty) { queue.clear() },
+            TopBarAction(id: "Clear the Queue", symbol: "trash", disabled: !queue.hasContent) { queue.clear() },
         ])
     }
 }
@@ -66,8 +55,12 @@ struct QueueRow: View {
 /// loop / shuffle, and every video in it (played ones above, the current one highlighted),
 /// scrolling once it's long.
 struct QueuePreview: View {
+    /// The Queue page: the list fills the page, with no collapse button.
+    var fullPage = false
     @Environment(AppModel.self) private var app
     @State private var collapsed = false
+    /// The queued video being dragged to a new place.
+    @State private var dragging: String?
 
     private var queue: PlaybackQueue { app.queue }
 
@@ -105,8 +98,10 @@ struct QueuePreview: View {
                     .font(.system(size: 16, weight: .bold))
                     .lineLimit(1)
                 Spacer()
-                ChromeButton(collapsed ? "Show the List" : "Hide the List",
-                             symbol: collapsed ? "chevron.down" : "chevron.up") { collapsed.toggle() }
+                if !fullPage {
+                    ChromeButton(collapsed ? "Show the List" : "Hide the List",
+                                 symbol: collapsed ? "chevron.down" : "chevron.up") { collapsed.toggle() }
+                }
             }
             Text(subtitle).font(.caption).foregroundStyle(.secondary)
             HStack(spacing: 4) {
@@ -126,8 +121,10 @@ struct QueuePreview: View {
                 }
                 Spacer()
                 Menu {
-                    Button("Show Queue Page", systemImage: "list.number") { app.navigate(to: .queue) }
-                    Divider()
+                    if !fullPage {
+                        Button("Show Queue Page", systemImage: "list.number") { app.navigate(to: .queue) }
+                        Divider()
+                    }
                     Button("Clear the Queue", systemImage: "trash", role: .destructive) { queue.clear() }
                 } label: {
                     Image(systemName: "ellipsis").frame(width: 30, height: 30).contentShape(Rectangle())
@@ -151,14 +148,25 @@ struct QueuePreview: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { i, video in
+                        let upcoming = i >= queue.played.count
                         QueuePanelRow(video: video, number: i + 1, isCurrent: i == currentIndex,
-                                      isPlayed: currentIndex.map { i < $0 } ?? (i < queue.played.count))
+                                      isPlayed: currentIndex.map { i < $0 } ?? (i < queue.played.count),
+                                      canMove: upcoming, isDragging: dragging == video.id)
                             .id(video.id)
+                            .onDrag {
+                                // Only videos still to play move; the drag still needs an item.
+                                if upcoming { dragging = video.id }
+                                return NSItemProvider(object: video.id as NSString)
+                            }
+                            .onDrop(of: [.text], delegate: QueueReorder(target: video.id, targetIsUpcoming: upcoming,
+                                                                        dragging: $dragging, queue: queue))
                     }
                 }
                 .padding(.vertical, 4)
             }
-            .frame(maxHeight: min(CGFloat(rows.count) * 84 + 8, 440))
+            .frame(maxHeight: fullPage ? .infinity : min(CGFloat(rows.count) * 84 + 8, 440))
+            // A drop outside any row (or a cancelled drag) ends the drag too.
+            .onDrop(of: [.text], isTargeted: nil) { _ in dragging = nil; return true }
             .onAppear { if let current { proxy.scrollTo(current, anchor: .center) } }
             .onChange(of: current) { _, id in
                 if let id { withAnimation(.smooth(duration: 0.3)) { proxy.scrollTo(id, anchor: .center) } }
@@ -172,6 +180,8 @@ private struct QueuePanelRow: View {
     let number: Int
     let isCurrent: Bool
     let isPlayed: Bool
+    var canMove = false
+    var isDragging = false
     @Environment(AppModel.self) private var app
     @State private var hovering = false
 
@@ -180,6 +190,9 @@ private struct QueuePanelRow: View {
             Group {
                 if isCurrent {
                     Image(systemName: "play.fill").font(.system(size: 9))
+                } else if canMove && hovering {
+                    // The grab handle, as on YouTube: drag the row to reorder.
+                    Image(systemName: "equal").font(.system(size: 15, weight: .medium))
                 } else {
                     Text("\(number)").font(.system(size: 11).monospacedDigit())
                 }
@@ -227,6 +240,7 @@ private struct QueuePanelRow: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
         .background(isCurrent ? AnyShapeStyle(.primary.opacity(0.1)) : hovering ? AnyShapeStyle(.primary.opacity(0.05)) : AnyShapeStyle(.clear))
+        .opacity(isDragging ? 0.35 : 1)
         .contentShape(Rectangle())
         .onTapGesture { if !isCurrent { app.playFromQueue(video) } }
         .onHover { hovering = $0 }
@@ -235,5 +249,26 @@ private struct QueuePanelRow: View {
                 Button("Remove from Queue", systemImage: "minus.circle") { app.queue.remove(video.id) }
             }
         }
+    }
+}
+
+/// Reorders the queue while a row is dragged over the others (they move out of the way as
+/// you go, as on YouTube); the drop itself only ends the drag.
+private struct QueueReorder: DropDelegate {
+    let target: String
+    let targetIsUpcoming: Bool
+    @Binding var dragging: String?
+    let queue: PlaybackQueue
+
+    func dropEntered(info: DropInfo) {
+        guard let dragging, dragging != target, targetIsUpcoming else { return }
+        withAnimation(.smooth(duration: 0.2)) { queue.move(dragging, to: target) }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? { DropProposal(operation: .move) }
+
+    func performDrop(info: DropInfo) -> Bool {
+        dragging = nil
+        return true
     }
 }
