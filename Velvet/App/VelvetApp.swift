@@ -22,6 +22,10 @@ struct VelvetApp: App {
         .commands {
             CommandGroup(replacing: .appInfo) {
                 Button("About Velvet") { AboutPanel.show(tools: app.tools) }
+                Button("Check for Updates…") {
+                    app.openSettings(.about)
+                    app.updates.checkNow()
+                }
             }
             CommandGroup(replacing: .sidebar) {
                 Button(app.isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar") { app.toggleSidebar() }

@@ -103,6 +103,16 @@ final class AppModel {
     var activeSearch: String?
 
     let alerts = SystemNotifications()
+    let updates = UpdateController()
+    /// Bumped to open the Settings window (only a view can call `openSettings`).
+    var settingsOpenRequest = 0
+    /// The pane the Settings window should show next; it clears this once shown.
+    var requestedSettingsPane: SettingsPane?
+
+    func openSettings(_ pane: SettingsPane) {
+        requestedSettingsPane = pane
+        settingsOpenRequest += 1
+    }
     @ObservationIgnored private(set) lazy var inbox = InboxModel(client: client, preferences: settings, alerts: alerts)
     var showingInbox = false
     var showingAccount = false
@@ -112,6 +122,13 @@ final class AppModel {
         alerts.onOpen = { [weak self] video in
             self?.bringToFront()
             self?.open(video)
+        }
+        alerts.onOpenUpdate = { [weak self] in
+            self?.bringToFront()
+            self?.openSettings(.about)
+        }
+        updates.onFound = { [weak self] release in
+            Task { await self?.alerts.postUpdate(release) }
         }
         #if DEBUG
         // `-VelvetSearch "query"` opens straight into results; handy for testing.
@@ -1101,6 +1118,7 @@ final class AppModel {
         Task { await aiFilter.refreshIfNeeded() }
         guard authState == .unknown else { return }
         nowPlaying.start()
+        updates.start { [weak self] in self?.settings.checkAppUpdates ?? false }
         prepareTools()
         if let saved = YouTubeSession.restore() {
             await activate(saved)

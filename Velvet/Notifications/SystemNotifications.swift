@@ -7,6 +7,8 @@ import OSLog
 final class SystemNotifications: NSObject, UNUserNotificationCenterDelegate {
     /// Called with the video to open when a notification is clicked.
     var onOpen: ((Video) -> Void)?
+    /// Called when the new-version notification is clicked.
+    var onOpenUpdate: (() -> Void)?
 
     private let center = UNUserNotificationCenter.current()
     private let log = Logger(subsystem: "com.subhash.Velvet", category: "Inbox")
@@ -53,6 +55,17 @@ final class SystemNotifications: NSObject, UNUserNotificationCenterDelegate {
         }
     }
 
+    /// Announces a new Velvet, only if notifications are already allowed: an update alone
+    /// isn't worth macOS's permission prompt (Settings › About shows it too).
+    func postUpdate(_ release: AvailableRelease) async {
+        guard await isAllowed else { return }
+        let content = UNMutableNotificationContent()
+        content.title = "Velvet \(release.version.description) is available"
+        content.body = "Click to see what's new and install it."
+        content.userInfo = ["update": true]
+        try? await center.add(UNNotificationRequest(identifier: "velvet-update-\(release.version.description)", content: content, trigger: nil))
+    }
+
     /// The video's thumbnail as a temporary file (the system moves it into its own store).
     private func thumbnailAttachment(for n: InboxNotification) async -> UNNotificationAttachment? {
         guard let url = n.thumbnail,
@@ -77,6 +90,10 @@ final class SystemNotifications: NSObject, UNUserNotificationCenterDelegate {
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         let info = response.notification.request.content.userInfo
+        if info["update"] as? Bool == true {
+            await MainActor.run { onOpenUpdate?() }
+            return
+        }
         guard let videoId = info["videoId"] as? String else { return }
         let isShort = info["isShort"] as? Bool ?? false
         let title = info["title"] as? String ?? ""

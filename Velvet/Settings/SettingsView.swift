@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SettingsPane: String, CaseIterable, Identifiable {
-    case general, feed, playback, notifications, sponsorBlock, deArrow, account, advanced
+    case general, feed, playback, notifications, sponsorBlock, deArrow, account, advanced, about
 
     var id: String { rawValue }
 
@@ -15,6 +15,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .deArrow: "DeArrow"
         case .account: "Account"
         case .advanced: "Advanced"
+        case .about: "About"
         }
     }
 
@@ -28,6 +29,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
         case .deArrow: "textformat"
         case .account: "person.crop.circle"
         case .advanced: "wrench.and.screwdriver"
+        case .about: "info.circle"
         }
     }
 }
@@ -35,6 +37,7 @@ enum SettingsPane: String, CaseIterable, Identifiable {
 /// The Settings window, laid out like the main window: a floating sidebar of categories
 /// (window buttons inside it) and the selected category's settings, its title in the bar.
 struct SettingsView: View {
+    @Environment(AppModel.self) private var app
     @State private var pane: SettingsPane = {
         #if DEBUG
         // `-VelvetSettingsPane playback` opens on that pane.
@@ -77,6 +80,15 @@ struct SettingsView: View {
         // Settings windows get the taller preferences title bar, which puts the window buttons
         // lower than the sidebar leaves room for (SwiftUI's toolbar style doesn't reach it).
         .background(WindowReader { $0?.toolbarStyle = .unified })
+        // "Check for Updates…" and the update notification ask for a pane.
+        .onAppear(perform: showRequestedPane)
+        .onChange(of: app.requestedSettingsPane) { showRequestedPane() }
+    }
+
+    private func showRequestedPane() {
+        guard let requested = app.requestedSettingsPane else { return }
+        pane = requested
+        app.requestedSettingsPane = nil
     }
 
     @ViewBuilder
@@ -90,6 +102,7 @@ struct SettingsView: View {
         case .deArrow: DeArrowPane()
         case .account: AccountPane()
         case .advanced: AdvancedPane()
+        case .about: AboutPane()
         }
     }
 }

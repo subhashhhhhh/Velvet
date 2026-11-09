@@ -65,6 +65,7 @@ struct RootView: View {
         }
         .animation(.easeOut(duration: 0.2), value: app.toast)
         .task { await app.start() }
+        .onChange(of: app.settingsOpenRequest) { openSettings() }
         #if DEBUG
         // `-VelvetSettingsTest YES` (with `-VelvetSettingsPane <pane>`): open Settings at launch.
         .task {
@@ -78,6 +79,24 @@ struct RootView: View {
                     let inWindow = close.convert(close.bounds, to: nil)
                     Logger(subsystem: "com.subhash.Velvet", category: "Test").info("Test: settings window \(Int(frame.width))x\(Int(frame.height)), close button centre \(Int(frame.height - inWindow.midY))pt from the top")
                 }
+            }
+        }
+        // `-VelvetUpdateTest YES` (with the VELVET_UPDATE_FEED environment variable): opens
+        // Settings › About, checks for an update at 3 s and installs what it finds at 6 s,
+        // logging each state. Installing replaces this test build and relaunches it.
+        .task {
+            guard UserDefaults.standard.bool(forKey: "VelvetUpdateTest") else { return }
+            let log = Logger(subsystem: "com.subhash.Velvet", category: "Test")
+            log.info("Test: update test, running \(AppVersion.current?.description ?? "?", privacy: .public), can install \(app.updates.canInstall)")
+            try? await Task.sleep(for: .seconds(3))
+            app.openSettings(.about)
+            app.updates.checkNow()
+            try? await Task.sleep(for: .seconds(3))
+            log.info("Test: update state \(String(describing: app.updates.state), privacy: .public)")
+            app.updates.install()
+            for _ in 0..<60 {
+                try? await Task.sleep(for: .seconds(1))
+                log.info("Test: update state \(String(describing: app.updates.state), privacy: .public)")
             }
         }
         #endif

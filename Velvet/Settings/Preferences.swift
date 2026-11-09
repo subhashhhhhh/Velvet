@@ -166,6 +166,8 @@ final class Preferences {
     // Advanced
     var jsRuntime: JSRuntime { didSet { save(jsRuntime.rawValue, .jsRuntime) } }
     var autoUpdateTools: Bool { didSet { save(autoUpdateTools, .autoUpdateTools) } }
+    /// Look for a newer Velvet on GitHub once a day.
+    var checkAppUpdates: Bool { didSet { save(checkAppUpdates, .checkAppUpdates) } }
 
     static let defaultSponsorServer = "https://sponsor.ajay.app"
 
@@ -226,6 +228,7 @@ final class Preferences {
 
         jsRuntime = JSRuntime(rawValue: get(.jsRuntime, "")) ?? .deno
         autoUpdateTools = get(.autoUpdateTools, true)
+        checkAppUpdates = get(.checkAppUpdates, true)
     }
 
     func sponsorAction(for category: SponsorCategory) -> SponsorAction {
@@ -248,7 +251,7 @@ final class Preferences {
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
         deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
         deArrowOriginalOnHover = fresh.deArrowOriginalOnHover
-        jsRuntime = fresh.jsRuntime; autoUpdateTools = fresh.autoUpdateTools
+        jsRuntime = fresh.jsRuntime; autoUpdateTools = fresh.autoUpdateTools; checkAppUpdates = fresh.checkAppUpdates
     }
 
     // MARK: Persistence
@@ -260,7 +263,7 @@ final class Preferences {
         case audioDelayMs, showDislikes, hdr, splitStreams, hideAIChannels, hideAILikely, seriesTracking
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
-        case jsRuntime, autoUpdateTools
+        case jsRuntime, autoUpdateTools, checkAppUpdates
 
         var name: String { "settings.\(self)" }
     }

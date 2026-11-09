@@ -36,6 +36,7 @@ All source files are in `Velvet/`.
 | `Shorts/` | Vertical Shorts player. |
 | `Settings/` | `Preferences` and the settings window. |
 | `Tools/` | yt-dlp and runtime download, process runner. |
+| `Updates/` | Velvet's own updates: release feed, signature check, installer. Signing and releases: `docs/signing.md`, `scripts/release.sh`. |
 | `Images/` | Image pipeline (downsampling, memory cache), animated images. |
 | `Views/` | Root view, shared controls (`Controls.swift`: `Chip`, `SegmentedTabs`; use these, not the system segmented picker), the custom sidebar (`Sidebar.swift`) and top bar (`TopBar.swift`), window-level player layer. Pages put their Back button, title and actions in the top bar with `.topBarBack`, `.topBarTitle`, `.topBarActions` and `.topBarRefresh`, not with `.toolbar`. |
 
@@ -120,6 +121,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetRenderControls <file.png>` | Draws the shared controls (`Views/Controls.swift`: tabs, chips) to an image. Use it when no window can be captured (for example while the user's Velvet is in fullscreen). |
 | `-VelvetWindowFullscreenTest YES` | Puts the window in macOS fullscreen from 6 s to 12 s (the top bar and sidebar must fill the screen) and logs which view a click on the top bar reaches (it must be the SwiftUI hosting view). It takes over the user's screen for 6 s. |
 | `-VelvetLeakTest YES`, `-VelvetNoRelief YES` | Memory tests. |
+| `-VelvetUpdateTest YES` | With the `VELVET_UPDATE_FEED` environment variable: opens Settings › About, checks for an update at 3 s and installs it at 6 s, logging each state (category `Test`). Use a scratch copy of a Debug build signed with "Velvet Self-Signed" (docs/signing.md): the install replaces the running copy and relaunches it. |
 | `-settings.<key> <value>` | Overrides a preference. Use `'<true/>'` or `'<false/>'` for Bool values and `'<integer>3</integer>'` for numbers. |
 
 ### 7.2 Procedure
