@@ -54,6 +54,13 @@ final class SearchAssist {
         if let reader = myActivity?.reader { Task { await reader.invalidate() } }
     }
 
+    /// Loads the My Activity history in the background (at sign-in), since reading it takes
+    /// a few seconds.
+    func prefetchHistory() {
+        guard prefs.searchSuggestions else { return }
+        Task { _ = await myActivityReader()?.recent() }
+    }
+
     private func myActivityReader() async -> MyActivitySearches? {
         guard prefs.searchHistoryFromMyActivity, let session = await account() else { return nil }
         if let myActivity, myActivity.account === session { return myActivity.reader }

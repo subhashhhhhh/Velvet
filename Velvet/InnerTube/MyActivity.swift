@@ -28,19 +28,39 @@ actor MyActivitySearches {
     }
 
     /// Recent searches, newest first, without repeats. Empty when the page can't be read.
+    /// Reading the page takes a few seconds, so once there's a list it's answered at once and,
+    /// when older than `lifetime`, read again in the background for next time.
     func recent() async -> [String] {
-        if let cached, Date().timeIntervalSince(cached.at) < Self.lifetime { return cached.searches }
-        if let inFlight { return await inFlight.value }
-        let task = Task { await self.load() }
-        inFlight = task
-        let searches = await task.value
-        inFlight = nil
-        cached = (.now, searches)
-        return searches
+        if let cached {
+            if Date().timeIntervalSince(cached.at) >= Self.lifetime { refresh() }
+            return cached.searches
+        }
+        return await refresh().value
     }
 
-    /// After a search in Velvet, so the next look includes it.
-    func invalidate() { cached = nil }
+    @discardableResult
+    private func refresh() -> Task<[String], Never> {
+        if let inFlight { return inFlight }
+        let task = Task {
+            let searches = await self.load()
+            self.finished(searches)
+            return searches
+        }
+        inFlight = task
+        return task
+    }
+
+    private func finished(_ searches: [String]) {
+        inFlight = nil
+        // A failed read keeps the last good list.
+        if !searches.isEmpty || cached == nil { cached = (.now, searches) }
+    }
+
+    /// After a search in Velvet: read the page again in the background, keeping the list until then.
+    func invalidate() {
+        guard cached != nil else { return }
+        refresh()
+    }
 
     private func load() async -> [String] {
         do {

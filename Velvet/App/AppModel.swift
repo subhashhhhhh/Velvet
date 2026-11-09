@@ -1576,6 +1576,8 @@ final class AppModel {
         await client.invalidateConfig() // signed-in pages carry their own visitor data
         authState = .signedIn
         authRevision += 1
+        // Read the search history now, so the search box has it the first time it's opened.
+        searchAssist.prefetchHistory()
         await refreshAccount()
         inbox.startPolling()
         if settings.uploadAlerts { await alerts.requestPermission() }
