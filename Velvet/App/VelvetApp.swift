@@ -17,6 +17,8 @@ struct VelvetApp: App {
                 .frame(minWidth: 820, minHeight: 520)
         }
         .windowToolbarStyle(.unified)
+        // Before the window has a saved size of its own (the minimum is too small for a grid).
+        .defaultSize(width: 1280, height: 800)
         .commands {
             CommandGroup(replacing: .sidebar) {
                 Button(app.isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar") { app.toggleSidebar() }
