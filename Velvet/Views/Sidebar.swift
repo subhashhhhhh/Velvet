@@ -5,8 +5,9 @@ enum SidebarMetrics {
     static let fullWidth: CGFloat = 248
     static let railWidth: CGFloat = 88
     static let inset: CGFloat = 8
-    /// Room at the top of the panel for the window's close/minimize/zoom buttons.
-    static let windowButtons: CGFloat = 44
+    /// Room at the top of the panel for the window's close/minimize/zoom buttons (none in
+    /// fullscreen).
+    static func windowButtons(fullscreen: Bool) -> CGFloat { fullscreen ? 10 : 44 }
     static let cornerRadius: CGFloat = 16
 }
 
@@ -82,7 +83,7 @@ private struct SidebarList: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Color.clear.frame(height: SidebarMetrics.windowButtons)
+            Color.clear.frame(height: SidebarMetrics.windowButtons(fullscreen: app.windowFullscreen))
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach([Destination.home, .shorts, .live]) { row($0) }
@@ -190,7 +191,7 @@ private struct SidebarRail: View {
 
     var body: some View {
         VStack(spacing: 2) {
-            Color.clear.frame(height: SidebarMetrics.windowButtons)
+            Color.clear.frame(height: SidebarMetrics.windowButtons(fullscreen: app.windowFullscreen))
             ForEach([Destination.home, .shorts, .live]) { item($0) }
             Divider().frame(width: 32).padding(.vertical, 6)
             ForEach([Destination.history, .watchLater, .playlists]) { item($0) }

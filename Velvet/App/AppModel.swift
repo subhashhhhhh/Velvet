@@ -241,6 +241,9 @@ final class AppModel {
         didSet { if mainWindow !== oldValue { observeWindow() } }
     }
     @ObservationIgnored private var occlusionObserver: NSObjectProtocol?
+    @ObservationIgnored private var fullscreenObservers: [NSObjectProtocol] = []
+    /// The window is in (or going into) macOS fullscreen: no title bar or window buttons.
+    var windowFullscreen = false
     @ObservationIgnored private weak var pipPlayer: MPVPlayer?
 
     /// The player currently on screen (watch page, a Short), if any.
@@ -504,6 +507,13 @@ final class AppModel {
                 let visible = window.occlusionState.contains(.visible)
                 self.log.info("Occlusion changed: visible=\(visible)")
                 self.windowVisibilityChanged(visible: visible)
+            }
+        }
+        windowFullscreen = mainWindow.styleMask.contains(.fullScreen)
+        for observer in fullscreenObservers { NotificationCenter.default.removeObserver(observer) }
+        fullscreenObservers = [(NSWindow.willEnterFullScreenNotification, true), (NSWindow.willExitFullScreenNotification, false)].map { name, entering in
+            NotificationCenter.default.addObserver(forName: name, object: mainWindow, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.windowFullscreen = entering }
             }
         }
         // Occlusion updates can trail a Space swipe by 2–3 s (seen on macOS 15). The Space
@@ -948,6 +958,13 @@ final class AppModel {
                     try? await Task.sleep(for: .seconds(gap > 0 ? gap : 4))
                     log.info("Test: after \(token, privacy: .public): search=\(self.searchText, privacy: .public), watch page shown=\(self.isShowingWatchPage), hidden=\(self.watchPageHidden), PiP=\(self.pip.isActive), theater=\(self.settings.theaterMode), playing=\(!(self.watching?.player.isPaused ?? true))")
                 }
+            }
+        }
+        // `-VelvetWindowFullscreenTest YES`: macOS fullscreen (not the player's) from 6 s to 12 s.
+        if UserDefaults.standard.bool(forKey: "VelvetWindowFullscreenTest") {
+            Task {
+                try? await Task.sleep(for: .seconds(6)); mainWindow?.toggleFullScreen(nil)
+                try? await Task.sleep(for: .seconds(6)); mainWindow?.toggleFullScreen(nil)
             }
         }
         // `-VelvetShort <id>`: open that Short in the Shorts player.

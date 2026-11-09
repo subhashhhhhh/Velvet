@@ -27,7 +27,9 @@ struct RootView: View {
         }
         .toolbar(removing: .title)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-        .toolbar(app.playerFullscreen ? .hidden : .visible, for: .windowToolbar)
+        // In fullscreen there are no window buttons to line up, and macOS would draw the
+        // toolbar as an opaque band over the top bar.
+        .toolbar(app.playerFullscreen || app.windowFullscreen ? .hidden : .visible, for: .windowToolbar)
         .sheet(isPresented: $app.showingSignIn) {
             SignInView(
                 onComplete: { cookies in Task { await app.completeSignIn(cookies: cookies) } },

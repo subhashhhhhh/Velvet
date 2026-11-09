@@ -107,6 +107,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetPiPTest YES`, `-VelvetPiPSkipTest YES` | Tests PiP and the PiP skip buttons. |
 | `-VelvetScrollPiPTest YES` | Scrolls the watch page to start and stop PiP. `-VelvetScrollY <points>` sets the depth. |
 | `-VelvetFullscreenTest YES`, `-VelvetResizeTest YES` | Tests fullscreen and window resize. |
+| `-VelvetWindowFullscreenTest YES` | Puts the window in macOS fullscreen from 6 s to 12 s (the top bar and sidebar must fill the screen). It takes over the user's screen for 6 s. |
 | `-VelvetLeakTest YES`, `-VelvetNoRelief YES` | Memory tests. |
 | `-settings.<key> <value>` | Overrides a preference. Use `'<true/>'` or `'<false/>'` for Bool values and `'<integer>3</integer>'` for numbers. |
 
