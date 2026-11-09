@@ -130,26 +130,37 @@ final class InboxModel {
         guard let i = items.firstIndex(where: { $0.id == notification.id }), !items[i].isRead else { return }
         items[i].isRead = true
         guard let token = notification.readToken else { return }
-        Task { try? await client.recordNotificationInteractions([token]) }
+        Task { try? await client.recordNotificationInteraction(token) }
     }
 
     var hasUnread: Bool { items.contains { !$0.isRead } }
 
-    /// Marks every loaded notification read, in one request; put back if YouTube refuses.
+    /// Marks every loaded notification read. YouTube takes one per request, so they go four at
+    /// a time; any it refuses show as unread again.
     func markAllRead() {
-        let unread = items.indices.filter { !items[$0].isRead }
+        let unread = items.filter { !$0.isRead }
         guard !unread.isEmpty else { return }
-        let tokens = unread.compactMap { items[$0].readToken }
-        for i in unread { items[i].isRead = true }
+        for i in items.indices { items[i].isRead = true }
         badge = 0
+        let client = client
         Task {
-            do {
-                try await client.recordNotificationInteractions(tokens)
-            } catch {
-                let ids = Set(unread.map { items[$0].id })
-                for i in items.indices where ids.contains(items[i].id) { items[i].isRead = false }
-                self.error = "Couldn't mark them as read: \(error.localizedDescription)"
+            let failed = await withTaskGroup(of: String?.self) { group -> Set<String> in
+                var pending = unread.compactMap { n in n.readToken.map { (n.id, $0) } }[...]
+                var failed = Set<String>()
+                func addNext() {
+                    guard let (id, token) = pending.popFirst() else { return }
+                    group.addTask { (try? await client.recordNotificationInteraction(token)) == nil ? id : nil }
+                }
+                for _ in 0..<4 { addNext() }
+                for await result in group {
+                    if let id = result { failed.insert(id) }
+                    addNext()
+                }
+                return failed
             }
+            guard !failed.isEmpty else { return }
+            for i in items.indices where failed.contains(items[i].id) { items[i].isRead = false }
+            log.error("Couldn't mark \(failed.count) of \(unread.count) notifications read")
         }
     }
 

@@ -938,6 +938,22 @@ final class AppModel {
                 }
             }
         }
+        // `-VelvetMarkReadTest YES`: mark the newest unread notification read, then reload and check.
+        if UserDefaults.standard.bool(forKey: "VelvetMarkReadTest") {
+            Task {
+                do {
+                    let page = NotificationParser.inbox(from: try await client.notificationMenu())
+                    guard let n = page.items.first(where: { !$0.isRead && $0.readToken != nil }) else { log.info("Test: nothing unread"); return }
+                    log.info("Test: marking \(n.id, privacy: .public) read: \(n.message.prefix(40), privacy: .public)")
+                    try await client.recordNotificationInteraction(n.readToken!)
+                    try? await Task.sleep(for: .seconds(2))
+                    let again = NotificationParser.inbox(from: try await client.notificationMenu())
+                    log.info("Test: after reload read=\(again.items.first { $0.id == n.id }?.isRead.description ?? "missing", privacy: .public)")
+                } catch {
+                    log.error("Test: failed \(error.localizedDescription, privacy: .public)")
+                }
+            }
+        }
         // `-VelvetInboxTest YES`: open the notifications popover at 6s.
         if UserDefaults.standard.bool(forKey: "VelvetInboxTest") {
             Task { try? await Task.sleep(for: .seconds(6)); showingInbox = true }

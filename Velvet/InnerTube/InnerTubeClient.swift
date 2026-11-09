@@ -198,11 +198,11 @@ actor InnerTubeClient {
         try await post("notification/get_unseen_count", [:])
     }
 
-    /// Marks notifications read (each request comes with its notification); one call for many.
-    func recordNotificationInteractions(_ serialized: [String]) async throws {
-        guard !serialized.isEmpty else { return }
+    /// Marks a notification read (the request comes with the notification). One per call:
+    /// the field is a single string, as youtube.com sends it (a list is rejected with 400).
+    func recordNotificationInteraction(_ serialized: String) async throws {
         _ = try await post("notification/record_interactions",
-                           ["serializedRecordNotificationInteractionsRequests": .array(serialized.map { .string($0) })])
+                           ["serializedRecordNotificationInteractionsRequest": .string(serialized)])
     }
 
     /// Sets a subscribed channel's bell (All / Personalized / None).
