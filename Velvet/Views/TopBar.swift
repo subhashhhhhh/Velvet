@@ -196,10 +196,25 @@ private struct SearchField: View {
                         .textFieldStyle(.plain)
                         .focused($focused)
                         .onSubmit {
-                            app.submitSearch()
+                            let assist = app.searchAssist
+                            if let i = assist.highlighted, assist.rows.indices.contains(i) {
+                                app.pickSuggestion(assist.rows[i].text)
+                            } else {
+                                app.submitSearch()
+                            }
                             focused = false
                         }
-                        .onExitCommand { focused = false }
+                        .onExitCommand {
+                            // Esc closes the suggestions first, then leaves the field.
+                            if app.searchAssist.isActive && !app.searchAssist.rows.isEmpty { app.searchAssist.isActive = false }
+                            else { focused = false }
+                        }
+                        .onKeyPress(.downArrow) { app.searchAssist.isActive = true; app.searchAssist.move(1); return .handled }
+                        .onKeyPress(.upArrow) { app.searchAssist.move(-1); return .handled }
+                        .onChange(of: app.searchText) { _, q in
+                            app.searchAssist.isActive = true
+                            app.searchAssist.queryChanged(q)
+                        }
                         .onAppear { focused = true }
                 } else {
                     Text(app.searchText.isEmpty ? "Search YouTube" : app.searchText)
@@ -236,9 +251,14 @@ private struct SearchField: View {
         .contentShape(Capsule())
         .onTapGesture { startEditing() }
         .onHover { hovering = $0 }
-        .onChange(of: focused) { _, now in if !now { editing = false } }
+        .onChange(of: focused) { _, now in
+            if !now { editing = false }
+            app.searchAssist.isActive = now
+        }
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.searchAssist.fieldFrame = $0 }
         .animation(.easeOut(duration: 0.15), value: editing)
         .onChange(of: app.searchFocusRequest) { startEditing() }
+        .onChange(of: app.searchBlurRequest) { focused = false }
         // ⌘K focuses search too (⌘F is in the View menu).
         .background {
             // Invisible rather than .hidden(): a hidden button's shortcut doesn't fire.

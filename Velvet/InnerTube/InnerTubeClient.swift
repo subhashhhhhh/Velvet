@@ -261,6 +261,19 @@ actor InnerTubeClient {
         return try JSON(data: data)
     }
 
+    /// A GET to another youtube.com service (search suggestions), with the account's cookies.
+    func get(_ url: URL) async throws -> Data {
+        var request = URLRequest(url: url, timeoutInterval: 6)
+        request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
+        if let auth {
+            for (k, v) in await auth.headers(origin: Self.origin) { request.setValue(v, forHTTPHeaderField: k) }
+        }
+        let (data, response) = try await session.data(for: request)
+        let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+        guard (200..<300).contains(status) else { throw InnerTubeError.http(status, url.host() ?? "") }
+        return data
+    }
+
     // MARK: - Bootstrap
 
     private func currentConfig() async throws -> Config {

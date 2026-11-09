@@ -111,6 +111,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetAIFilterTest YES` | With `-settings.hideAIChannels '<true/>'`: logs the AiSList list sizes, how many home videos have a channel handle, and how many are hidden. |
 | `-VelvetRelatedChipTest YES` | With `-VelvetPlay`: logs the related-video chips, selects the second, then All again, logging the list each time. |
 | `-VelvetSubscriptionsTest YES` | Opens Subscriptions and logs its sections, video and Shorts counts. |
+| `-VelvetSuggestTest YES` | Prints YouTube's signed-in search suggestions (raw) for an empty box and "s" to stderr. Your own past searches are the items without subtype 512. The key test also logs the dropdown's rows (`-VelvetKeyTest "cmd+k,s"`). |
 | `-VelvetHistoryTest YES` | Goes History → a video → a channel, then Back, Back, Forward, and logs the page and whether Back/Forward are available after each step. Trackpad swipes can't be sent from a script; the user must test them. |
 | `-VelvetPlaylistTest YES` | Opens your first playlist (after Watch Later) when the sidebar has loaded them. Add `-VelvetPlaylistPlay YES` to then play its second video and log the queue it fills. |
 | `-VelvetFullscreenAtLaunch YES` | Puts the window in macOS fullscreen as soon as it exists. Check with the window list that the toolbar window sits off screen (y = -52). It takes over the user's screen. |

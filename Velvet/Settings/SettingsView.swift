@@ -170,6 +170,11 @@ private struct GeneralPane: View {
                     set: { if $0 != app.isSidebarCollapsed { app.toggleSidebar() } }
                 ))
             }
+            Section {
+                Toggle("Search suggestions and history", isOn: $settings.searchSuggestions)
+            } footer: {
+                Text("Suggestions come from YouTube as you type (what you type is sent to it, as on youtube.com). Signed in, your account's past searches, from any device, are listed first with a clock.")
+            }
             Section("Keyboard Shortcuts") {
                 ShortcutGrid(rows: [
                     ("Play / Pause", "Space or K"), ("Back / ahead 10 s", "J  L"), ("Back / ahead 5 s", "←  →"),

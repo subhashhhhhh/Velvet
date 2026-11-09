@@ -21,6 +21,8 @@ struct RootView: View {
         .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
         .overlay(alignment: .topLeading) { PlayerLayer() }
         .overlay { SwipeIndicator() }
+        // Above the player layer, which floats over the page.
+        .overlay(alignment: .topLeading) { SearchSuggestionsDropdown() }
         .toolbar {
             if #available(macOS 26.0, *) {
                 ToolbarItem(placement: .navigation) { Color.clear.frame(width: 1, height: 1) }

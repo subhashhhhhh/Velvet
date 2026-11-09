@@ -95,6 +95,8 @@ nonisolated enum SponsorAction: String, CaseIterable, Identifiable, Codable, Sen
 final class Preferences {
     // General
     var startPage: Destination { didSet { save(startPage.rawValue, .startPage) } }
+    /// Suggestions under the search box (and, signed in, your account's past searches).
+    var searchSuggestions: Bool { didSet { save(searchSuggestions, .searchSuggestions) } }
     /// Light or dark for Velvet only (System follows macOS).
     var appearance: AppearanceMode { didSet { save(appearance.rawValue, .appearance); appearance.apply() } }
 
@@ -171,6 +173,7 @@ final class Preferences {
 
         startPage = Destination(rawValue: get(.startPage, "")) ?? .home
         appearance = AppearanceMode(rawValue: get(.appearance, "")) ?? .system
+        searchSuggestions = get(.searchSuggestions, true)
         showShortsShelf = get(.showShortsShelf, true)
         shortsAfterRows = get(.shortsAfterRows, 3)
         videosPerRow = get(.videosPerRow, 3)
@@ -227,7 +230,7 @@ final class Preferences {
     func resetAll() {
         for key in Key.allCases { defaults.removeObject(forKey: key.name) }
         let fresh = Preferences(defaults: defaults)
-        startPage = fresh.startPage; appearance = fresh.appearance
+        startPage = fresh.startPage; appearance = fresh.appearance; searchSuggestions = fresh.searchSuggestions
         showShortsShelf = fresh.showShortsShelf; shortsAfterRows = fresh.shortsAfterRows
         videosPerRow = fresh.videosPerRow; videosPerRowSidebarHidden = fresh.videosPerRowSidebarHidden; hideWatched = fresh.hideWatched; hideMembersOnly = fresh.hideMembersOnly; hidePromotions = fresh.hidePromotions
         quality = fresh.quality; codec = fresh.codec; defaultSpeed = fresh.defaultSpeed
@@ -245,7 +248,7 @@ final class Preferences {
     // MARK: Persistence
 
     private enum Key: CaseIterable {
-        case startPage, appearance, showShortsShelf, shortsAfterRows, videosPerRow, videosPerRowSidebarHidden, hideWatched, hideMembersOnly, hidePromotions
+        case startPage, appearance, searchSuggestions, showShortsShelf, shortsAfterRows, videosPerRow, videosPerRowSidebarHidden, hideWatched, hideMembersOnly, hidePromotions
         case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions, pipOnNavigate, pipStyle, queueAutoAdvance
         case uploadAlerts, notificationCheckMinutes, theaterMode
         case audioDelayMs, showDislikes, hideAIChannels, hideAILikely, seriesTracking

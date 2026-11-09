@@ -62,6 +62,18 @@ final class AppModel {
     let deArrow = DeArrowService()
     @ObservationIgnored private(set) lazy var aiFilter = AIChannelFilter(preferences: settings)
     @ObservationIgnored private(set) lazy var series = SeriesTracker(client: client)
+    @ObservationIgnored private(set) lazy var searchAssist = SearchAssist(client: client, preferences: settings)
+
+    /// A suggestion clicked (or picked with ↑/↓ and Return): search for it.
+    func pickSuggestion(_ text: String) {
+        searchText = text
+        searchAssist.isActive = false
+        searchBlurRequest += 1
+        submitSearch()
+    }
+
+    /// Bumped to take the cursor out of the search field (after picking a suggestion).
+    var searchBlurRequest = 0
 
     /// A series episode's page has loaded: track it, and with nothing queued, queue the next
     /// episode so it plays when this one ends.
@@ -1188,7 +1200,7 @@ final class AppModel {
                     // "cmd+k" presses ⌘K.
                     let command = token.hasPrefix("cmd+")
                     let key = command ? String(token.dropFirst(4)) : token
-                    let codes: [String: UInt16] = ["i": 34, "t": 17, "k": 40, "f": 3, "r": 15]
+                    let codes: [String: UInt16] = ["i": 34, "t": 17, "k": 40, "f": 3, "r": 15, "s": 1]
                     if let window = mainWindow, let event = NSEvent.keyEvent(
                         with: .keyDown, location: .zero, modifierFlags: command ? .command : [], timestamp: ProcessInfo.processInfo.systemUptime,
                         windowNumber: window.windowNumber, context: nil, characters: key, charactersIgnoringModifiers: key,
@@ -1198,7 +1210,7 @@ final class AppModel {
                     // `-VelvetKeyGap <seconds>` (default 4) presses faster, e.g. 0.15 to mash a key.
                     let gap = UserDefaults.standard.double(forKey: "VelvetKeyGap")
                     try? await Task.sleep(for: .seconds(gap > 0 ? gap : 4))
-                    log.info("Test: after \(token, privacy: .public): search=\(self.searchText, privacy: .public), queue=\(self.queue.items.count) from \(self.queue.source ?? "-", privacy: .public), watch page shown=\(self.isShowingWatchPage), hidden=\(self.watchPageHidden), PiP=\(self.pip.isActive), theater=\(self.settings.theaterMode), looping=\(self.watching?.player.isLooping ?? false), playing=\(!(self.watching?.player.isPaused ?? true))")
+                    log.info("Test: after \(token, privacy: .public): search=\(self.searchText, privacy: .public), suggestions=\(self.searchAssist.isActive ? self.searchAssist.rows.count : -1) (\(self.searchAssist.rows.filter(\.isHistory).count) yours: \(self.searchAssist.rows.prefix(3).map(\.text).joined(separator: " | "), privacy: .public)), queue=\(self.queue.items.count) from \(self.queue.source ?? "-", privacy: .public), watch page shown=\(self.isShowingWatchPage), hidden=\(self.watchPageHidden), PiP=\(self.pip.isActive), theater=\(self.settings.theaterMode), looping=\(self.watching?.player.isLooping ?? false), playing=\(!(self.watching?.player.isPaused ?? true))")
                 }
             }
         }
@@ -1240,6 +1252,20 @@ final class AppModel {
                 await feed?.loadMore()
                 let videos = feed?.videos ?? []
                 log.info("Test: subscriptions: \(first) videos, \(videos.count) after a second page, \(feed?.shorts.count ?? 0) Shorts, first \(videos.first.map { "\($0.channelName ?? "?"): \($0.title) (\($0.published ?? ""))" } ?? "-", privacy: .public)")
+            }
+        }
+        // `-VelvetSuggestTest YES`: print YouTube's signed-in search suggestions (raw) for "" and "s".
+        if UserDefaults.standard.bool(forKey: "VelvetSuggestTest") {
+            Task {
+                try? await Task.sleep(for: .seconds(3))
+                for q in ["", "s"] {
+                    var c = URLComponents(string: "https://suggestqueries-clients6.youtube.com/complete/search")!
+                    c.queryItems = [URLQueryItem(name: "client", value: "youtube"), URLQueryItem(name: "ds", value: "yt"),
+                                    URLQueryItem(name: "hl", value: "en"), URLQueryItem(name: "gs_ri", value: "youtube"),
+                                    URLQueryItem(name: "q", value: q), URLQueryItem(name: "xhr", value: "t")]
+                    let data = (try? await client.get(c.url!)) ?? Data()
+                    FileHandle.standardError.write(Data("SUGGEST[\(q)]: \(String(decoding: data, as: UTF8.self).prefix(1500))\n".utf8))
+                }
             }
         }
         // `-VelvetHistoryTest YES`: History → a video → a channel, then Back, Back, Forward,
