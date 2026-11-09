@@ -55,6 +55,13 @@ private nonisolated final class MPVCore: @unchecked Sendable {
         }, Unmanaged.passUnretained(self).toOpaque())
     }
 
+    /// Reads a number property now (thread-safe C API).
+    func double(_ name: String) -> Double? {
+        guard let handle else { return nil }
+        var v = 0.0
+        return mpv_get_property(handle, name, MPV_FORMAT_DOUBLE, &v) >= 0 ? v : nil
+    }
+
     func observe(_ name: String, _ format: mpv_format) {
         guard let handle else { return }
         mpv_observe_property(handle, 0, name, format)
@@ -212,6 +219,8 @@ final class MPVPlayer {
     @ObservationIgnored var onLoadFailure: ((String) -> Void)?
     /// Fired once when playback reaches the end (keep-open holds the last frame).
     @ObservationIgnored var onEnded: (() -> Void)?
+    /// Playback stalled waiting for data; the argument is mpv's download rate in Mbit/s.
+    @ObservationIgnored var onStall: ((Double) -> Void)?
     @ObservationIgnored private var playedSinceLoad = false
 
     @ObservationIgnored private let core: MPVCore?
@@ -225,6 +234,8 @@ final class MPVPlayer {
         var loop = false
         /// Seconds; positive plays the audio later (Bluetooth latency).
         var audioDelay = 0.0
+        /// Show HDR video in HDR on screens that have the headroom (EDR), as Safari does.
+        var hdr = true
     }
 
     init(options: Options) {
@@ -235,6 +246,9 @@ final class MPVPlayer {
         // size the host view is (page, fullscreen, PiP). Resizing therefore never needs mpv to
         // reconfigure, so animations stay smooth and paused frames stay correct.
         layer.contentsGravity = .resizeAspect
+        // Lets the layer go brighter than SDR white (EDR) when mpv hands it HDR frames; SDR
+        // video is unaffected.
+        layer.wantsExtendedDynamicRangeContent = options.hdr
         layer.contentsScale = NSScreen.main?.backingScaleFactor ?? 2
         layer.drawableSize = Self.renderSize(for: CGSize(width: 1920, height: 1080))
 
@@ -246,6 +260,9 @@ final class MPVPlayer {
             ("gpu-api", "vulkan"),
             ("gpu-context", "moltenvk"),
             ("hwdec", options.hardwareDecoding ? "videotoolbox" : "no"),
+            // HDR video: output in its own colour space (an HDR swapchain on the Metal layer)
+            // instead of tone-mapping it down to SDR. mpv only switches for HDR content.
+            ("target-colorspace-hint", options.hdr ? "yes" : "no"),
             ("ytdl", "no"),
             ("idle", "yes"),
             ("keep-open", "yes"),
@@ -298,6 +315,7 @@ final class MPVPlayer {
             ("mute", MPV_FORMAT_FLAG), ("time-pos", MPV_FORMAT_DOUBLE), ("duration", MPV_FORMAT_DOUBLE),
             ("demuxer-cache-time", MPV_FORMAT_DOUBLE), ("volume", MPV_FORMAT_DOUBLE), ("speed", MPV_FORMAT_DOUBLE),
             ("video-params/w", MPV_FORMAT_DOUBLE), ("video-params/h", MPV_FORMAT_DOUBLE),
+            ("video-params/gamma", MPV_FORMAT_STRING), ("video-target-params/gamma", MPV_FORMAT_STRING),
             ("hwdec-current", MPV_FORMAT_STRING), ("video-codec", MPV_FORMAT_STRING),
         ] as [(String, mpv_format)] {
             core.observe(name, format)
@@ -490,7 +508,16 @@ final class MPVPlayer {
         switch (name, value) {
         case ("pause", .flag(let v)):
             if v != isPaused { isPaused = v; onPauseChange?(v); onPictureInPicturePauseChange?(v) }
-        case ("paused-for-cache", .flag(let v)): isBuffering = v
+        case ("paused-for-cache", .flag(let v)):
+            isBuffering = v
+            if v {
+                // Ahead = how much was downloaded past the playhead; speed = mpv's current
+                // download rate. Little ahead and a rate under the stream's bitrate = network.
+                let ahead = bufferedUntil - position
+                let speed = (core?.double("cache-speed") ?? 0) * 8 / 1_000_000
+                Logger(subsystem: "com.subhash.Velvet", category: "Player").info("Buffering at \(Int(self.position))s: \(ahead, format: .fixed(precision: 1))s ahead, downloading at \(speed, format: .fixed(precision: 1)) Mbit/s")
+                onStall?(speed)
+            }
         case ("eof-reached", .flag(let v)):
             if v && !hasEnded { onEnded?() }
             hasEnded = v
@@ -517,6 +544,11 @@ final class MPVPlayer {
         case ("hwdec-current", .string(let v)):
             hardwareDecoder = v
             Logger(subsystem: "com.subhash.Velvet", category: "Player").info("Decoder: \(v.isEmpty || v == "no" ? "software" : v, privacy: .public)")
+        case ("video-params/gamma", .string(let v)):
+            Logger(subsystem: "com.subhash.Velvet", category: "Player").info("Video transfer: \(v, privacy: .public)")
+        case ("video-target-params/gamma", .string(let v)):
+            // pq / hlg here means the screen gets HDR; srgb / bt.1886 means tone-mapped to SDR.
+            Logger(subsystem: "com.subhash.Velvet", category: "Player").info("Output transfer: \(v, privacy: .public)")
         case ("video-codec", .string(let v)):
             Logger(subsystem: "com.subhash.Velvet", category: "Player").info("Video codec: \(v, privacy: .public)")
         default: break

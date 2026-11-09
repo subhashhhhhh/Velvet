@@ -133,6 +133,8 @@ final class Preferences {
     var theaterMode: Bool { didSet { save(theaterMode, .theaterMode) } }
     /// Delays the audio (milliseconds; negative plays it earlier), to match laggy Bluetooth audio.
     var audioDelayMs: Int { didSet { save(audioDelayMs, .audioDelayMs) } }
+    /// HDR videos in HDR on screens that can show it (else tone-mapped to SDR).
+    var hdr: Bool { didSet { save(hdr, .hdr) } }
     /// Dislike counts from the Return YouTube Dislike API.
     var showDislikes: Bool { didSet { save(showDislikes, .showDislikes) } }
     /// Hide videos from channels on the AiSList community list of AI-generated channels.
@@ -198,6 +200,7 @@ final class Preferences {
         theaterMode = get(.theaterMode, false)
         audioDelayMs = get(.audioDelayMs, 0)
         showDislikes = get(.showDislikes, true)
+        hdr = get(.hdr, true)
         hideAIChannels = get(.hideAIChannels, false)
         hideAILikely = get(.hideAILikely, false)
         seriesTracking = get(.seriesTracking, true)
@@ -237,7 +240,7 @@ final class Preferences {
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
         autoPictureInPicture = fresh.autoPictureInPicture; pipOnScroll = fresh.pipOnScroll
-        autoCaptions = fresh.autoCaptions; queueAutoAdvance = fresh.queueAutoAdvance; theaterMode = fresh.theaterMode; audioDelayMs = fresh.audioDelayMs; showDislikes = fresh.showDislikes; hideAIChannels = fresh.hideAIChannels; hideAILikely = fresh.hideAILikely; seriesTracking = fresh.seriesTracking; uploadAlerts = fresh.uploadAlerts; notificationCheckMinutes = fresh.notificationCheckMinutes; pipOnNavigate = fresh.pipOnNavigate; pipStyle = fresh.pipStyle
+        autoCaptions = fresh.autoCaptions; queueAutoAdvance = fresh.queueAutoAdvance; theaterMode = fresh.theaterMode; audioDelayMs = fresh.audioDelayMs; showDislikes = fresh.showDislikes; hdr = fresh.hdr; hideAIChannels = fresh.hideAIChannels; hideAILikely = fresh.hideAILikely; seriesTracking = fresh.seriesTracking; uploadAlerts = fresh.uploadAlerts; notificationCheckMinutes = fresh.notificationCheckMinutes; pipOnNavigate = fresh.pipOnNavigate; pipStyle = fresh.pipStyle
         sponsorBlockEnabled = fresh.sponsorBlockEnabled; sponsorActions = fresh.sponsorActions
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
         deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
@@ -251,7 +254,7 @@ final class Preferences {
         case startPage, appearance, searchSuggestions, showShortsShelf, shortsAfterRows, videosPerRow, videosPerRowSidebarHidden, hideWatched, hideMembersOnly, hidePromotions
         case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions, pipOnNavigate, pipStyle, queueAutoAdvance
         case uploadAlerts, notificationCheckMinutes, theaterMode
-        case audioDelayMs, showDislikes, hideAIChannels, hideAILikely, seriesTracking
+        case audioDelayMs, showDislikes, hdr, hideAIChannels, hideAILikely, seriesTracking
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
         case jsRuntime, autoUpdateTools

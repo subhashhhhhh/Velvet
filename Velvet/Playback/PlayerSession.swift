@@ -46,7 +46,8 @@ final class PlayerSession: Identifiable {
             bufferMB: preferences.bufferMB,
             speed: video.kind == .short ? 1 : preferences.defaultSpeed,
             loop: video.kind == .short,
-            audioDelay: Double(preferences.audioDelayMs) / 1000
+            audioDelay: Double(preferences.audioDelayMs) / 1000,
+            hdr: preferences.hdr
         ))
         let player = self.player
         self.sponsor = SponsorSkipper(
@@ -69,6 +70,7 @@ final class PlayerSession: Identifiable {
             self?.saveProgress()
         }
         player.onLoadFailure = { [weak self] message in self?.recoverFromLoadFailure(message) }
+        player.onStall = { [weak self] mbps in self?.stalled(downloadMbps: mbps) }
     }
 
     func start() {
@@ -95,6 +97,34 @@ final class PlayerSession: Identifiable {
     }
 
     /// Switches quality, keeping the playback position.
+    /// Picked in the player's quality menu: the automatic step-down leaves it alone.
+    @ObservationIgnored private var qualityChosenByUser = false
+    @ObservationIgnored private var recentStalls: [Date] = []
+    /// Called after the quality drops because the connection can't keep up (for a notice).
+    @ObservationIgnored var onQualityLowered: ((String) -> Void)?
+
+    /// From the quality menu.
+    func chooseQuality(_ q: VideoQuality) {
+        qualityChosenByUser = true
+        setQuality(q)
+    }
+
+    /// Like YouTube's player: when playback keeps stalling (3 times in 20 s) because the
+    /// download is slower than the stream, drop one quality step. A quality picked by hand
+    /// for this video is kept.
+    private func stalled(downloadMbps: Double) {
+        let now = Date()
+        recentStalls = recentStalls.filter { now.timeIntervalSince($0) < 20 } + [now]
+        guard recentStalls.count >= 3, !qualityChosenByUser, !isLive,
+              let current = selection?.video, let tier = current.tier, tier > 480,
+              downloadMbps > 0, downloadMbps * 1000 < (current.bitrate ?? .infinity) else { return }
+        guard let lower = availableQualities.filter({ $0 != .auto && $0.rawValue < tier }).max(by: { $0.rawValue < $1.rawValue }) else { return }
+        recentStalls = []
+        log.info("Lowering quality \(tier)p → \(lower.rawValue)p: downloading at \(downloadMbps, format: .fixed(precision: 1)) Mbit/s for a \(Int((current.bitrate ?? 0) / 1000)) Mbit/s stream")
+        setQuality(lower)
+        onQualityLowered?(lower.label)
+    }
+
     func setQuality(_ q: VideoQuality) {
         guard q != quality, let info else { quality = q; return }
         quality = q

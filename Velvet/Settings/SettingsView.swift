@@ -337,6 +337,9 @@ private struct PlaybackPane: View {
                     ForEach(VideoCodec.allCases) { Text($0.label).tag($0) }
                 }
                 Text(settings.codec.detail).font(.caption).foregroundStyle(.secondary)
+                Toggle("Play HDR videos in HDR", isOn: $settings.hdr)
+                Text("On screens that can go brighter than normal white (most Mac screens since 2021, and HDR displays). Applies to videos opened after changing it.")
+                    .font(.caption).foregroundStyle(.secondary)
             }
             Section {
                 Toggle("Start playing when a video opens", isOn: $settings.autoplay)

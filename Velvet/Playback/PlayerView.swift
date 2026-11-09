@@ -376,12 +376,20 @@ struct PlayerControls: View {
     private var qualityMenu: some View {
         Menu {
             ForEach(session.availableQualities) { q in
-                Button { session.setQuality(q) } label: {
+                Button { session.chooseQuality(q) } label: {
                     if q == session.quality { Label(q.label, systemImage: "checkmark") } else { Text(q.label) }
                 }
             }
         } label: {
-            Text(session.selection?.video.tier.map { String($0) + "p" } ?? "Auto")
+            HStack(spacing: 3) {
+                Text(session.selection?.video.tier.map { String($0) + "p" } ?? "Auto")
+                if session.selection?.video.isHDR == true {
+                    Text("HDR").font(.system(size: 9, weight: .heavy))
+                        .padding(.horizontal, 3).padding(.vertical, 1)
+                        .background(.white.opacity(0.9), in: RoundedRectangle(cornerRadius: 3))
+                        .foregroundStyle(.black)
+                }
+            }
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)

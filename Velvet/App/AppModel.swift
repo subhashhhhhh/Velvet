@@ -307,6 +307,7 @@ final class AppModel {
                               isSignedIn: { [weak self] in self?.authState == .signedIn })
         s.page.accountName = { [weak self] in self?.account?.name }
         s.page.accountPhoto = { [weak self] in self?.account?.photo }
+        s.onQualityLowered = { [weak self] label in self?.showToast("Lowered to \(label) to stop buffering") }
         s.player.onEnded = { [weak self, weak s] in
             guard let self, let s, s === self.watching, self.settings.queueAutoAdvance else { return }
             self.playNextInQueue()

@@ -16,6 +16,8 @@ nonisolated struct StreamFormat: Hashable, Sendable {
     let fps: Double?
     let vcodec: String?
     let acodec: String?
+    /// HDR video (yt-dlp's dynamic_range: HDR10 / HLG; YouTube's VP9 profile 2 and AV1 HDR).
+    var isHDR = false
     /// Average bitrate in kbit/s.
     let bitrate: Double?
     let language: String?
@@ -183,7 +185,7 @@ extension StreamInfo {
                 earliestExpiry = min(earliestExpiry, expire)
             }
             let note = (f["format_note"].string ?? "").lowercased()
-            return StreamFormat(
+            var format = StreamFormat(
                 id: id,
                 url: url,
                 ext: f["ext"].string,
@@ -203,6 +205,8 @@ extension StreamInfo {
                 httpHeaders: (f["http_headers"].object ?? [:]).compactMapValues(\.string),
                 availableAt: f["available_at"].double.map { Date(timeIntervalSince1970: $0) }
             )
+            format.isHDR = (f["dynamic_range"].string).map { $0 != "SDR" } ?? false
+            return format
         }
         captions = CaptionParser.tracks(from: json, preferredLanguage: Locale.current.language.languageCode?.identifier ?? "en")
         chapters = json["chapters"].array.compactMap { c in
