@@ -240,6 +240,7 @@ private struct PlaybackPane: View {
                 Toggle("Keep playing in Picture in Picture when leaving the video", isOn: $settings.pipOnNavigate)
                     .disabled(!PictureInPicture.isAvailable)
                 Toggle("Show captions automatically", isOn: $settings.autoCaptions)
+                Toggle("Show dislike counts", isOn: $settings.showDislikes)
                 Toggle("Play the next video in the queue when one ends", isOn: $settings.queueAutoAdvance)
                 Toggle("Theater mode (T)", isOn: $settings.theaterMode)
                 Picker("Default speed", selection: $settings.defaultSpeed) {
@@ -250,7 +251,7 @@ private struct PlaybackPane: View {
             } header: {
                 Text("Behavior")
             } footer: {
-                Text("When the Velvet window is hidden while a video plays — another Space, minimized, or covered — the video continues in a floating Picture in Picture window, and returns when you come back.")
+                Text("Dislike counts come from Return YouTube Dislike, which estimates them from its users' votes; Velvet sends it the ID of the video you open. When the Velvet window is hidden while a video plays — another Space, minimized, or covered — the video continues in a floating Picture in Picture window, and returns when you come back.")
             }
             Section {
                 Toggle("Hardware decoding", isOn: $settings.hardwareDecoding)

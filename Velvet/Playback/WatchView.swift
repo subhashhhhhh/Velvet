@@ -195,9 +195,17 @@ private struct WatchInfoView: View {
                 }
                 Divider().frame(height: 16)
                 Button { page.toggleDislike() } label: {
-                    Image(systemName: page.likeStatus == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown")
+                    let symbol = page.likeStatus == .dislike ? "hand.thumbsdown.fill" : "hand.thumbsdown"
+                    if let count = page.displayedDislikeCount {
+                        Label(count, systemImage: symbol)
+                    } else {
+                        Image(systemName: symbol)
+                    }
                 }
-                .help("Dislike")
+                .help(page.dislikeCount == nil ? "Dislike" : "Dislike (count from Return YouTube Dislike)")
+                .task(id: app.settings.showDislikes) {
+                    if app.settings.showDislikes { await page.loadDislikes() }
+                }
             }
             .buttonStyle(PillButtonStyle())
             .background(.quaternary, in: Capsule())

@@ -52,6 +52,21 @@ final class WatchPageModel {
     }
 
     /// The count to display for the current like state.
+    /// From Return YouTube Dislike; nil until loaded or when the setting is off.
+    private(set) var dislikeCount: Int?
+
+    func loadDislikes() async {
+        dislikeCount = await ReturnDislikeAPI.dislikes(for: videoId)
+    }
+
+    /// The count with your own dislike counted (the API only sees votes from its own users).
+    var displayedDislikeCount: String? {
+        guard var count = dislikeCount else { return nil }
+        if likeStatus == .dislike && details?.likeStatus != .dislike { count += 1 }
+        if likeStatus != .dislike && details?.likeStatus == .dislike { count = max(0, count - 1) }
+        return count.formatted(.number.notation(.compactName))
+    }
+
     var displayedLikeCount: String? {
         guard let d = details else { return nil }
         if likeStatus == .like { return d.likeCountWhenLiked ?? d.likeCount }
