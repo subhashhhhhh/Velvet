@@ -27,7 +27,7 @@ nonisolated enum VideoCodec: String, CaseIterable, Identifiable, Codable, Sendab
         switch self {
         case .auto: "Best quality the Mac can decode in hardware."
         case .av1: "Smallest files. Hardware decoding needs M3 or newer."
-        case .vp9: "Good quality, hardware decoded on Apple silicon."
+        case .vp9: "Good quality. Hardware decoded on Apple silicon and on most Intel Macs from 2017 on."
         case .h264: "Most compatible, but YouTube caps it at 1080p."
         }
     }

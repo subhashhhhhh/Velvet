@@ -26,8 +26,17 @@ nonisolated enum Tool: String, CaseIterable, Codable, Sendable, Identifiable {
         }
     }
 
-    /// Apple-silicon release asset (macOS 27 is Apple-silicon only).
+    /// The release asset for this Mac's processor (yt-dlp's is universal).
     var assetName: String {
+        #if arch(x86_64)
+        switch self {
+        case .ytdlp: "yt-dlp_macos.zip"
+        case .deno: "deno-x86_64-apple-darwin.zip"
+        // Baseline: the regular x64 build needs AVX2, which some Intel Macs lack.
+        case .bun: "bun-darwin-x64-baseline.zip"
+        case .quickjs: "qjs-darwin-x86_64"
+        }
+        #else
         switch self {
         // The folder ("onedir") build starts in ~0.4s; the single-file one unpacks itself every run (~5s).
         case .ytdlp: "yt-dlp_macos.zip"
@@ -35,6 +44,7 @@ nonisolated enum Tool: String, CaseIterable, Codable, Sendable, Identifiable {
         case .bun: "bun-darwin-aarch64.zip"
         case .quickjs: "qjs-darwin-arm64"
         }
+        #endif
     }
 
     var isZip: Bool { assetName.hasSuffix(".zip") }
@@ -44,7 +54,11 @@ nonisolated enum Tool: String, CaseIterable, Codable, Sendable, Identifiable {
         switch self {
         case .ytdlp: "yt-dlp_macos"
         case .deno: "deno"
+        #if arch(x86_64)
+        case .bun: "bun-darwin-x64-baseline/bun"
+        #else
         case .bun: "bun-darwin-aarch64/bun"
+        #endif
         case .quickjs: "qjs"
         }
     }

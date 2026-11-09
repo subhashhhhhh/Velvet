@@ -29,8 +29,15 @@ nonisolated enum ReleaseFeed {
     /// downloading by hand.
     static let installMarker = "<!-- velvet:install -->"
 
-    /// Velvet ships for Apple silicon only (its yt-dlp runtime downloads are arm64).
-    static let architectureLabel = "AppleSilicon"
+    /// The build for this Mac's processor. An Intel build stays on Intel builds even when it
+    /// runs under Rosetta.
+    static var architectureLabel: String {
+        #if arch(x86_64)
+        "Intel"
+        #else
+        "AppleSilicon"
+        #endif
+    }
 
     private static let log = Logger(subsystem: "com.subhash.Velvet", category: "Updates")
 
