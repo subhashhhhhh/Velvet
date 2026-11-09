@@ -5,13 +5,13 @@
 
 ## 1. General
 
-Velvet is a native YouTube client for macOS. It is for personal use.
+Velvet is a native YouTube client for macOS. It is free and open source (MIT). People install it from GitHub Releases and the Homebrew tap `subhashhhhhh/homebrew-velvet`, and it updates itself. Each change goes to real users, not only to the maintainer.
 
 The primary goal is low memory usage. Each change must keep memory usage low.
 
 Velvet uses these items:
 
-- macOS 15 (Sequoia) or later. Do not use APIs that need a later macOS without an `#available` check.
+- macOS 15 (Sequoia) or later, Apple silicon only. Do not use APIs that need a later macOS without an `#available` check.
 - Two project files: `Velvet.xcodeproj` (Xcode 27 format) and `project.yml` (xcodegen, for Xcode 26). Keep the build settings the same in the two files. `install.sh` selects the correct one.
 - Swift 6 and SwiftUI. The default actor isolation is the main actor.
 - mpv (MPVKit 1.0.0) for playback.
@@ -50,6 +50,9 @@ All source files are in `Velvet/`.
 6. Use the private PIP.framework only through `PictureInPicture.swift`.
 7. Add a setting to `Preferences` for each new optional behavior. Add the toggle to `SettingsView`.
 8. Write a comment when the reason for code is not clear. Do not write comments that only repeat the code.
+9. Do not add analytics, telemetry or crash reporting. Do not add a connection to a new service without a reason. List each service that Velvet connects to in README §3.
+10. Keep `README.md` correct. When a change adds or removes a feature, a shortcut or a setting category, update the README in the same commit. The README uses ASD-STE100 Simplified Technical English.
+11. Do not make user-visible text that says Velvet is a personal app. Write errors and help for users who are not the maintainer.
 
 ## 4. Build
 
@@ -78,11 +81,23 @@ CAUTION: Do not quit or kill the Velvet app that the user operates. The script i
 1. Use the local git repository.
 2. Make a commit after each small part of a feature. Do not make one large commit for a full feature.
 3. Write a short subject line. Write the reason for the change in the body.
-4. Push to `origin` (private GitHub repository `subhashhhhhh/Velvet`) after each commit. The computer can stop without a warning. Unpushed work can be lost.
+4. Push to `origin` (GitHub repository `subhashhhhhh/Velvet`) after each commit. The computer can stop without a warning. Unpushed work can be lost.
+5. Commits use the identity `Subhash <79552953+subhashhhhhh@users.noreply.github.com>` (global git config). Do not commit with a different email, and do not rewrite or force-push published history.
+6. Do not commit personal data: cookies, `-VelvetDumpJSON` output, logs, screenshots, or the signing certificate.
 
-## 7. Tests
+## 7. Releases
 
-### 7.1 Debug launch arguments
+Ask the user before each release. A release goes to all users.
+
+1. Increase `MARKETING_VERSION` in `Velvet.xcodeproj` and in `project.yml` (the same value; `1.2` or `1.2.3`). Commit and push.
+2. Write the release notes in `dist/notes-<version>.md`: what changed, for users. Do not write install instructions; the script adds them.
+3. Do `scripts/release.sh --publish`. It builds and signs the app, makes the DMG and the zip, creates the GitHub release, writes `updates/latest.json` (the in-app updater reads it) and updates the Homebrew cask.
+
+The release signature is the "Velvet Self-Signed" certificate in the login keychain. Installed copies accept only updates with this signature. Do not make a new certificate. Refer to `docs/signing.md`.
+
+## 8. Tests
+
+### 8.1 Debug launch arguments
 
 Start the Debug build with these arguments to test a feature:
 
@@ -124,7 +139,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetUpdateTest YES` | With the `VELVET_UPDATE_FEED` environment variable: opens Settings › About, checks for an update at 3 s and installs it at 6 s, logging each state (category `Test`). Use a scratch copy of a Debug build signed with "Velvet Self-Signed" (docs/signing.md): the install replaces the running copy and relaunches it. |
 | `-settings.<key> <value>` | Overrides a preference. Use `'<true/>'` or `'<false/>'` for Bool values and `'<integer>3</integer>'` for numbers. |
 
-### 7.2 Procedure
+### 8.2 Procedure
 
 0. Always add `-ApplePersistenceIgnoreState YES`. The Debug app shares the installed app's saved window state, and some saved states open no window at all, so no test runs.
 
@@ -143,9 +158,12 @@ CAUTION: The Debug app shares `~/Library/Application Support/Velvet` with the in
 
 CAUTION: Do not do account actions (like, subscribe, Watch Later, playlists) in a test. These actions change the account of the user.
 
-## 8. Known limits
+## 9. Known limits
 
 - The system PiP window on macOS does not let you drag its timeline. The ±10 s buttons operate. IINA has the same limit.
 - Command-line tools cannot send media keys or MediaRemote commands. The user must test media keys.
 - The `visionos` yt-dlp client does not need cookies and has no stream delay. The account path uses cookies and has a delay of approximately 4 s.
 - YouTube paces each client's stream links to its estimate of the viewer's bandwidth (the `initcwndbps` link parameter, signed, so it can't be raised). Different clients are paced separately, so `SplitStreamServer` downloads high-bitrate video (over 10 Mbit/s) from the `visionos` and `web_embedded` links at once through a local server on 127.0.0.1. Measured on a 29 Mbit/s line: about 15 Mbit/s from one link, about 20 from two. The player logs every stall with the buffered time and mpv's download rate.
+- On macOS 27, mpv's Core Audio output fails for planar audio formats (mpv#18384) and mpv falls back to AVFoundation, which plays mute, volume and speed changes 3–4 s late. Keep `audio-format=float` and `audio-channels=stereo` in `MPVPlayer`.
+- YouTube's suggestion service gives a web sign-in only a few past searches. The full search history comes from the Google My Activity page (`MyActivity.swift`), which is a web page, not an API. If it stops to work, the search box falls back to the suggestion service.
+- Posted key and mouse events from a test reach the app only when its window is frontmost. When the user's own Velvet is frontmost, they go to the wrong app (macOS beeps). Ask the user to test typing and clicks.
