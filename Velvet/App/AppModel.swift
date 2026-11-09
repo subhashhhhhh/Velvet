@@ -550,6 +550,31 @@ final class AppModel {
             authRevision += 1
         }
         #if DEBUG
+        // `-VelvetDumpJSON <videoId> -VelvetDumpDir <path>`: save raw (read-only) responses for
+        // parser work: the watch page, its first comments and replies pages, and the home feed.
+        if let id = UserDefaults.standard.string(forKey: "VelvetDumpJSON"), !id.isEmpty,
+           let dir = UserDefaults.standard.string(forKey: "VelvetDumpDir") {
+            Task {
+                func save(_ json: JSON, _ name: String) {
+                    try? json.data().write(to: URL(fileURLWithPath: dir).appendingPathComponent(name))
+                }
+                do {
+                    let watch = try await client.next(videoId: id)
+                    save(watch, "watch.json")
+                    if let token = WatchParser.details(from: watch, videoId: id)?.commentsToken {
+                        let comments = try await client.next(continuation: token)
+                        save(comments, "comments.json")
+                        if let r = WatchParser.comments(from: comments).comments.first(where: { $0.repliesToken != nil })?.repliesToken {
+                            save(try await client.next(continuation: r), "replies.json")
+                        }
+                    }
+                    save(try await client.browse("FEwhat_to_watch"), "home.json")
+                    log.info("Dump finished")
+                } catch {
+                    log.error("Dump failed: \(error.localizedDescription, privacy: .public)")
+                }
+            }
+        }
         if let id = UserDefaults.standard.string(forKey: "VelvetChannel"), !id.isEmpty { openChannel(id) }
         // `-VelvetNavigateTest YES` (with -VelvetPlay): sidebar to History at 10s, reopen the video at 18s.
         if UserDefaults.standard.bool(forKey: "VelvetNavigateTest") {
