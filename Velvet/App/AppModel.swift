@@ -110,6 +110,26 @@ final class AppModel {
         return .smooth(duration: 0.3)
     }()
     var playerSlot: CGRect = .zero { didSet { playerVisibilityChanged() } }
+    /// Until when slot moves animate (switching theater mode); otherwise the player follows
+    /// its slot at once (scrolling, resizing).
+    @ObservationIgnored private var animateSlotUntil = Date.distantPast
+    private static let theaterAnimation = Animation.smooth(duration: 0.3)
+
+    func updatePlayerSlot(_ slot: CGRect) {
+        guard slot != playerSlot else { return }
+        if Date() < animateSlotUntil {
+            withAnimation(Self.theaterAnimation) { playerSlot = slot }
+        } else {
+            playerSlot = slot
+        }
+    }
+
+    /// T: the player spans the page, or goes back into its column.
+    func toggleTheaterMode() {
+        guard isShowingWatchPage, !playerFullscreen else { return }
+        animateSlotUntil = Date().addingTimeInterval(0.5)
+        withAnimation(Self.theaterAnimation) { settings.theaterMode.toggle() }
+    }
     var watchViewport: CGRect = .zero { didSet { playerVisibilityChanged() } }
 
     /// How much of the inline player is inside the watch page's visible area (0…1).
@@ -396,8 +416,42 @@ final class AppModel {
         return best
     }
 
+    @ObservationIgnored private var keyMonitor: Any?
+
+    /// The I key in both directions: from the watch page to the page under it (video in PiP),
+    /// and back. Handled app-wide because once the page is hidden there's no player view to
+    /// receive keys. Ignored while typing (search, comments) and with ⌘/⌥/⌃.
+    private func installKeyMonitor() {
+        guard keyMonitor == nil else { return }
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            nonisolated(unsafe) let event = event
+            let consumed = MainActor.assumeIsolated { () -> Bool in
+                guard let self, self.watching != nil, !self.playerFullscreen,
+                      event.charactersIgnoringModifiers?.lowercased() == "i",
+                      event.modifierFlags.isDisjoint(with: [.command, .option, .control]),
+                      event.window === self.mainWindow, !Self.isTyping(in: event.window) else { return false }
+                if self.watchPageHidden {
+                    self.showWatchPage()
+                } else if self.isShowingWatchPage {
+                    self.leaveWatchPage(forcePictureInPicture: true)
+                } else {
+                    return false
+                }
+                return true
+            }
+            return consumed ? nil : event
+        }
+    }
+
+    private static func isTyping(in window: NSWindow?) -> Bool {
+        guard let responder = window?.firstResponder else { return false }
+        if let text = responder as? NSTextView { return text.isEditable }
+        return responder is NSTextField
+    }
+
     private func observeWindow() {
         installScrollForwarding()
+        installKeyMonitor()
         if let occlusionObserver { NotificationCenter.default.removeObserver(occlusionObserver) }
         guard let mainWindow else { return }
         occlusionObserver = NotificationCenter.default.addObserver(
@@ -812,6 +866,23 @@ final class AppModel {
                 for _ in 0..<6 {
                     try? await Task.sleep(for: .seconds(1))
                     log.info("Test: back on \(self.watching?.video.id ?? "nothing", privacy: .public) at \(self.watching?.player.position ?? -1, format: .fixed(precision: 1))s, playing=\(!(self.watching?.player.isPaused ?? true)), loading=\(self.watching?.player.isLoading ?? false)")
+                }
+            }
+        }
+        // `-VelvetKeyTest "t,i,i"` (with -VelvetPlay): from 8s, press each key 4s apart, as real key events.
+        if let keys = UserDefaults.standard.string(forKey: "VelvetKeyTest"), !keys.isEmpty {
+            Task {
+                try? await Task.sleep(for: .seconds(8))
+                for key in keys.split(separator: ",").map(String.init) {
+                    if let window = mainWindow, let event = NSEvent.keyEvent(
+                        with: .keyDown, location: .zero, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                        windowNumber: window.windowNumber, context: nil, characters: key, charactersIgnoringModifiers: key,
+                        isARepeat: false, keyCode: key == "i" ? 34 : 17) {
+                        NSApp.postEvent(event, atStart: false)
+                    }
+                    try? await Task.sleep(for: .seconds(1))
+                    log.info("Test: after \(key, privacy: .public): watch page shown=\(self.isShowingWatchPage), hidden=\(self.watchPageHidden), PiP=\(self.pip.isActive), theater=\(self.settings.theaterMode)")
+                    try? await Task.sleep(for: .seconds(3))
                 }
             }
         }

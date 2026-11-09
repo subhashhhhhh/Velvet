@@ -211,10 +211,9 @@ struct PlayerView: View {
             case "m": player.toggleMute()
             case "f": onToggleFullscreen()
             case "p": app.togglePictureInPicture()
-            // Back to the page under the video (Home, search, a channel…), video in PiP.
-            case "i":
-                guard app.watching === session else { return .ignored }
-                app.leaveWatchPage(forcePictureInPicture: true)
+            case "t":
+                guard !isFullscreen, app.watching === session else { return .ignored }
+                app.toggleTheaterMode()
             case "n" where press.modifiers.contains(.shift):
                 guard !app.queue.isEmpty, app.watching === session else { return .ignored }
                 app.playNextInQueue()
@@ -279,6 +278,12 @@ struct PlayerControls: View {
                             Image(systemName: player.isInPictureInPicture ? "pip.exit" : "pip.enter")
                         }
                         .help("Picture in Picture (P)")
+                    }
+                    if !isFullscreen && app.watching === session {
+                        Button { app.toggleTheaterMode() } label: {
+                            Image(systemName: app.settings.theaterMode ? "rectangle.inset.filled" : "rectangle")
+                        }
+                        .help(app.settings.theaterMode ? "Default view (T)" : "Theater mode (T)")
                     }
                     Button(action: onToggleFullscreen) {
                         Image(systemName: isFullscreen ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")

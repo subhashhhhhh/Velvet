@@ -228,7 +228,7 @@ struct PlayerLayer: View {
                 ZStack(alignment: .topLeading) {
                     PlayerView(session: session, isFullscreen: full) { app.togglePlayerFullscreen() }
                         .frame(width: max(0, frame.width), height: max(0, frame.height))
-                        .clipShape(RoundedRectangle(cornerRadius: full ? 0 : 12, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: full || app.settings.theaterMode ? 0 : 12, style: .continuous))
                         .offset(x: frame.minX - (visible.isNull ? 0 : visible.minX),
                                 y: frame.minY - (visible.isNull ? 0 : visible.minY))
                 }

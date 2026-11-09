@@ -124,6 +124,8 @@ final class Preferences {
     var pipStyle: PiPStyle { didSet { save(pipStyle.rawValue, .pipStyle) } }
     var autoCaptions: Bool { didSet { save(autoCaptions, .autoCaptions) } }
     var queueAutoAdvance: Bool { didSet { save(queueAutoAdvance, .queueAutoAdvance) } }
+    /// The watch page's player spans the page (T). Remembered, like YouTube's.
+    var theaterMode: Bool { didSet { save(theaterMode, .theaterMode) } }
 
     // Notifications
     /// macOS notifications for new items in your YouTube inbox (uploads from belled channels).
@@ -176,6 +178,7 @@ final class Preferences {
         pipStyle = PiPStyle(rawValue: get(.pipStyle, "")) ?? .floating
         autoCaptions = get(.autoCaptions, false)
         queueAutoAdvance = get(.queueAutoAdvance, true)
+        theaterMode = get(.theaterMode, false)
         uploadAlerts = get(.uploadAlerts, true)
         notificationCheckMinutes = get(.notificationCheckMinutes, 5)
 
@@ -212,7 +215,7 @@ final class Preferences {
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
         autoPictureInPicture = fresh.autoPictureInPicture; pipOnScroll = fresh.pipOnScroll
-        autoCaptions = fresh.autoCaptions; queueAutoAdvance = fresh.queueAutoAdvance; uploadAlerts = fresh.uploadAlerts; notificationCheckMinutes = fresh.notificationCheckMinutes; pipOnNavigate = fresh.pipOnNavigate; pipStyle = fresh.pipStyle
+        autoCaptions = fresh.autoCaptions; queueAutoAdvance = fresh.queueAutoAdvance; theaterMode = fresh.theaterMode; uploadAlerts = fresh.uploadAlerts; notificationCheckMinutes = fresh.notificationCheckMinutes; pipOnNavigate = fresh.pipOnNavigate; pipStyle = fresh.pipStyle
         sponsorBlockEnabled = fresh.sponsorBlockEnabled; sponsorActions = fresh.sponsorActions
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
         deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
@@ -225,7 +228,7 @@ final class Preferences {
     private enum Key: CaseIterable {
         case startPage, showShortsShelf, shortsAfterRows, videosPerRow, videosPerRowSidebarHidden, hideWatched, hideMembersOnly, hidePromotions
         case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions, pipOnNavigate, pipStyle, queueAutoAdvance
-        case uploadAlerts, notificationCheckMinutes
+        case uploadAlerts, notificationCheckMinutes, theaterMode
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
         case jsRuntime, autoUpdateTools

@@ -104,6 +104,7 @@ private struct PlaybackPane: View {
                     .disabled(!PictureInPicture.isAvailable)
                 Toggle("Show captions automatically", isOn: $settings.autoCaptions)
                 Toggle("Play the next video in the queue when one ends", isOn: $settings.queueAutoAdvance)
+                Toggle("Theater mode (T)", isOn: $settings.theaterMode)
                 Picker("Default speed", selection: $settings.defaultSpeed) {
                     ForEach([0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.5, 3.0], id: \.self) {
                         Text($0 == 1 ? "Normal" : "\($0.formatted())×").tag($0)

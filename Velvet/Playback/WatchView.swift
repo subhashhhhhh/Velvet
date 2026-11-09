@@ -11,16 +11,21 @@ struct WatchView: View {
 
     var body: some View {
         GeometryReader { geo in
+            let theater = app.settings.theaterMode
             let wide = geo.size.width >= 1050
             let size = playerSize(in: geo.size, wide: wide)
             ScrollView {
+                VStack(spacing: 0) {
+                if theater {
+                    // Theater: the player spans the page in a black band, the page continues below.
+                    playerSlot(width: geo.size.width, height: theaterHeight(in: geo.size))
+                }
                 HStack(alignment: .top, spacing: Self.columnSpacing) {
                     VStack(alignment: .leading, spacing: 18) {
-                        // The player's slot. The player is drawn by RootView's PlayerLayer on top.
-                        Color.clear
-                            .frame(width: size.width, height: size.height)
-                            .frame(maxWidth: .infinity)
-                            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.playerSlot = $0 }
+                        if !theater {
+                            playerSlot(width: size.width, height: size.height)
+                                .frame(maxWidth: .infinity)
+                        }
                         WatchInfoView(session: session)
                         if !wide, let chat = page.liveChat {
                             LiveChatPanel(chat: chat).frame(height: 420)
@@ -38,6 +43,7 @@ struct WatchView: View {
                     }
                 }
                 .padding(Self.padding)
+                }
             }
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.watchViewport = $0 }
         }
@@ -75,6 +81,19 @@ struct WatchView: View {
 
     /// Exact player size: full column width at the video's aspect ratio, shrunk (keeping the
     /// ratio) only when that would leave too little room below it. No letterbox padding.
+    /// The player's slot. The player itself is drawn by RootView's PlayerLayer on top of it.
+    private func playerSlot(width: CGFloat, height: CGFloat) -> some View {
+        Color.clear
+            .frame(width: width, height: height)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.updatePlayerSlot($0) }
+    }
+
+    /// Theater band: the video's height at full width, capped so the title still shows below
+    /// (the player letterboxes inside it, on black, like YouTube's).
+    private func theaterHeight(in container: CGSize) -> CGFloat {
+        min(container.width / aspect, max(240, container.height - 120)).rounded()
+    }
+
     private func playerSize(in container: CGSize, wide: Bool) -> CGSize {
         let columnWidth = container.width - Self.padding * 2 - (wide ? Self.relatedWidth + Self.columnSpacing : 0)
         let maxHeight = max(240, container.height - 170)
