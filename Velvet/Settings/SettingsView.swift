@@ -567,6 +567,9 @@ private struct ToolRow: View {
                 case .working(let step):
                     ProgressView().controlSize(.small)
                     Text(step).foregroundStyle(.secondary)
+                case .downloading(let received, let total):
+                    ProgressView(value: total > 0 ? Double(received) / Double(total) : 0).frame(width: 80)
+                    Text(ToolProgressText.bytes(received, total)).monospacedDigit().foregroundStyle(.secondary)
                 case .installed(let version):
                     Text(version).monospacedDigit().foregroundStyle(.secondary)
                     Button("Reinstall") { Task { try? await app.tools.install(tool) } }

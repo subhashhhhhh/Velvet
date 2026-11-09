@@ -156,9 +156,23 @@ struct PlayerView: View {
     private var statusOverlay: some View {
         switch session.phase {
         case .resolving:
-            VStack(spacing: 10) {
-                ProgressView().controlSize(.large).tint(.white)
-                Text("Finding streams…").foregroundStyle(.white.opacity(0.7)).font(.callout)
+            if !app.tools.isReady(runtime: app.settings.jsRuntime) {
+                // Right after install: the video waits for yt-dlp and the runtime to download.
+                VStack(spacing: 14) {
+                    Text("Setting up playback").font(.headline).foregroundStyle(.white)
+                    ToolSetupRows(onDark: true)
+                    if app.tools.setupFailure(runtime: app.settings.jsRuntime) != nil {
+                        Button("Try Again") { app.tools.retrySetup(runtime: app.settings.jsRuntime) }
+                            .buttonStyle(.prominentOverMedia)
+                    }
+                }
+                .padding(20)
+                .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            } else {
+                VStack(spacing: 10) {
+                    ProgressView().controlSize(.large).tint(.white)
+                    Text("Finding streams…").foregroundStyle(.white.opacity(0.7)).font(.callout)
+                }
             }
         case .failed(let message):
             VStack(spacing: 12) {

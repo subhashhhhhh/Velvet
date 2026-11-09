@@ -101,6 +101,8 @@ final class ToolManager {
     enum Status: Equatable {
         case notInstalled
         case working(String)
+        /// Bytes so far and in all (0 until the server says).
+        case downloading(received: Int64, total: Int64)
         case installed(version: String)
         case failed(String)
     }
@@ -108,9 +110,18 @@ final class ToolManager {
     private(set) var status: [Tool: Status] = [:]
     private(set) var lastUpdateCheck: Date?
 
-    nonisolated static let root: URL = FileManager.default
-        .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appending(path: "com.subhash.Velvet/tools", directoryHint: .isDirectory)
+    nonisolated static let root: URL = {
+        #if DEBUG
+        // `-VelvetToolsDir <path>`: a separate tools folder, to test a first install without
+        // touching the installed app's tools.
+        if let dir = UserDefaults.standard.string(forKey: "VelvetToolsDir"), !dir.isEmpty {
+            return URL(filePath: dir, directoryHint: .isDirectory)
+        }
+        #endif
+        return FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appending(path: "com.subhash.Velvet/tools", directoryHint: .isDirectory)
+    }()
 
     private var manifest: [Tool: InstalledTool] = [:]
     private var installs: [Tool: Task<URL, Error>] = [:]
@@ -143,6 +154,42 @@ final class ToolManager {
     func isInstalled(_ tool: Tool) -> Bool {
         if case .installed = status[tool] { return true }
         return false
+    }
+
+    /// The tools playback needs: yt-dlp and the chosen JavaScript runtime.
+    nonisolated static func needed(runtime: JSRuntime) -> [Tool] { [.ytdlp, Tool(runtime)] }
+
+    /// Both are installed, so a video can play.
+    func isReady(runtime: JSRuntime) -> Bool {
+        Self.needed(runtime: runtime).allSatisfy(isInstalled)
+    }
+
+    /// How far the downloads have got, 0…1, across the tools playback needs (an installed tool
+    /// counts as done, one not started yet as nothing).
+    func setupFraction(runtime: JSRuntime) -> Double {
+        let tools = Self.needed(runtime: runtime)
+        let parts = tools.map { tool -> Double in
+            switch status[tool] ?? .notInstalled {
+            case .installed: 1
+            case .downloading(let received, let total) where total > 0: 0.9 * Double(received) / Double(total)
+            case .working(let step) where step.hasPrefix("Verif") || step.hasPrefix("Install"): 0.95
+            default: 0
+            }
+        }
+        return parts.reduce(0, +) / Double(tools.count)
+    }
+
+    /// The first failure among the tools playback needs, if any.
+    func setupFailure(runtime: JSRuntime) -> String? {
+        for tool in Self.needed(runtime: runtime) {
+            if case .failed(let message) = status[tool] { return message }
+        }
+        return nil
+    }
+
+    /// Tries the downloads again after a failure (offline, GitHub unreachable).
+    func retrySetup(runtime: JSRuntime) {
+        Task { _ = try? await ready(runtime: runtime) }
     }
 
     /// Paths to yt-dlp and the chosen runtime, installing either on first use.
@@ -194,8 +241,13 @@ final class ToolManager {
             status[tool] = .working("Checking latest release…")
             let release = try await Self.latestRelease(tool)
 
-            status[tool] = .working("Downloading \(release.tag)…")
-            let downloaded = try await Self.download(release.url)
+            status[tool] = .downloading(received: 0, total: 0)
+            let downloaded = try await Self.download(release.url) { received, total in
+                Task { @MainActor [weak self] in
+                    guard let self, case .downloading = self.status[tool] else { return }
+                    self.status[tool] = .downloading(received: received, total: total)
+                }
+            }
             defer { try? FileManager.default.removeItem(at: downloaded) }
 
             status[tool] = .working("Verifying…")
@@ -285,15 +337,29 @@ final class ToolManager {
     }
 
     @concurrent
-    private nonisolated static func download(_ url: URL) async throws -> URL {
-        try await retrying("Download of \(url.lastPathComponent)") { try await downloadOnce(url) }
+    private nonisolated static func download(_ url: URL, progress: @escaping @Sendable (Int64, Int64) -> Void) async throws -> URL {
+        try await retrying("Download of \(url.lastPathComponent)") { try await downloadOnce(url, progress: progress) }
     }
 
+    /// The system download (straight to disk), with its byte counts read four times a second
+    /// for the progress shown on first run and in Settings.
     @concurrent
-    private nonisolated static func downloadOnce(_ url: URL) async throws -> URL {
-        let (temp, response) = try await URLSession.shared.download(from: url)
+    private nonisolated static func downloadOnce(_ url: URL, progress: @escaping @Sendable (Int64, Int64) -> Void) async throws -> URL {
+        let grabber = TaskGrabber()
+        let poll = Task {
+            while !Task.isCancelled {
+                if let task = grabber.task {
+                    progress(task.countOfBytesReceived, max(0, task.countOfBytesExpectedToReceive))
+                }
+                try? await Task.sleep(for: .milliseconds(250))
+            }
+        }
+        defer { poll.cancel() }
+        let (temp, response) = try await URLSession.shared.download(from: url, delegate: grabber)
         let code = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(code) else { throw ToolError.github(code) }
+        let size = (try? temp.resourceValues(forKeys: [.fileSizeKey]).fileSize).map(Int64.init) ?? 0
+        progress(size, size)
         // The system deletes `temp` once we return; move it somewhere we own.
         let owned = FileManager.default.temporaryDirectory.appending(path: "velvet-\(UUID().uuidString)")
         try FileManager.default.moveItem(at: temp, to: owned)
@@ -352,5 +418,16 @@ final class ToolManager {
     private nonisolated static func saveManifest(_ manifest: [Tool: InstalledTool]) {
         let raw = Dictionary(uniqueKeysWithValues: manifest.map { ($0.key.rawValue, $0.value) })
         try? JSONEncoder().encode(raw).write(to: manifestURL, options: .atomic)
+    }
+}
+
+/// Hands over the download task when it starts, so its byte counts can be read.
+private nonisolated final class TaskGrabber: NSObject, URLSessionTaskDelegate, @unchecked Sendable {
+    private let lock = NSLock()
+    private var current: URLSessionTask?
+    var task: URLSessionTask? { lock.withLock { current } }
+
+    func urlSession(_ session: URLSession, didCreateTask task: URLSessionTask) {
+        lock.withLock { current = task }
     }
 }
