@@ -353,26 +353,70 @@ private struct RelatedList: View {
 
     /// Related videos minus members-only ones when those are hidden (watched ones stay: rewatching is common here).
     private var related: [Video] {
-        page.related.filter { !app.dismissedVideos.contains($0.id) && !(app.settings.hideMembersOnly && $0.isMembersOnly) }
+        page.related.filter { v in
+            !app.dismissedVideos.contains(v.id) && !(app.settings.hideMembersOnly && v.isMembersOnly)
+                && (v.kind != .short || app.settings.showShortsShelf)
+        }
+    }
+
+    /// YouTube puts Shorts in shelves between related videos. The parser keeps document
+    /// order, so each run of consecutive Shorts is one shelf.
+    private enum Segment: Identifiable {
+        case videos([Video])
+        case shorts([Video])
+        var id: String {
+            switch self {
+            case .videos(let v): "v" + (v.first?.id ?? "")
+            case .shorts(let v): "s" + (v.first?.id ?? "")
+            }
+        }
+    }
+
+    private var segments: [Segment] {
+        var out: [Segment] = []
+        var run: [Video] = []
+        var runIsShorts = false
+        func flush() {
+            guard !run.isEmpty else { return }
+            out.append(runIsShorts ? .shorts(run) : .videos(run))
+            run = []
+        }
+        for v in related {
+            let isShort = v.kind == .short
+            if isShort != runIsShorts { flush(); runIsShorts = isShort }
+            run.append(v)
+        }
+        flush()
+        return out
     }
 
     var body: some View {
+        let lastId = related.last?.id
         VStack(alignment: .leading, spacing: 10) {
-            if columns {
-                Text("Up Next").font(.headline)
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 14, alignment: .top)], spacing: 14) {
-                    ForEach(related) { v in
-                        Button { app.open(v) } label: { VideoCard(video: v) }.buttonStyle(.plain)
-                    }
-                }
-            } else {
-                LazyVStack(alignment: .leading, spacing: 10) {
-                    ForEach(related) { v in
-                        Button { app.open(v) } label: { RelatedRow(video: v) }
-                            .buttonStyle(.plain)
-                            .onAppear {
-                                if v.id == related.last?.id { Task { await page.loadMoreRelated() } }
+            if columns { Text("Up Next").font(.headline) }
+            LazyVStack(alignment: .leading, spacing: columns ? 18 : 10) {
+                ForEach(segments) { segment in
+                    switch segment {
+                    case .shorts(let shorts):
+                        ShortsShelf(shorts: shorts, cardWidth: columns ? 150 : 112) { app.open($0) }
+                            .padding(.vertical, 6)
+                            .onAppear { if shorts.last?.id == lastId { Task { await page.loadMoreRelated() } } }
+                    case .videos(let videos):
+                        if columns {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 14, alignment: .top)], spacing: 14) {
+                                ForEach(videos) { v in
+                                    Button { app.open(v) } label: { VideoCard(video: v) }.buttonStyle(.plain)
+                                }
                             }
+                        } else {
+                            ForEach(videos) { v in
+                                Button { app.open(v) } label: { RelatedRow(video: v) }
+                                    .buttonStyle(.plain)
+                                    .onAppear {
+                                        if v.id == lastId { Task { await page.loadMoreRelated() } }
+                                    }
+                            }
+                        }
                     }
                 }
             }

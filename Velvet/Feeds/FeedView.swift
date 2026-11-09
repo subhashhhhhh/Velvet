@@ -150,6 +150,8 @@ struct ChipBar: View {
 
 struct ShortsShelf: View {
     let shorts: [Video]
+    /// Narrower in the watch page's side column, so about three cards fit.
+    var cardWidth: CGFloat = 150
     var onOpen: (Video) -> Void
 
     var body: some View {
@@ -161,7 +163,7 @@ struct ShortsShelf: View {
                     ForEach(shorts) { short in
                         Button { onOpen(short) } label: { ShortCard(video: short) }
                             .buttonStyle(.plain)
-                            .frame(width: 150)
+                            .frame(width: cardWidth)
                     }
                 }
             }
