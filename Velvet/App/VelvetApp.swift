@@ -20,6 +20,9 @@ struct VelvetApp: App {
         // Before the window has a saved size of its own (the minimum is too small for a grid).
         .defaultSize(width: 1280, height: 800)
         .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About Velvet") { AboutPanel.show(tools: app.tools) }
+            }
             CommandGroup(replacing: .sidebar) {
                 Button(app.isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar") { app.toggleSidebar() }
                     .keyboardShortcut("s", modifiers: .command)
