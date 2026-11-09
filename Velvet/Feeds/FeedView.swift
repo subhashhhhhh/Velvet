@@ -53,6 +53,9 @@ struct FeedView: View {
                         footer
                     }
                     .padding(VideoGrid.padding)
+                    // Under the chips, leave the same 26pt gap as between thumbnails
+                    // (chip bar's 10pt + this + the card inset).
+                    .padding(.top, feed.chips.isEmpty ? 0 : 10 - VideoGrid.padding)
                     .coordinateSpace(.named(GridTracker.space))
                     .gridWidth(layout)
                 }
@@ -135,7 +138,8 @@ struct ChipBar: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 20)
+            // Chips line up with the thumbnails below, not with the cards' hover highlight.
+            .padding(.horizontal, VideoGrid.contentInset)
             .padding(.vertical, 10)
         }
         .scrollClipDisabled(false)

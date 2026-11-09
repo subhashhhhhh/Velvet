@@ -11,6 +11,11 @@ struct GridLayout: Equatable {
 enum VideoGrid {
     static let spacing: CGFloat = 14
     static let padding: CGFloat = 20
+    /// A card's inset around its thumbnail (room for the hover highlight). Thumbnails therefore
+    /// start `padding + cardInset` from the edge and sit `spacing + 2 × cardInset` apart (26pt).
+    static let cardInset: CGFloat = 6
+    /// Where thumbnails start; things above the grid (the topic chips) line up with it.
+    static var contentInset: CGFloat { padding + cardInset }
     /// Below this a card's title and metadata stop being readable, so a narrow window
     /// shows fewer columns than the setting asks for.
     static let minCardWidth: CGFloat = 170

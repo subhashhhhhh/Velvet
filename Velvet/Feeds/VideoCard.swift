@@ -43,7 +43,7 @@ struct VideoCard: View {
                 Spacer(minLength: 0)
             }
         }
-        .padding(6)
+        .padding(VideoGrid.cardInset)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(hovering ? AnyShapeStyle(.quinary) : AnyShapeStyle(.clear))
