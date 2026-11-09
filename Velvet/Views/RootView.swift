@@ -1,3 +1,4 @@
+import OSLog
 import SwiftUI
 
 struct RootView: View {
@@ -67,6 +68,14 @@ struct RootView: View {
             guard UserDefaults.standard.bool(forKey: "VelvetSettingsTest") else { return }
             try? await Task.sleep(for: .seconds(3))
             openSettings()
+            try? await Task.sleep(for: .seconds(2))
+            // The window buttons must sit inside the sidebar's top 44pt (centre ~26pt down).
+            for window in NSApp.windows where window.identifier?.rawValue.contains("Settings") == true {
+                if let close = window.standardWindowButton(.closeButton), let frame = window.contentView?.frame {
+                    let inWindow = close.convert(close.bounds, to: nil)
+                    Logger(subsystem: "com.subhash.Velvet", category: "Test").info("Test: settings window \(Int(frame.width))x\(Int(frame.height)), close button centre \(Int(frame.height - inWindow.midY))pt from the top")
+                }
+            }
         }
         #endif
         .background(WindowReader { app.mainWindow = $0 })

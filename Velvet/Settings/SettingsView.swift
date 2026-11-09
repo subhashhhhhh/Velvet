@@ -56,10 +56,12 @@ struct SettingsView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .frame(width: 800, height: 580)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         // As in the main window: an empty toolbar keeps the window buttons centred in the
-        // 52pt bar, and Velvet draws everything under it.
+        // 52pt bar, and Velvet draws everything under it. The fixed size goes outside, so the
+        // layout grows up into the bar instead of leaving the bar's height empty at the bottom.
         .ignoresSafeArea(.container, edges: .top)
+        .frame(width: 800, height: 600)
         .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
         .toolbar {
             if #available(macOS 26.0, *) {
@@ -72,6 +74,9 @@ struct SettingsView: View {
         .toolbar(removing: .title)
         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
         .navigationTitle(pane.title)
+        // Settings windows get the taller preferences title bar, which puts the window buttons
+        // lower than the sidebar leaves room for (SwiftUI's toolbar style doesn't reach it).
+        .background(WindowReader { $0?.toolbarStyle = .unified })
     }
 
     @ViewBuilder
