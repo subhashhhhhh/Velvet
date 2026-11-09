@@ -23,6 +23,11 @@ nonisolated struct WatchDetails: Sendable {
     var publishedDate: String?
     var description: String
     var channel: ChannelInfo?
+    /// Every channel of a collaboration video (YouTube's "X and 2 more"), the main one first;
+    /// empty for a video from one channel.
+    var collaborators: [ChannelInfo] = []
+    /// "Warner Bros. and 2 more", for a collaboration.
+    var collaborationTitle: String?
     /// The signed-in user is subscribed to the channel.
     var isSubscribed = false
     /// The channel's notification bell (subscribed channels only).

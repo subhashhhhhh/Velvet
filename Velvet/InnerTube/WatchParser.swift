@@ -10,6 +10,8 @@ nonisolated enum WatchParser {
         let owner = secondary.first("videoOwnerRenderer") ?? .null
         let views = primary["viewCount"]["videoViewCountRenderer"]
 
+        // A collaboration has no plain title: the owner opens a "Collaborators" list instead.
+        let collaborators = Self.collaborators(in: owner)
         let channel = owner["title"].text.map { name in
             ChannelInfo(
                 id: owner["navigationEndpoint"]["browseEndpoint"]["browseId"].string,
@@ -18,7 +20,7 @@ nonisolated enum WatchParser {
                 subscribers: owner["subscriberCountText"].text,
                 handlePath: owner["navigationEndpoint"]["browseEndpoint"]["canonicalBaseUrl"].string
             )
-        }
+        } ?? collaborators.first
 
         let likeVM = primary.first("segmentedLikeDislikeButtonViewModel")?["likeButtonViewModel"]["likeButtonViewModel"] ?? .null
         let likeTitle = likeVM.first("defaultButtonViewModel")?["buttonViewModel"]["title"].string
@@ -55,6 +57,8 @@ nonisolated enum WatchParser {
             description: expandedDescription(secondary["attributedDescription"])
                 ?? secondary["description"].text ?? "",
             channel: channel,
+            collaborators: collaborators.count > 1 ? collaborators : [],
+            collaborationTitle: collaborators.count > 1 ? owner["attributedTitle"]["content"].string : nil,
             isSubscribed: subscribed,
             bell: subscribed ? NotificationParser.bell(in: secondary) : nil,
             likeCount: likeTitle.flatMap { $0.first?.isNumber == true ? $0 : nil },
@@ -66,6 +70,29 @@ nonisolated enum WatchParser {
             commentsToken: commentsToken,
             liveChatToken: LiveChatParser.initialToken(from: json)
         )
+    }
+
+    /// The channels in a collaboration's "Collaborators" list: each item's name, channel (from
+    /// its tap command), avatar, and "@handle • 12.9M subscribers" subtitle.
+    private static func collaborators(in owner: JSON) -> [ChannelInfo] {
+        guard let list = owner.first("dialogViewModel")?.first("listViewModel") else { return [] }
+        return list["listItems"].array.compactMap { item in
+            let li = item["listItemViewModel"]
+            guard let name = li["title"]["content"].string else { return nil }
+            let browse = li["title"].first("browseEndpoint") ?? li.first("browseEndpoint") ?? .null
+            // The subtitle is wrapped in direction marks; split "@handle • 12.9M subscribers".
+            let subtitle = (li["subtitle"]["content"].string ?? "")
+                .filter { !"\u{200E}\u{200F}\u{2066}\u{2067}\u{2068}\u{2069}".contains($0) }
+            let parts = subtitle.components(separatedBy: " • ").map { $0.trimmingCharacters(in: .whitespaces) }
+            let handle = parts.first { $0.hasPrefix("@") }
+            return ChannelInfo(
+                id: browse["browseId"].string,
+                name: name,
+                avatar: li["leadingAccessory"].first("sources")?.array.last?["url"].string.flatMap(URL.init(string:)),
+                subscribers: parts.first { $0.hasSuffix("subscribers") || $0.hasSuffix("subscriber") },
+                handlePath: handle.map { "/" + $0 }
+            )
+        }
     }
 
     /// The description with every link written out in full. YouTube shortens link text
