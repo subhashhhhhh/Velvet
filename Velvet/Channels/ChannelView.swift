@@ -19,7 +19,6 @@ struct ChannelView: View {
             }
         }
         .navigationTitle(model.header?.name ?? "Channel")
-        .topBarBack { app.closeChannel() }
         .task { await model.load() }
         .alert("Couldn't Complete That", isPresented: Binding(get: { model.actionError != nil }, set: { if !$0 { model.dismissError() } })) {
             Button("OK") { model.dismissError() }

@@ -11,8 +11,10 @@ struct TopBarAction: Identifiable {
     let perform: () -> Void
 }
 
-/// What the page on screen wants in the top bar. Pages nest (a playlist inside the Playlists
-/// page), and the innermost one wins: an outer page only fills what its child left empty.
+/// What the page on screen wants in the top bar. Pages nest, and the innermost one wins: an
+/// outer page only fills what its child left empty. Back normally steps through the app's
+/// history (AppModel.goBack); a page sets `back` only for a step that isn't in it (a playlist
+/// opened inside a channel page).
 struct TopBarContent {
     var title: String?
     var back: (() -> Void)?
@@ -70,8 +72,14 @@ struct TopBar: View {
         HStack(spacing: 12) {
             HStack(spacing: 4) {
                 ChromeButton("Toggle Sidebar", symbol: "sidebar.left") { app.toggleSidebar() }
-                if let back = content.back {
-                    ChromeButton("Back", symbol: "chevron.backward", shortcut: "[", action: back)
+                if content.back != nil || app.canGoBack {
+                    ChromeButton("Back", symbol: "chevron.backward", shortcut: "[") {
+                        if let back = content.back { back() } else { app.goBack() }
+                    }
+                    .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                }
+                if content.back == nil && app.canGoForward {
+                    ChromeButton("Forward", symbol: "chevron.forward", shortcut: "]") { app.goForward() }
                         .transition(.opacity.combined(with: .scale(scale: 0.8)))
                 }
                 if let title = content.title {
@@ -107,7 +115,8 @@ struct TopBar: View {
                 .gesture(WindowDragGesture())
                 .onTapGesture(count: 2) { app.mainWindow?.performZoom(nil) }
         }
-        .animation(.smooth(duration: 0.2), value: content.back != nil)
+        .animation(.smooth(duration: 0.2), value: content.back != nil || app.canGoBack)
+        .animation(.smooth(duration: 0.2), value: app.canGoForward)
         .opacity(app.playerFullscreen ? 0 : 1)
     }
 }

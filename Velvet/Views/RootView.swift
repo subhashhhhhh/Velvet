@@ -20,6 +20,7 @@ struct RootView: View {
         .ignoresSafeArea(.container, edges: .top)
         .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
         .overlay(alignment: .topLeading) { PlayerLayer() }
+        .overlay { SwipeIndicator() }
         .toolbar {
             if #available(macOS 26.0, *) {
                 ToolbarItem(placement: .navigation) { Color.clear.frame(width: 1, height: 1) }
@@ -141,10 +142,6 @@ struct SearchResultsView: View {
             }
         }
         .navigationTitle(query)
-        .topBarBack {
-            app.activeSearch = nil
-            app.searchText = ""
-        }
         .task(id: query) {
             let f = FeedModel(source: .search(query), client: app.client)
             f.hidesPromotions = { [settings = app.settings] in settings.hidePromotions }
@@ -219,5 +216,31 @@ struct PlayerLayer: View {
             }
         }
         .ignoresSafeArea()
+    }
+}
+
+/// The arrow that slides in from the edge during a Back/Forward swipe, filling in as the
+/// swipe passes the point where letting go navigates. Its own view, so the swipe's progress
+/// redraws only this.
+private struct SwipeIndicator: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        let amount = app.swipeAmount
+        let progress = min(1, abs(amount))
+        let back = amount > 0
+        Image(systemName: back ? "chevron.backward" : "chevron.forward")
+            .font(.system(size: 18, weight: .bold))
+            .foregroundStyle(progress >= 0.5 ? Color(nsColor: .windowBackgroundColor) : .primary)
+            .frame(width: 44, height: 44)
+            .background(Circle().fill(progress >= 0.5 ? AnyShapeStyle(.primary) : AnyShapeStyle(.regularMaterial)))
+            .shadow(color: .black.opacity(0.25), radius: 8, y: 2)
+            .scaleEffect(0.7 + 0.3 * progress)
+            .opacity(progress == 0 ? 0 : 1)
+            // Slides in from just off the edge.
+            .offset(x: (back ? 1 : -1) * (progress * 90 - 50))
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: back ? .leading : .trailing)
+            .animation(.easeOut(duration: 0.12), value: progress >= 0.5)
+            .allowsHitTesting(false)
     }
 }

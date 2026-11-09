@@ -80,7 +80,6 @@ struct ShortsPlayerView: View {
         }
         .animation(.easeOut(duration: 0.2), value: controller.panel)
         .navigationTitle("Shorts")
-        .transformPreference(TopBarKey.self) { if showsBack && $0.back == nil { $0.back = { app.backFromShorts() } } }
         .focusable()
         .focusEffectDisabled()
         .focused($focused)

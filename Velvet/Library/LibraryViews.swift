@@ -135,9 +135,8 @@ struct PlaylistsPage: View {
                     if let open = app.openPlaylist {
                         PlaylistDetailView(summary: open)
                             .id(open.id)
-                            .topBarBack { app.openPlaylist = nil }
                     } else {
-                        PlaylistsGrid(model: model) { app.openPlaylist = $0 }
+                        PlaylistsGrid(model: model) { app.open($0) }
                             .id(app.authRevision)
                     }
                 }

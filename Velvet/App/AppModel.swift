@@ -32,6 +32,24 @@ enum Destination: String, Hashable, CaseIterable, Identifiable {
     }
 }
 
+/// A page you can go back or forward to (a browser-style history entry).
+enum Route: Equatable {
+    case destination(Destination, playlist: PlaylistSummary?)
+    case search(String)
+    case channel(String)
+    case video(Video)
+
+    static func == (a: Route, b: Route) -> Bool {
+        switch (a, b) {
+        case let (.destination(d1, p1), .destination(d2, p2)): d1 == d2 && p1?.id == p2?.id
+        case let (.search(q1), .search(q2)): q1 == q2
+        case let (.channel(c1), .channel(c2)): c1 == c2
+        case let (.video(v1), .video(v2)): v1.id == v2.id
+        default: false
+        }
+    }
+}
+
 /// App-wide state shared through the environment.
 @Observable
 final class AppModel {
@@ -78,7 +96,82 @@ final class AppModel {
         #endif
     }
 
+    // MARK: - History (Back / Forward, swipes)
+
+    @ObservationIgnored private var backStack: [Route] = []
+    private(set) var forwardStack: [Route] = []
+    /// Bumped when the back stack changes (it's not observed itself, to keep it cheap).
+    private(set) var historyRevision = 0
+    @ObservationIgnored private var applyingHistory = false
+
+    /// The page on screen, as a history entry (Shorts opened over a page aren't one).
+    var currentRoute: Route {
+        if let watching, !watchPageHidden { return .video(watching.video) }
+        if let channel { return .channel(channel.id) }
+        if let activeSearch { return .search(activeSearch) }
+        let d = destination ?? .home
+        return .destination(d, playlist: d == .playlists ? openPlaylist : nil)
+    }
+
+    /// Call before a navigation you made: where you were becomes a Back step.
+    func recordNavigation() {
+        guard !applyingHistory else { return }
+        let here = currentRoute
+        if backStack.last != here { backStack.append(here) }
+        if backStack.count > 50 { backStack.removeFirst() }
+        forwardStack.removeAll()
+        historyRevision += 1
+    }
+
+    var canGoBack: Bool {
+        _ = historyRevision
+        let here = currentRoute
+        return shortsOverlay != nil || backStack.contains { $0 != here }
+    }
+
+    var canGoForward: Bool { shortsOverlay == nil && !forwardStack.isEmpty }
+
+    func goBack() {
+        // Shorts opened over a page close back to it (and resume a video they paused).
+        if shortsOverlay != nil { backFromShorts(); return }
+        let here = currentRoute
+        while let route = backStack.popLast() {
+            guard route != here else { continue }
+            forwardStack.append(here)
+            historyRevision += 1
+            apply(route)
+            return
+        }
+        historyRevision += 1
+    }
+
+    func goForward() {
+        guard shortsOverlay == nil, let route = forwardStack.popLast() else { return }
+        backStack.append(currentRoute)
+        historyRevision += 1
+        apply(route)
+    }
+
+    private func apply(_ route: Route) {
+        applyingHistory = true
+        defer { applyingHistory = false }
+        switch route {
+        case let .destination(d, playlist):
+            navigate(to: d)
+            openPlaylist = playlist
+            searchText = ""
+        case let .search(query):
+            searchText = query
+            submitSearch()
+        case let .channel(id):
+            openChannel(id)
+        case let .video(video):
+            open(video)
+        }
+    }
+
     func submitSearch() {
+        recordNavigation()
         leaveWatchPage()
         channel = nil
         let q = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -197,6 +290,7 @@ final class AppModel {
 
     /// Opens a video. Shorts open in the vertical Shorts player; other videos resume where you left off.
     func open(_ video: Video, at position: Double? = nil) {
+        if video.kind != .short { recordNavigation() }
         pipHandoff = nil // a queued video still loading for PiP is dropped (its task closes it)
         // The video set aside for a Short: carry on where it was rather than starting over.
         if let suspended = suspendedWatch, suspended.video.id == video.id, position == nil {
@@ -444,12 +538,67 @@ final class AppModel {
 
     /// The inline player floats above the page (see PlayerLayer), so wheel/trackpad scrolling
     /// over it would never reach the page. Forward those events to the page's scroll view.
+    // MARK: - Swipe between pages
+
+    /// How far a two-finger swipe has gone: towards Back (0…1) or Forward (0…-1). Drives the
+    /// arrow that slides in from the edge.
+    private(set) var swipeAmount: CGFloat = 0
+
+    /// Starts tracking a sideways two-finger swipe (the one Safari uses for Back/Forward),
+    /// unless it should scroll something sideways instead. Returns whether it took the event.
+    private func beginSwipeIfNeeded(_ event: NSEvent) -> Bool {
+        guard event.phase == .began, event.hasPreciseScrollingDeltas,
+              NSEvent.isSwipeTrackingFromScrollEventsEnabled,
+              let window = mainWindow, event.window === window, !playerFullscreen,
+              abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY) * 1.5 else { return false }
+        // Fingers moving right reveal what's to the left: Back.
+        let towardsBack = event.scrollingDeltaX > 0
+        guard towardsBack ? canGoBack : canGoForward else { return false }
+        if let content = window.contentView,
+           Self.canScrollSideways(in: content, at: event.locationInWindow, towardsStart: towardsBack) { return false }
+        let back = canGoBack, forward = canGoForward
+        var navigated = false
+        event.trackSwipeEvent(options: [.lockDirection, .clampGestureAmount],
+                              dampenAmountThresholdMin: forward ? -1 : 0, max: back ? 1 : 0) { [weak self] amount, phase, complete, _ in
+            MainActor.assumeIsolated {
+                guard let self else { return }
+                self.swipeAmount = amount
+                // .ended: let go past the threshold (it animates on to ±1); .cancelled: not far enough.
+                if phase == .ended, !navigated {
+                    navigated = true
+                    if towardsBack { self.goBack() } else { self.goForward() }
+                }
+                if complete { self.swipeAmount = 0 }
+            }
+        }
+        return true
+    }
+
+    /// A sideways-scrolling row (topic chips, a Shorts shelf) under the pointer that can still
+    /// move in the swipe's direction gets the gesture; at its end, the swipe navigates.
+    private static func canScrollSideways(in root: NSView, at windowPoint: NSPoint, towardsStart: Bool) -> Bool {
+        // Walk the views rather than hit-test: SwiftUI's hosting views can answer a hit test
+        // themselves, hiding the scroll views inside.
+        func visit(_ v: NSView) -> Bool {
+            if v.isHidden { return false }
+            if let scroll = v as? NSScrollView, let document = scroll.documentView,
+               scroll.convert(scroll.bounds, to: nil).contains(windowPoint) {
+                let visible = scroll.contentView.bounds
+                if document.frame.width > visible.width + 1,
+                   towardsStart ? visible.minX > 1 : visible.maxX < document.frame.width - 1 { return true }
+            }
+            return v.subviews.contains(where: visit)
+        }
+        return visit(root)
+    }
+
     private func installScrollForwarding() {
         guard scrollMonitor == nil else { return }
         scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
             // Local monitors run on the main thread; NSEvent just isn't marked Sendable.
             nonisolated(unsafe) let event = event
             let consumed = MainActor.assumeIsolated { () -> Bool in
+                if self?.beginSwipeIfNeeded(event) == true { return true }
                 guard let self, self.isShowingWatchPage, !self.playerFullscreen,
                       let window = self.mainWindow, event.window === window,
                       let content = window.contentView else { return false }
@@ -612,6 +761,7 @@ final class AppModel {
 
     func openChannel(_ channelId: String) {
         guard channel?.id != channelId || isShowingWatchPage || shortsOverlay != nil else { return }
+        recordNavigation()
         leaveWatchPage()
         shortsTab?.pause()
         if channel?.id != channelId {
@@ -698,6 +848,7 @@ final class AppModel {
     }
 
     func navigate(to destination: Destination) {
+        recordNavigation()
         // Shorts autoplay, so a video carried along in PiP would talk over them.
         if destination == .shorts { closePlayer() } else { leaveWatchPage() }
         shortsOverlay?.close(); shortsOverlay = nil
@@ -1014,6 +1165,34 @@ final class AppModel {
             }
         }
         ControlsPreview.renderIfAsked()
+        // `-VelvetHistoryTest YES`: History → a video → a channel, then Back, Back, Forward,
+        // logging the page after each step.
+        if UserDefaults.standard.bool(forKey: "VelvetHistoryTest") {
+            Task {
+                func describe(_ r: Route) -> String {
+                    switch r {
+                    case let .destination(d, p): "\(d.rawValue)\(p.map { "/\($0.title)" } ?? "")"
+                    case let .search(q): "search \(q)"
+                    case let .channel(id): "channel \(id)"
+                    case let .video(v): "video \(v.id)"
+                    }
+                }
+                let steps: [(String, () -> Void)] = [
+                    ("History", { self.navigate(to: .history) }),
+                    ("video", { self.open(Video(id: "Jgk7Y1TJX5U", title: "Test")) }),
+                    ("channel", { self.openChannel("UCXuqSBlHAE6Xw-yeJA0Tunw") }),
+                    ("Back", { self.goBack() }),
+                    ("Back", { self.goBack() }),
+                    ("Forward", { self.goForward() }),
+                ]
+                try? await Task.sleep(for: .seconds(5))
+                for (name, step) in steps {
+                    step()
+                    try? await Task.sleep(for: .seconds(2))
+                    log.info("Test: after \(name, privacy: .public): \(describe(self.currentRoute), privacy: .public), back \(self.canGoBack), forward \(self.canGoForward), PiP \(self.pip.isActive)")
+                }
+            }
+        }
         // `-VelvetAccountTest YES`: open the account panel at 6 s.
         if UserDefaults.standard.bool(forKey: "VelvetAccountTest") {
             Task { try? await Task.sleep(for: .seconds(6)); showingAccount = true }
