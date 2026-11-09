@@ -18,7 +18,13 @@ struct VelvetApp: App {
         }
         .windowToolbarStyle(.unified)
         .commands {
-            SidebarCommands()
+            CommandGroup(replacing: .sidebar) {
+                Button(app.isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar") { app.toggleSidebar() }
+                    .keyboardShortcut("s", modifiers: [.control, .command])
+                Button("Search YouTube") { app.searchFocusRequest += 1 }
+                    .keyboardShortcut("f")
+                Divider()
+            }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { app.watching?.saveProgress(); app.progress.saveNow() }

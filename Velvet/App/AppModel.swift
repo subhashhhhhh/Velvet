@@ -96,11 +96,20 @@ final class AppModel {
     /// Where the watch page lays out the player, and the page's visible area (root coordinates).
     /// The player itself is drawn in a window-level layer (RootView) so fullscreen is a single
     /// frame animation over everything, sidebar included.
-    var sidebarVisibility = NavigationSplitViewVisibility.automatic
-    /// The sidebar is (or is animating to being) hidden. Grids pick their column count from this.
-    var isSidebarCollapsed: Bool { sidebarVisibility == .detailOnly }
-    /// How much wider the page gets when the sidebar hides, reported by the sidebar.
-    var sidebarWidth: CGFloat = 220
+    /// The sidebar is (or is animating to being) a narrow icon rail. Grids pick their column
+    /// count from this.
+    var isSidebarCollapsed = UserDefaults.standard.bool(forKey: "Sidebar.collapsed") {
+        didSet { UserDefaults.standard.set(isSidebarCollapsed, forKey: "Sidebar.collapsed") }
+    }
+    /// How much wider the page gets when the sidebar collapses to its rail.
+    var sidebarWidth: CGFloat { SidebarMetrics.fullWidth - SidebarMetrics.railWidth }
+
+    func toggleSidebar() {
+        withAnimation(Self.sidebarAnimation) { isSidebarCollapsed.toggle() }
+    }
+
+    /// Bumped to put the cursor in the search field (⌘F, ⌘K).
+    var searchFocusRequest = 0
     /// Close to the split view's own slide, so grids move in step with the sidebar.
     static let sidebarAnimation: Animation = {
         #if DEBUG
@@ -641,6 +650,8 @@ final class AppModel {
         channel = nil
         if destination != .shorts { shortsTab?.pause() }
         activeSearch = nil
+        // The Playlists item goes back to the grid, like a tab bar's selected tab.
+        if destination == .playlists { openPlaylist = nil }
         self.destination = destination
     }
 
@@ -785,6 +796,13 @@ final class AppModel {
     private(set) var historyFeed: SectionedFeedModel?
     private(set) var watchLaterFeed: SectionedFeedModel?
     private(set) var playlistsModel: PlaylistsModel?
+    /// The playlist open on the Playlists page (nil: the grid of all of them).
+    var openPlaylist: PlaylistSummary?
+
+    func open(_ playlist: PlaylistSummary) {
+        navigate(to: .playlists)
+        openPlaylist = playlist
+    }
 
     private func rebuildAccountFeeds() {
         // Shorts are personalized too; rebuilt once the account state is known.
@@ -797,6 +815,7 @@ final class AppModel {
         historyFeed = signedIn ? SectionedFeedModel(browseId: "FEhistory", client: client) : nil
         watchLaterFeed = signedIn ? SectionedFeedModel(browseId: "VLWL", client: client) : nil
         playlistsModel = signedIn ? PlaylistsModel(client: client) : nil
+        openPlaylist = nil
     }
 
     func libraryFeed(for destination: Destination) -> SectionedFeedModel? {
@@ -890,7 +909,7 @@ final class AppModel {
                 for delay in [8.0, 4.0] {
                     try? await Task.sleep(for: .seconds(delay))
                     log.info("Test: toggling the sidebar")
-                    withAnimation { sidebarVisibility = isSidebarCollapsed ? .all : .detailOnly }
+                    toggleSidebar()
                 }
             }
         }
@@ -1030,7 +1049,7 @@ final class AppModel {
             }
             // `-VelvetFullscreenTest YES`: show the sidebar, player fullscreen at 6s, back at 12s.
             if UserDefaults.standard.bool(forKey: "VelvetFullscreenTest") {
-                sidebarVisibility = .all
+                isSidebarCollapsed = false
                 Task {
                     try? await Task.sleep(for: .seconds(6))
                     togglePlayerFullscreen()

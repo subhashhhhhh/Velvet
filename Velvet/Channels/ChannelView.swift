@@ -4,19 +4,22 @@ struct ChannelView: View {
     let model: ChannelModel
     @Environment(AppModel.self) private var app
     @State private var layout = GridLayout()
+    /// One of the channel's playlists, shown over the channel (which keeps its place).
+    @State private var openPlaylist: PlaylistSummary?
 
     var body: some View {
-        NavigationStack {
+        ZStack {
             content
-                .navigationDestination(for: PlaylistSummary.self) { PlaylistDetailView(summary: $0) }
-        }
-        .navigationTitle(model.header?.name ?? "Channel")
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button("Back", systemImage: "chevron.backward") { app.closeChannel() }
-                    .keyboardShortcut("[", modifiers: .command)
+                .opacity(openPlaylist == nil ? 1 : 0)
+                .allowsHitTesting(openPlaylist == nil)
+            if let openPlaylist {
+                PlaylistDetailView(summary: openPlaylist)
+                    .id(openPlaylist.id)
+                    .topBarBack { self.openPlaylist = nil }
             }
         }
+        .navigationTitle(model.header?.name ?? "Channel")
+        .topBarBack { app.closeChannel() }
         .task { await model.load() }
         .alert("Couldn't Complete That", isPresented: Binding(get: { model.actionError != nil }, set: { if !$0 { model.dismissError() } })) {
             Button("OK") { model.dismissError() }
@@ -33,7 +36,7 @@ struct ChannelView: View {
                         tabBar(header.tabs)
                     }
                     if let tab = model.currentTab {
-                        ChannelTabGrid(content: tab, columns: VideoGrid.columns(layout, prefs: app.settings)).id(tab.tab.id)
+                        ChannelTabGrid(content: tab, columns: VideoGrid.columns(layout, prefs: app.settings)) { openPlaylist = $0 }.id(tab.tab.id)
                     }
                 }
                 .padding(VideoGrid.padding)
@@ -118,6 +121,7 @@ private struct ChannelTabGrid: View {
     let content: ChannelTabContent
     /// Video columns, per the "videos per row" settings.
     let columns: Int
+    var onOpenPlaylist: (PlaylistSummary) -> Void
     @Environment(AppModel.self) private var app
 
     var body: some View {
@@ -142,7 +146,7 @@ private struct ChannelTabGrid: View {
                 case .playlists:
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 230, maximum: 360), spacing: 16, alignment: .top)], spacing: 20) {
                         ForEach(content.playlists) { p in
-                            NavigationLink(value: p) { PlaylistCard(playlist: p) }.buttonStyle(.plain)
+                            Button { onOpenPlaylist(p) } label: { PlaylistCard(playlist: p) }.buttonStyle(.plain)
                                 .onAppear { if p.id == content.playlists.last?.id { Task { await content.loadMore() } } }
                         }
                     }

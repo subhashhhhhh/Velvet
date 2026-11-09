@@ -25,13 +25,8 @@ struct HomeView: View {
             }
         }
         .navigationTitle("Home")
-        .toolbar {
-            if app.authState == .signedIn {
-                Button("Refresh", systemImage: "arrow.clockwise") {
-                    Task { await app.homeFeed?.reload() }
-                }
-                .keyboardShortcut("r")
-            }
-        }
+        .topBarActions(app.authState == .signedIn
+                       ? [TopBarAction(id: "Refresh", symbol: "arrow.clockwise", shortcut: "r") { Task { await app.homeFeed?.reload() } }]
+                       : [])
     }
 }

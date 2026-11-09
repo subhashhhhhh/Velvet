@@ -80,14 +80,7 @@ struct ShortsPlayerView: View {
         }
         .animation(.easeOut(duration: 0.2), value: controller.panel)
         .navigationTitle("Shorts")
-        .toolbar {
-            if showsBack {
-                ToolbarItem(placement: .navigation) {
-                    Button("Back", systemImage: "chevron.backward") { app.backFromShorts() }
-                        .keyboardShortcut("[", modifiers: .command)
-                }
-            }
-        }
+        .transformPreference(TopBarKey.self) { if showsBack && $0.back == nil { $0.back = { app.backFromShorts() } } }
         .focusable()
         .focusEffectDisabled()
         .focused($focused)

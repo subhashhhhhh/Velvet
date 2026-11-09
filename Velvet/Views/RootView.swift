@@ -5,20 +5,29 @@ struct RootView: View {
 
     var body: some View {
         @Bindable var app = app
-        NavigationSplitView(columnVisibility: $app.sidebarVisibility) {
-            SidebarView()
-                .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 280)
-        } detail: {
+        HStack(spacing: 0) {
+            Sidebar()
             detail
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.top, TopBar.height)
+                .withTopBar()
         }
+        // Velvet draws its own top bar where the title bar is; the (empty) system toolbar
+        // stays only so the window buttons sit in the middle of that bar.
+        .ignoresSafeArea(.container, edges: .top)
+        .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
         .overlay(alignment: .topLeading) { PlayerLayer() }
         .toolbar {
-            if app.authState == .signedIn {
-                ToolbarItem(placement: .primaryAction) { InboxButton() }
+            if #available(macOS 26.0, *) {
+                ToolbarItem(placement: .navigation) { Color.clear.frame(width: 1, height: 1) }
+                    .sharedBackgroundVisibility(.hidden)
+            } else {
+                ToolbarItem(placement: .navigation) { Color.clear.frame(width: 1, height: 1) }
             }
         }
-        .searchable(text: $app.searchText, placement: .toolbar, prompt: "Search YouTube")
-        .onSubmit(of: .search) { app.submitSearch() }
+        .toolbar(removing: .title)
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .toolbar(app.playerFullscreen ? .hidden : .visible, for: .windowToolbar)
         .sheet(isPresented: $app.showingSignIn) {
             SignInView(
                 onComplete: { cookies in Task { await app.completeSignIn(cookies: cookies) } },
@@ -72,6 +81,7 @@ struct RootView: View {
             case .live:
                 SectionedFeedView(feed: app.liveFeed, emptyMessage: "Nothing is live right now.")
                     .navigationTitle("Live")
+                    .topBarTitle("Live")
             case .shorts:
                 if let shorts = app.shortsTab {
                     // Identity follows the controller so a rebuilt one gets its own start.
@@ -100,76 +110,14 @@ struct SearchResultsView: View {
             }
         }
         .navigationTitle(query)
+        .topBarBack {
+            app.activeSearch = nil
+            app.searchText = ""
+        }
         .task(id: query) {
             let f = FeedModel(source: .search(query), client: app.client)
             f.hidesPromotions = { [settings = app.settings] in settings.hidePromotions }
             feed = f
-        }
-    }
-}
-
-struct SidebarView: View {
-    @Environment(AppModel.self) private var app
-
-    var body: some View {
-        List(selection: Binding(
-            // Nothing selected while a video, Short or channel covers the page, so clicking the
-            // current destination (e.g. Home under a video) still counts as a navigation.
-            get: { app.activeSearch == nil && !app.isShowingWatchPage && app.shortsOverlay == nil && app.channel == nil
-                ? app.destination : nil },
-            set: { if let d = $0 { app.navigate(to: d) } }
-        )) {
-            Section {
-                ForEach([Destination.home, .shorts, .live]) { row($0) }
-            }
-            Section("Library") {
-                ForEach([Destination.history, .watchLater, .playlists]) { row($0) }
-                row(.queue).badge(app.queue.items.count)
-            }
-        }
-        .listStyle(.sidebar)
-        .safeAreaInset(edge: .bottom) { AccountFooter().padding(10) }
-        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { if $0 > 0 { app.sidebarWidth = $0 } }
-    }
-
-    private func row(_ d: Destination) -> some View {
-        Label(d.title, systemImage: d.symbol).tag(d)
-    }
-}
-
-struct AccountFooter: View {
-    @Environment(AppModel.self) private var app
-
-    var body: some View {
-        switch app.authState {
-        case .unknown:
-            EmptyView()
-        case .signedOut:
-            Button {
-                app.showingSignIn = true
-            } label: {
-                Label("Sign In", systemImage: "person.crop.circle")
-                    .frame(maxWidth: .infinity)
-            }
-            .controlSize(.large)
-            .buttonStyle(.bordered)
-        case .signedIn:
-            Menu {
-                if let handle = app.account?.handle { Text(handle) }
-                Button("Sign Out", role: .destructive) { Task { await app.signOut() } }
-            } label: {
-                HStack(spacing: 8) {
-                    RemoteImage(url: app.account?.photo)
-                        .frame(width: 24, height: 24)
-                        .clipShape(Circle())
-                    Text(app.account?.name ?? "Signed In")
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                }
-            }
-            .menuStyle(.button)
-            .buttonStyle(.plain)
-            .menuIndicator(.hidden)
         }
     }
 }

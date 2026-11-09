@@ -48,13 +48,7 @@ struct WatchView: View {
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.watchViewport = $0 }
         }
         .navigationTitle(page.details?.title ?? video.title)
-        .toolbar(app.playerFullscreen ? .hidden : .visible, for: .windowToolbar)
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                Button("Back", systemImage: "chevron.backward") { app.leaveWatchPage() }
-                    .keyboardShortcut("[", modifiers: .command)
-            }
-        }
+        .topBarBack { app.leaveWatchPage() }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
             // Covers leaving fullscreen via the green button or Mission Control, not just our controls.
             app.windowDidExitFullscreen()

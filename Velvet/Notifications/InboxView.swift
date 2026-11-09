@@ -9,7 +9,7 @@ struct InboxButton: View {
     var body: some View {
         @Bindable var app = app
         Button { app.showingInbox.toggle() } label: {
-            Image(systemName: "bell")
+            Image(systemName: app.showingInbox ? "bell.fill" : "bell")
                 .overlay(alignment: .topTrailing) {
                     if inbox.badge > 0 {
                         Text(inbox.badge > 9 ? "9+" : "\(inbox.badge)")
@@ -18,10 +18,11 @@ struct InboxButton: View {
                             .padding(.horizontal, 3.5)
                             .frame(minWidth: 14, minHeight: 14)
                             .background(.red, in: Capsule())
-                            .offset(x: 8, y: -7)
+                            .offset(x: 9, y: -8)
                     }
                 }
         }
+        .buttonStyle(ChromeButtonStyle())
         .help(inbox.badge > 0 ? "Notifications (\(inbox.badge) new)" : "Notifications")
         .popover(isPresented: $app.showingInbox, arrowEdge: .bottom) {
             InboxPopover { app.showingInbox = false }

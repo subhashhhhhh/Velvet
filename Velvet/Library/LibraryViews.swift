@@ -50,10 +50,7 @@ struct SectionedFeedView: View {
             }
         }
         .task { await feed.loadIfNeeded() }
-        .toolbar {
-            Button("Refresh", systemImage: "arrow.clockwise") { Task { await feed.reload() } }
-                .keyboardShortcut("r")
-        }
+        .topBarRefresh { await feed.reload() }
     }
 
     private func grid(_ videos: [Video]) -> some View {
@@ -108,6 +105,7 @@ struct LibraryFeedPage: View {
             }
         }
         .navigationTitle(destination.title)
+        .topBarTitle(destination.title)
     }
 }
 
@@ -125,20 +123,25 @@ struct PlaylistsPage: View {
                 SignInRequiredView(title: "Playlists", symbol: "list.bullet.rectangle", message: "Sign in to see your playlists.")
             case .signedIn:
                 if let model = app.playlistsModel {
-                    NavigationStack {
-                        PlaylistsGrid(model: model)
-                            .navigationDestination(for: PlaylistSummary.self) { PlaylistDetailView(summary: $0) }
+                    if let open = app.openPlaylist {
+                        PlaylistDetailView(summary: open)
+                            .id(open.id)
+                            .topBarBack { app.openPlaylist = nil }
+                    } else {
+                        PlaylistsGrid(model: model) { app.openPlaylist = $0 }
+                            .id(app.authRevision)
                     }
-                    .id(app.authRevision)
                 }
             }
         }
         .navigationTitle("Playlists")
+        .topBarTitle("Playlists")
     }
 }
 
 private struct PlaylistsGrid: View {
     let model: PlaylistsModel
+    var onOpen: (PlaylistSummary) -> Void
 
     var body: some View {
         Group {
@@ -154,18 +157,15 @@ private struct PlaylistsGrid: View {
                 ScrollView {
                     LazyVGrid(columns: [GridItem(.adaptive(minimum: 230, maximum: 360), spacing: 16, alignment: .top)], spacing: 20) {
                         ForEach(model.playlists) { p in
-                            NavigationLink(value: p) { PlaylistCard(playlist: p) }.buttonStyle(.plain)
+                            Button { onOpen(p) } label: { PlaylistCard(playlist: p) }.buttonStyle(.plain)
                         }
                     }
                     .padding(20)
                 }
             }
         }
-        .navigationTitle("Playlists")
         .task { await model.loadIfNeeded() }
-        .toolbar {
-            Button("Refresh", systemImage: "arrow.clockwise") { Task { await model.reload() } }.keyboardShortcut("r")
-        }
+        .topBarRefresh { await model.reload() }
     }
 }
 
@@ -215,6 +215,7 @@ struct PlaylistDetailView: View {
             if let feed { SectionedFeedView(feed: feed, emptyMessage: "This playlist is empty.") }
         }
         .navigationTitle(feed?.title ?? summary.title)
+        .topBarTitle(feed?.title ?? summary.title)
         .task { if feed == nil { feed = SectionedFeedModel(browseId: summary.browseId, client: app.client) } }
     }
 }

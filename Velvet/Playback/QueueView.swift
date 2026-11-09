@@ -31,16 +31,11 @@ struct QueueView: View {
             }
         }
         .navigationTitle("Queue")
-        .toolbar {
-            ToolbarItemGroup {
-                Button("Play", systemImage: "play.fill") { app.playNextInQueue() }
-                    .disabled(queue.isEmpty)
-                    .help("Play the queue from the top")
-                Button("Clear", systemImage: "trash") { queue.clear() }
-                    .disabled(queue.isEmpty)
-                    .help("Clear the queue")
-            }
-        }
+        .topBarTitle("Queue")
+        .topBarActions([
+            TopBarAction(id: "Play the Queue", symbol: "play.fill", disabled: queue.isEmpty) { app.playNextInQueue() },
+            TopBarAction(id: "Clear the Queue", symbol: "trash", disabled: queue.isEmpty) { queue.clear() },
+        ])
     }
 }
 
