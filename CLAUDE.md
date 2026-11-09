@@ -98,7 +98,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetDumpJSON <videoId> -VelvetDumpDir <path>` | Saves raw signed-in responses (watch page, comments, replies, home) for parser work. Read-only. |
 | `-VelvetWindowWidth <points>` | Sets the window width. Use it for layout checks. |
 | `-VelvetPiPTest YES`, `-VelvetPiPSkipTest YES` | Tests PiP and the PiP skip buttons. |
-| `-VelvetScrollPiPTest YES` | Scrolls the watch page to start and stop PiP. |
+| `-VelvetScrollPiPTest YES` | Scrolls the watch page to start and stop PiP. `-VelvetScrollY <points>` sets the depth. |
 | `-VelvetFullscreenTest YES`, `-VelvetResizeTest YES` | Tests fullscreen and window resize. |
 | `-VelvetLeakTest YES`, `-VelvetNoRelief YES` | Memory tests. |
 | `-settings.<key> <value>` | Overrides a preference. Use `'<true/>'` or `'<false/>'` for Bool values. |

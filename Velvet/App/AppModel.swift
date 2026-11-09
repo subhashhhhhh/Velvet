@@ -108,10 +108,13 @@ final class AppModel {
     @ObservationIgnored lazy var nowPlaying = NowPlaying { [weak self] in self?.currentSession }
 
     func makeSession(for video: Video) -> PlayerSession {
-        PlayerSession(video: video, resolver: resolver, preferences: settings,
-                      client: client, session: authState == .signedIn ? session : nil,
-                      progress: progress,
-                      isSignedIn: { [weak self] in self?.authState == .signedIn })
+        let s = PlayerSession(video: video, resolver: resolver, preferences: settings,
+                              client: client, session: authState == .signedIn ? session : nil,
+                              progress: progress,
+                              isSignedIn: { [weak self] in self?.authState == .signedIn })
+        s.page.accountName = { [weak self] in self?.account?.name }
+        s.page.accountPhoto = { [weak self] in self?.account?.photo }
+        return s
     }
 
     /// Opens a video. Shorts open in the vertical Shorts player; other videos resume where you left off.
@@ -566,6 +569,8 @@ final class AppModel {
                     if let token = WatchParser.details(from: watch, videoId: id)?.commentsToken {
                         let comments = try await client.next(continuation: token)
                         save(comments, "comments.json")
+                        let page = WatchParser.comments(from: comments)
+                        log.info("Dump: \(page.comments.count) comments, create=\(page.createParams != nil), reply=\(page.comments.filter { $0.actions.reply != nil }.count), like=\(page.comments.filter { $0.actions.like != nil }.count), edit=\(page.comments.filter { $0.actions.edit != nil }.count), delete=\(page.comments.filter { $0.actions.delete != nil }.count)")
                         if let r = WatchParser.comments(from: comments).comments.first(where: { $0.repliesToken != nil })?.repliesToken {
                             save(try await client.next(continuation: r), "replies.json")
                         }
@@ -608,7 +613,9 @@ final class AppModel {
                     let top = doc.isFlipped ? y : doc.bounds.height - y - sv.contentView.bounds.height
                     doc.scrollToVisible(NSRect(x: 0, y: max(0, top), width: 1, height: sv.contentView.bounds.height))
                 }
-                try? await Task.sleep(for: .seconds(9)); scroll(to: 900)
+                // `-VelvetScrollY <points>` picks the depth (layout checks further down the page).
+                let y = UserDefaults.standard.double(forKey: "VelvetScrollY")
+                try? await Task.sleep(for: .seconds(9)); scroll(to: y > 0 ? y : 900)
                 try? await Task.sleep(for: .seconds(6)); scroll(to: 0)
             }
         }

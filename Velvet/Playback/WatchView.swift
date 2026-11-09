@@ -425,6 +425,7 @@ struct CommentsSection: View {
     let page: WatchPageModel
     let player: MPVPlayer
     var showsHeader = true
+    @Environment(AppModel.self) private var app
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -432,9 +433,19 @@ struct CommentsSection: View {
             if !page.hasComments && page.details != nil {
                 Text("Comments are turned off or unavailable.").foregroundStyle(.secondary)
             }
+            if page.canComment {
+                HStack(alignment: .top, spacing: 12) {
+                    RemoteImage(url: app.account?.photo)
+                        .frame(width: 36, height: 36)
+                        .clipShape(Circle())
+                    CommentComposer(placeholder: "Add a comment…", submitTitle: "Comment", collapses: true) {
+                        await page.postComment($0)
+                    }
+                }
+            }
             LazyVStack(alignment: .leading, spacing: 18) {
                 ForEach(page.comments) { c in
-                    CommentRow(comment: c, page: page)
+                    CommentRow(comment: c, page: page, threadId: c.id)
                         .onAppear {
                             if c.id == page.comments.last?.id { Task { await page.loadMoreComments() } }
                         }
@@ -451,10 +462,88 @@ struct CommentsSection: View {
     }
 }
 
+/// A text box for a comment, reply or edit, with Cancel and submit buttons.
+private struct CommentComposer: View {
+    var placeholder: String
+    var initialText = ""
+    var submitTitle: String
+    /// Top-level composer: just the field until it's used, like YouTube's.
+    var collapses = false
+    var onCancel: (() -> Void)?
+    /// Returns true when posted (the field then clears / closes).
+    var onSubmit: (String) async -> Bool
+
+    @State private var text = ""
+    @State private var sending = false
+    @FocusState private var focused: Bool
+
+    private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var expanded: Bool { !collapses || focused || !text.isEmpty }
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 8) {
+            TextField(placeholder, text: $text, axis: .vertical)
+                .textFieldStyle(.plain)
+                .lineLimit(1...10)
+                .focused($focused)
+                .disabled(sending)
+                .padding(.vertical, 6)
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(focused ? AnyShapeStyle(.primary) : AnyShapeStyle(.quaternary)).frame(height: 1)
+                }
+                .onKeyPress(.return, phases: .down) { press in
+                    // ⌘↩ posts; plain ↩ adds a line.
+                    guard press.modifiers.contains(.command) else { return .ignored }
+                    submit()
+                    return .handled
+                }
+            if expanded {
+                HStack(spacing: 8) {
+                    if sending { ProgressView().controlSize(.small) }
+                    Button("Cancel") {
+                        text = initialText.isEmpty || collapses ? "" : initialText
+                        focused = false
+                        onCancel?()
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 10)
+                    Button(submitTitle) { submit() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(trimmed.isEmpty || trimmed == initialText || sending)
+                        .help("⌘↩")
+                }
+            }
+        }
+        .onAppear {
+            text = initialText
+            if !collapses { focused = true }
+        }
+    }
+
+    private func submit() {
+        let value = trimmed
+        guard !value.isEmpty, value != initialText, !sending else { return }
+        sending = true
+        Task {
+            if await onSubmit(value) {
+                text = ""
+                focused = false
+            }
+            sending = false
+        }
+    }
+}
+
 private struct CommentRow: View {
     let comment: Comment
     let page: WatchPageModel
+    /// The top-level comment this one belongs to (itself for top-level comments).
+    let threadId: String
     var isReply = false
+
+    @State private var replying = false
+    @State private var editing = false
+    @State private var confirmingDelete = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -472,26 +561,82 @@ private struct CommentRow: View {
                     if comment.isVerified { Image(systemName: "checkmark.seal.fill").font(.caption).foregroundStyle(.secondary) }
                     if let t = comment.published { Text(t).font(.caption).foregroundStyle(.secondary) }
                 }
-                if !comment.text.isEmpty {
-                    Text(RichText.attributed(comment.text))
-                        .font(.body)
-                        .textSelection(.enabled)
+                if editing {
+                    CommentComposer(placeholder: "Edit your comment", initialText: comment.text, submitTitle: "Save",
+                                    onCancel: { editing = false }) { text in
+                        let ok = await page.edit(comment, text: text)
+                        if ok { editing = false }
+                        return ok
+                    }
+                } else {
+                    if !comment.text.isEmpty {
+                        Text(RichText.attributed(comment.text))
+                            .font(.body)
+                            .textSelection(.enabled)
+                    }
+                    if let gif = comment.gif {
+                        // Fit within 200pt tall / 280pt wide, keeping the GIF's shape.
+                        let scale = min(200 / max(gif.height, 1), 280 / max(gif.width, 1), 1)
+                        AnimatedImage(url: gif.url)
+                            .frame(width: gif.width * scale, height: gif.height * scale)
+                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    }
+                    toolbar
                 }
-                if let gif = comment.gif {
-                    // Fit within 200pt tall / 280pt wide, keeping the GIF's shape.
-                    let scale = min(200 / max(gif.height, 1), 280 / max(gif.width, 1), 1)
-                    AnimatedImage(url: gif.url)
-                        .frame(width: gif.width * scale, height: gif.height * scale)
-                        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                }
-                HStack(spacing: 14) {
-                    if let likes = comment.likeCount {
-                        Label(likes, systemImage: "hand.thumbsup").font(.caption).foregroundStyle(.secondary)
+                if replying {
+                    // Replying to a reply mentions its author, as YouTube does.
+                    CommentComposer(placeholder: "Add a reply…", initialText: isReply ? "\(comment.author) " : "",
+                                    submitTitle: "Reply", onCancel: { replying = false }) { text in
+                        let ok = await page.reply(to: comment, inThread: threadId, text: text)
+                        if ok { replying = false }
+                        return ok
                     }
                 }
                 if !isReply { repliesBlock }
             }
         }
+        .confirmationDialog("Delete your comment?", isPresented: $confirmingDelete) {
+            Button("Delete", role: .destructive) { page.delete(comment, inThread: isReply ? threadId : nil) }
+        } message: {
+            Text("It will be removed from YouTube permanently.")
+        }
+    }
+
+    private var toolbar: some View {
+        HStack(spacing: 14) {
+            let likes = comment.isLiked ? (comment.likeCountLiked ?? comment.likeCount) : comment.likeCount
+            if comment.actions.like != nil {
+                Button { page.toggleLike(comment) } label: {
+                    Label(likes ?? "", systemImage: comment.isLiked ? "hand.thumbsup.fill" : "hand.thumbsup")
+                }
+                .buttonStyle(.plain)
+                .help(comment.isLiked ? "Unlike" : "Like")
+            } else if let likes {
+                Label(likes, systemImage: "hand.thumbsup")
+            }
+            if comment.actions.reply != nil {
+                Button("Reply") { replying = true }
+                    .buttonStyle(.plain)
+                    .fontWeight(.semibold)
+            }
+            if comment.actions.edit != nil || comment.actions.delete != nil {
+                Menu {
+                    if comment.actions.edit != nil { Button("Edit", systemImage: "pencil") { editing = true } }
+                    if comment.actions.delete != nil {
+                        Button("Delete", systemImage: "trash", role: .destructive) { confirmingDelete = true }
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+                .menuStyle(.button)
+                .menuIndicator(.hidden)
+                .buttonStyle(.plain)
+                .fixedSize()
+                .help("More")
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
     }
 
     @ViewBuilder
@@ -510,7 +655,7 @@ private struct CommentRow: View {
         }
         if let loaded {
             VStack(alignment: .leading, spacing: 14) {
-                ForEach(loaded) { CommentRow(comment: $0, page: page, isReply: true) }
+                ForEach(loaded) { CommentRow(comment: $0, page: page, threadId: comment.id, isReply: true) }
                 if page.hasMoreReplies(comment) {
                     Button("Show more replies") { Task { await page.loadReplies(for: comment) } }
                         .buttonStyle(.plain).font(.subheadline.weight(.semibold)).foregroundStyle(.tint)
