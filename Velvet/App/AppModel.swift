@@ -253,12 +253,14 @@ final class AppModel {
 
     /// Leaving the watch page (sidebar, search, channel, Back): keep the video going in PiP
     /// if enabled, otherwise close it.
-    func leaveWatchPage() {
+    /// `forcePictureInPicture`: the user asked for PiP explicitly (the I key), so the
+    /// "keep playing when leaving" preference doesn't apply.
+    func leaveWatchPage(forcePictureInPicture: Bool = false) {
         guard let watching, !watchPageHidden else {
             if shortsOverlay != nil { closePlayer() }
             return
         }
-        guard settings.pipOnNavigate, PictureInPicture.isAvailable, watching.phase == .ready else {
+        guard settings.pipOnNavigate || forcePictureInPicture, PictureInPicture.isAvailable, watching.phase == .ready else {
             closePlayer()
             return
         }
@@ -584,6 +586,15 @@ final class AppModel {
                 navigate(to: .history)
                 try? await Task.sleep(for: .seconds(8))
                 if let v = watching?.video { log.info("Test: reopening video"); open(v) }
+            }
+        }
+        // `-VelvetMinimizeTest YES` (with -VelvetPlay): what the I key does, at 8s.
+        if UserDefaults.standard.bool(forKey: "VelvetMinimizeTest") {
+            Task {
+                try? await Task.sleep(for: .seconds(8))
+                log.info("Test: I key (leave page into PiP)")
+                leaveWatchPage(forcePictureInPicture: true)
+                log.info("Test: page hidden=\(self.watchPageHidden), PiP active=\(self.pip.isActive)")
             }
         }
         // `-VelvetScrollPiPTest YES` (with -VelvetPlay): scroll the page down at 9s, back up at 15s.

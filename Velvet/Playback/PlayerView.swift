@@ -211,6 +211,10 @@ struct PlayerView: View {
             case "m": player.toggleMute()
             case "f": onToggleFullscreen()
             case "p": app.togglePictureInPicture()
+            // Back to the page under the video (Home, search, a channel…), video in PiP.
+            case "i":
+                guard app.watching === session else { return .ignored }
+                app.leaveWatchPage(forcePictureInPicture: true)
             case "c": session.toggleCaptions()
             case ",": player.setSpeed(player.speed - 0.25)
             case ".": player.setSpeed(player.speed + 0.25)
