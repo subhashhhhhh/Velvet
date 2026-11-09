@@ -32,6 +32,11 @@ final class MPVSurfaceView: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    /// Clicks go to the SwiftUI player around it. Taking them itself, this view answered
+    /// clicks over its whole frame, including the part scrolled under the top bar and
+    /// clipped away (a click on the search field paused the video).
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
     var hostsVideo: Bool { metal != nil }
 
     /// Shows a frozen frame while the live video is elsewhere (PiP).

@@ -123,7 +123,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetMarkReadTest YES` | Marks the newest unread notification read, reloads the inbox and logs whether it stayed read. Changes that one notification's read state. |
 | `-VelvetWindowWidth <points>` | Sets the window width. Use it for layout checks. |
 | `-VelvetPiPTest YES`, `-VelvetPiPSkipTest YES` | Tests PiP and the PiP skip buttons. |
-| `-VelvetScrollPiPTest YES` | Scrolls the watch page to start and stop PiP. `-VelvetScrollY <points>` sets the depth. |
+| `-VelvetScrollPiPTest YES` | Scrolls the watch page to start and stop PiP. `-VelvetScrollY <points>` sets the depth. A second later it clicks the search field and logs whether search opened (it must) and whether the video paused (it must not): with `-VelvetScrollY 250` the player is under the top bar. Bring the test window to the front for the click. The jump is an AppKit scroll, which can leave the lazy page layout stale; the page looks wrong in screenshots, but real scrolling is fine. |
 | `-VelvetFullscreenTest YES`, `-VelvetResizeTest YES` | Tests fullscreen and window resize. |
 | `-VelvetAccountTest YES` | Opens the account panel (top bar picture) at 6 s. |
 | `-VelvetSettingsTest YES` | Opens the Settings window at 3 s. `-VelvetSettingsPane <pane>` (general, feed, playback, notifications, sponsorBlock, deArrow, account, advanced) picks the pane. Logs the window size and how far down the window buttons sit (26 pt, as in the main window). |

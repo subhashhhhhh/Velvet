@@ -1504,7 +1504,28 @@ final class AppModel {
                 // `-VelvetScrollY <points>` picks the depth (layout checks further down the page).
                 let y = UserDefaults.standard.double(forKey: "VelvetScrollY")
                 try? await Task.sleep(for: .seconds(9)); scroll(to: y > 0 ? y : 900)
-                try? await Task.sleep(for: .seconds(6)); scroll(to: 0)
+                // What a click on the search field would reach (the player under it must not).
+                try? await Task.sleep(for: .seconds(1))
+                if let content = mainWindow?.contentView {
+                    let field = searchAssist.fieldFrame
+                    let point = NSPoint(x: field.midX, y: content.bounds.height - field.midY)
+                    let hit = content.hitTest(point)
+                    log.info("Test: hit test at the search field: \(hit.map { String(describing: type(of: $0)) } ?? "nil", privacy: .public), player slot top \(Int(self.playerSlot.minY)), field \(Int(field.minY))–\(Int(field.maxY))")
+                    // A real click there (the window must be frontmost): it must open search,
+                    // not pause the video.
+                    let pausedBefore = watching?.player.isPaused ?? true
+                    if let window = mainWindow {
+                        for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                            if let e = NSEvent.mouseEvent(with: type, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                          windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1) {
+                                NSApp.postEvent(e, atStart: false)
+                            }
+                        }
+                    }
+                    try? await Task.sleep(for: .seconds(1))
+                    log.info("Test: after clicking the search field: video paused \(pausedBefore) → \(self.watching?.player.isPaused ?? true), search active \(self.searchAssist.isActive)")
+                }
+                try? await Task.sleep(for: .seconds(5)); scroll(to: 0)
             }
         }
         if let id = UserDefaults.standard.string(forKey: "VelvetHomeThenPlay"), !id.isEmpty {

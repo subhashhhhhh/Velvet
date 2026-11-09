@@ -244,6 +244,9 @@ struct PlayerLayer: View {
                 }
                 .frame(width: visible.isNull ? 0 : visible.width, height: visible.isNull ? 0 : visible.height, alignment: .topLeading)
                 .clipped()
+                // Clipping hides the part outside the page; this keeps it from taking clicks too
+                // (it sits over the top bar when the player is scrolled up under it).
+                .contentShape(Rectangle())
                 .offset(x: visible.isNull ? 0 : visible.minX, y: visible.isNull ? 0 : visible.minY)
                 .opacity(app.playerSlot == .zero && !full ? 0 : 1)
                 .id(session.id)
