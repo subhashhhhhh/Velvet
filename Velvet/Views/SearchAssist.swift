@@ -12,6 +12,16 @@ final class SearchAssist {
     }
     /// Where the search field is, in window coordinates; the dropdown hangs below it.
     var fieldFrame: CGRect = .zero
+    /// Where the dropdown is (window coordinates); a click outside both closes it.
+    @ObservationIgnored var dropdownFrame: CGRect = .zero
+    /// The list is on screen.
+    var isShowing: Bool { isActive && !rows.isEmpty }
+
+    /// Clicking the field: shows your recent searches (or the suggestions for what's typed),
+    /// and hides them on the next click.
+    func toggleFromClick(query: String) {
+        if isShowing { isActive = false } else { isActive = true; queryChanged(query) }
+    }
     /// The row picked with ↑/↓ (nil: what's typed).
     var highlighted: Int?
 
@@ -103,6 +113,7 @@ struct SearchSuggestionsDropdown: View {
                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.primary.opacity(0.1)))
                 .shadow(color: .black.opacity(0.3), radius: 18, y: 8)
                 .offset(x: field.minX - origin.x, y: field.maxY - origin.y + 6)
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { assist.dropdownFrame = $0 }
             }
         }
         .ignoresSafeArea()

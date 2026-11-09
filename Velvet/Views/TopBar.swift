@@ -216,6 +216,8 @@ private struct SearchField: View {
                             app.searchAssist.queryChanged(q)
                         }
                         .onAppear { focused = true }
+                        // Clicks in the text go to the field itself, so watch them alongside.
+                        .simultaneousGesture(TapGesture().onEnded { app.searchAssist.toggleFromClick(query: app.searchText) })
                 } else {
                     Text(app.searchText.isEmpty ? "Search YouTube" : app.searchText)
                         .foregroundStyle(app.searchText.isEmpty ? .secondary : .primary)

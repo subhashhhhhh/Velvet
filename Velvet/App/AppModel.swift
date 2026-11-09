@@ -618,6 +618,28 @@ final class AppModel {
         return visit(root)
     }
 
+    @ObservationIgnored private var clickMonitor: Any?
+
+    /// A click anywhere but the search field or its suggestions closes the suggestions and
+    /// leaves the field (so the player's keys work again). The click still goes through.
+    private func installClickMonitor() {
+        guard clickMonitor == nil else { return }
+        clickMonitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak self] event in
+            nonisolated(unsafe) let event = event
+            MainActor.assumeIsolated {
+                guard let self, self.searchAssist.isActive, let window = self.mainWindow, event.window === window,
+                      let content = window.contentView else { return }
+                let p = event.locationInWindow
+                let point = CGPoint(x: p.x, y: content.bounds.height - p.y)
+                let assist = self.searchAssist
+                guard !assist.fieldFrame.contains(point), !(assist.isShowing && assist.dropdownFrame.contains(point)) else { return }
+                assist.isActive = false
+                self.searchBlurRequest += 1
+            }
+            return event
+        }
+    }
+
     private func installScrollForwarding() {
         guard scrollMonitor == nil else { return }
         scrollMonitor = NSEvent.addLocalMonitorForEvents(matching: .scrollWheel) { [weak self] event in
@@ -695,6 +717,7 @@ final class AppModel {
 
     private func observeWindow() {
         installScrollForwarding()
+        installClickMonitor()
         installKeyMonitor()
         if let occlusionObserver { NotificationCenter.default.removeObserver(occlusionObserver) }
         guard let mainWindow else { return }
@@ -1266,6 +1289,30 @@ final class AppModel {
                     let data = (try? await client.get(c.url!)) ?? Data()
                     FileHandle.standardError.write(Data("SUGGEST[\(q)]: \(String(decoding: data, as: UTF8.self).prefix(1500))\n".utf8))
                 }
+            }
+        }
+        // `-VelvetSearchClickTest YES`: click the search field three times, then elsewhere, logging
+        // whether the suggestions show after each click (they should: show, hide, show, hide).
+        if UserDefaults.standard.bool(forKey: "VelvetSearchClickTest") {
+            Task {
+                try? await Task.sleep(for: .seconds(6))
+                guard let window = mainWindow, let content = window.contentView else { return }
+                @MainActor func click(_ p: CGPoint, _ name: String) async {
+                    let location = NSPoint(x: p.x, y: content.bounds.height - p.y)
+                    for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                        if let e = NSEvent.mouseEvent(with: type, location: location, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                      windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1) {
+                            NSApp.postEvent(e, atStart: false)
+                        }
+                    }
+                    try? await Task.sleep(for: .seconds(2))
+                    log.info("Test: after clicking \(name, privacy: .public): suggestions showing \(self.searchAssist.isShowing) (\(self.searchAssist.rows.count) rows), active \(self.searchAssist.isActive)")
+                }
+                let field = CGPoint(x: searchAssist.fieldFrame.midX, y: searchAssist.fieldFrame.midY)
+                await click(field, "the field")
+                await click(field, "the field again")
+                await click(field, "the field a third time")
+                await click(CGPoint(x: content.bounds.midX, y: content.bounds.height - 40), "the page")
             }
         }
         // `-VelvetHistoryTest YES`: History → a video → a channel, then Back, Back, Forward,
