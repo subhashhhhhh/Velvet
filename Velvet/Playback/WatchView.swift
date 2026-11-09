@@ -485,10 +485,28 @@ struct CommentsSection: View {
     let player: MPVPlayer
     var showsHeader = true
     @Environment(AppModel.self) private var app
+    /// Filters the comments loaded so far (YouTube has no comment search).
+    @State private var query = ""
+
+    private var searching: Bool { !query.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    /// Threads whose comment, author or loaded replies contain every word of the query.
+    private var shown: [Comment] {
+        guard searching else { return page.comments }
+        let words = query.split(separator: " ").map(String.init)
+        func matches(_ c: Comment) -> Bool {
+            words.allSatisfy { c.text.localizedStandardContains($0) || c.author.localizedStandardContains($0) }
+        }
+        return page.comments.filter { c in matches(c) || (page.replies[c.id] ?? []).contains(where: matches) }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if showsHeader { Text("Comments").font(.title3.weight(.semibold)) }
+            HStack {
+                if showsHeader { Text("Comments").font(.title3.weight(.semibold)) }
+                Spacer()
+                if !page.comments.isEmpty { searchField }
+            }
             if !page.hasComments && page.details != nil {
                 Text("Comments are turned off or unavailable.").foregroundStyle(.secondary)
             }
@@ -502,22 +520,52 @@ struct CommentsSection: View {
                     }
                 }
             }
+            if searching {
+                HStack {
+                    Text(shown.isEmpty ? "No loaded comments match." : "\(shown.count) of \(page.comments.count) loaded comments match.")
+                        .foregroundStyle(.secondary)
+                    if page.canLoadMoreComments && !page.isLoadingComments {
+                        Button("Load More to Search") { Task { await page.loadMoreComments() } }
+                            .buttonStyle(.link)
+                    }
+                }
+                .font(.callout)
+            }
             LazyVStack(alignment: .leading, spacing: 18) {
-                ForEach(page.comments) { c in
+                ForEach(shown) { c in
                     CommentRow(comment: c, page: page, threadId: c.id)
                         .onAppear {
-                            if c.id == page.comments.last?.id { Task { await page.loadMoreComments() } }
+                            // While searching, more pages load only when asked.
+                            if !searching, c.id == page.comments.last?.id { Task { await page.loadMoreComments() } }
                         }
                 }
             }
             if page.isLoadingComments {
                 ProgressView().frame(maxWidth: .infinity)
-            } else if page.hasComments && !page.commentsLoaded {
+            } else if page.hasComments && !page.commentsLoaded && !searching {
                 // Fetch the first page only once the section scrolls into view.
                 Color.clear.frame(height: 1).onAppear { Task { await page.loadMoreComments() } }
             }
         }
         .padding(.top, 6)
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+            TextField("Search comments", text: $query)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .onExitCommand { query = "" }
+            if !query.isEmpty {
+                Button { query = "" } label: { Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary) }
+                    .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 10)
+        .frame(width: 220, height: 28)
+        .background(Capsule().fill(.primary.opacity(0.065)))
+        .overlay(Capsule().strokeBorder(.primary.opacity(0.06)))
     }
 }
 
