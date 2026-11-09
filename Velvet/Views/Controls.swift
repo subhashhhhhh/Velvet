@@ -145,9 +145,13 @@ struct VelvetSwitchStyle: ToggleStyle {
 extension Color {
     /// Links in descriptions and comments: Velvet's crimson, lighter on dark backgrounds so
     /// it stays readable. (The neutral tint made them look like the text around them.)
-    static let velvetLink = Color(nsColor: NSColor(name: "VelvetLink") { appearance in
+    static let velvetLink = Color(nsColor: .velvetLink)
+}
+
+extension NSColor {
+    static let velvetLink = NSColor(name: "VelvetLink") { appearance in
         appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
             ? NSColor(srgbRed: 1.0, green: 0.42, blue: 0.5, alpha: 1)
             : NSColor(srgbRed: 0.78, green: 0.05, blue: 0.2, alpha: 1)
-    })
+    }
 }

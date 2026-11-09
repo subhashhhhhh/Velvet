@@ -903,65 +903,87 @@ enum RichText {
     }
 }
 
-/// Text whose URLs and timestamps are links, in Velvet's link colour, with a pointing hand
-/// over them. SwiftUI shows no hand over links inside a Text, and doesn't say where they are:
-/// a text renderer notes each link's frame as it draws, and hovering compares against those.
-/// Text without links is a plain Text.
+/// Text whose URLs and timestamps are links, in Velvet's link colour. Text with links is
+/// AppKit's text view: SwiftUI's Text shows the I-beam over links in selectable text and no
+/// pointing hand, and switching selection off over a link restarted hover tracking. NSTextView
+/// does both itself (and selection). Text without links is a plain Text.
 struct LinkedText: View {
     let text: String
-    @State private var frames = LinkFrames()
-    @State private var overLink = false
 
     var body: some View {
         let attributed = RichText.attributed(text)
         if attributed.runs.contains(where: { $0.link != nil }) {
-            Self.marked(attributed)
-                .tint(.velvetLink)
-                .textRenderer(LinkFrameRenderer(frames: frames))
-                .onContinuousHover { phase in
-                    var over = false
-                    if case .active(let point) = phase {
-                        over = frames.rects.contains { $0.insetBy(dx: -1, dy: -2).contains(point) }
-                    }
-                    if over != overLink { overLink = over }
-                }
-                .pointerStyle(overLink ? .link : nil)
+            LinkTextView(attributed: attributed)
         } else {
             Text(attributed)
         }
     }
+}
 
-    /// The text with each link run marked, so the renderer can find it.
-    private static func marked(_ attributed: AttributedString) -> Text {
-        var result = Text(verbatim: "")
-        for run in attributed.runs {
-            let piece = Text(AttributedString(attributed[run.range]))
-            result = run.link == nil ? Text("\(result)\(piece)") : Text("\(result)\(piece.customAttribute(LinkRun()))")
-        }
-        return result
+private struct LinkTextView: NSViewRepresentable {
+    let attributed: AttributedString
+    @Environment(\.lineLimit) private var lineLimit
+    @Environment(\.openURL) private var openURL
+
+    private static let font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeNSView(context: Context) -> NSTextView {
+        let view = NSTextView(frame: .zero)
+        view.isEditable = false
+        view.isSelectable = true
+        view.drawsBackground = false
+        view.isRichText = true
+        view.textContainerInset = .zero
+        view.textContainer?.lineFragmentPadding = 0
+        view.textContainer?.widthTracksTextView = true
+        view.isVerticallyResizable = false
+        view.isHorizontallyResizable = false
+        view.linkTextAttributes = [.foregroundColor: NSColor.velvetLink, .cursor: NSCursor.pointingHand]
+        view.delegate = context.coordinator
+        return view
     }
-}
 
-private nonisolated struct LinkRun: TextAttribute {}
+    func updateNSView(_ view: NSTextView, context: Context) {
+        context.coordinator.openURL = openURL
+        let string = Self.string(attributed)
+        if view.textStorage?.isEqual(to: string) != true { view.textStorage?.setAttributedString(string) }
+        view.textContainer?.maximumNumberOfLines = lineLimit ?? 0
+        view.textContainer?.lineBreakMode = lineLimit == nil ? .byWordWrapping : .byTruncatingTail
+    }
 
-/// Where the links were last drawn, in the text's own coordinates. A reference, so the
-/// renderer can update it without making the view draw again.
-private nonisolated final class LinkFrames: @unchecked Sendable {
-    var rects: [CGRect] = []
-}
+    /// The height the text needs at the offered width (measured apart from the view).
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: NSTextView, context: Context) -> CGSize? {
+        let width = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? 400
+        let storage = NSTextStorage(attributedString: Self.string(attributed))
+        let manager = NSLayoutManager()
+        let container = NSTextContainer(size: NSSize(width: width, height: .greatestFiniteMagnitude))
+        container.lineFragmentPadding = 0
+        container.maximumNumberOfLines = lineLimit ?? 0
+        container.lineBreakMode = lineLimit == nil ? .byWordWrapping : .byTruncatingTail
+        manager.addTextContainer(container)
+        storage.addLayoutManager(manager)
+        manager.ensureLayout(for: container)
+        return CGSize(width: width, height: ceil(manager.usedRect(for: container).height))
+    }
 
-private nonisolated struct LinkFrameRenderer: TextRenderer {
-    let frames: LinkFrames
+    private static func string(_ attributed: AttributedString) -> NSAttributedString {
+        let string = NSMutableAttributedString(attributed)
+        let all = NSRange(location: 0, length: string.length)
+        string.addAttributes([.font: font, .foregroundColor: NSColor.labelColor], range: all)
+        return string
+    }
 
-    func draw(layout: Text.Layout, in context: inout GraphicsContext) {
-        var rects: [CGRect] = []
-        for line in layout {
-            for run in line where run[LinkRun.self] != nil {
-                rects.append(run.typographicBounds.rect)
-            }
-            context.draw(line)
+    final class Coordinator: NSObject, NSTextViewDelegate {
+        var openURL: OpenURLAction?
+
+        /// Timestamps seek the player and web links open in the browser (the page's openURL).
+        func textView(_ textView: NSTextView, clickedOnLink link: Any, at charIndex: Int) -> Bool {
+            guard let url = link as? URL ?? (link as? String).flatMap(URL.init(string:)) else { return false }
+            openURL?(url)
+            return true
         }
-        frames.rects = rects
     }
 }
 
