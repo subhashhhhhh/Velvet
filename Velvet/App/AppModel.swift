@@ -268,6 +268,8 @@ final class AppModel {
         return .smooth(duration: 0.3)
     }()
     var playerSlot: CGRect = .zero { didSet { playerVisibilityChanged() } }
+    /// The watch page's list sizes, for the scroll test.
+    @ObservationIgnored nonisolated(unsafe) static var testWatchCounts: (@MainActor () -> String)?
     /// Until when slot moves animate (switching theater mode); otherwise the player follows
     /// its slot at once (scrolling, resizing).
     @ObservationIgnored private var animateSlotUntil = Date.distantPast
@@ -686,7 +688,7 @@ final class AppModel {
     }
 
     /// The page's main scroll view: the largest NSScrollView under the point.
-    private static func largestScrollView(in root: NSView, containing windowPoint: NSPoint) -> NSScrollView? {
+    static func largestScrollView(in root: NSView, containing windowPoint: NSPoint) -> NSScrollView? {
         var best: NSScrollView?
         func visit(_ v: NSView) {
             if let sv = v as? NSScrollView, !sv.isHidden,
@@ -1459,6 +1461,25 @@ final class AppModel {
                 log.info("Test: I key (leave page into PiP)")
                 leaveWatchPage(forcePictureInPicture: true)
                 log.info("Test: page hidden=\(self.watchPageHidden), PiP active=\(self.pip.isActive)")
+            }
+        }
+        // `-VelvetFrameMonitor YES`: log frame regularity every 2 s while you scroll by hand.
+        if UserDefaults.standard.bool(forKey: "VelvetFrameMonitor") {
+            Task {
+                try? await Task.sleep(for: .seconds(3))
+                if let window = mainWindow { FrameMonitor.start(in: window) }
+            }
+        }
+        // `-VelvetScrollPerfTest YES`: scroll like a trackpad at 12 s and log frame timing.
+        if UserDefaults.standard.bool(forKey: "VelvetScrollPerfTest") {
+            Self.testWatchCounts = { [weak self] in
+                guard let page = self?.watching?.page else { return "no watch page" }
+                return "\(page.comments.count) comments, \(page.related.count) related"
+            }
+            Task {
+                try? await Task.sleep(for: .seconds(12))
+                guard let window = mainWindow else { return }
+                ScrollPerfTest.start(in: window, label: watching != nil ? "watch page" : "home")
             }
         }
         // `-VelvetScrollPiPTest YES` (with -VelvetPlay): scroll the page down at 9s, back up at 15s.
