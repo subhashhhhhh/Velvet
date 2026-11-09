@@ -104,6 +104,7 @@ final class AppModel {
     var activeSearch: String?
 
     let alerts = SystemNotifications()
+    @ObservationIgnored private(set) lazy var downloads = Downloads(resolver: resolver, preferences: settings)
     let updates = UpdateController()
     /// Bumped to open the Settings window (only a view can call `openSettings`).
     var settingsOpenRequest = 0
@@ -329,6 +330,7 @@ final class AppModel {
                               client: client, session: authState == .signedIn ? session : nil,
                               progress: progress,
                               isSignedIn: { [weak self] in self?.authState == .signedIn })
+        s.localStreams = { [weak self] id in self?.downloads.localStreams(for: id) }
         s.page.accountName = { [weak self] in self?.account?.name }
         s.page.accountPhoto = { [weak self] in self?.account?.photo }
         s.onQualityLowered = { [weak self] label in self?.showToast("Lowered to \(label) to stop buffering") }
@@ -1482,6 +1484,27 @@ final class AppModel {
             Task {
                 try? await Task.sleep(for: .seconds(3))
                 if let window = mainWindow { FrameMonitor.start(in: window) }
+            }
+        }
+        // `-VelvetDownloadTest <videoId>`: downloads the video (quality from the settings), logs
+        // progress, then opens it: it must play from the downloaded files.
+        if let id = UserDefaults.standard.string(forKey: "VelvetDownloadTest"), !id.isEmpty {
+            Task {
+                try? await Task.sleep(for: .seconds(6))
+                let video = Video(id: id, title: "Download test")
+                downloads.download(video)
+                var last = ""
+                for _ in 0..<300 {
+                    try? await Task.sleep(for: .seconds(1))
+                    let state = downloads.active[id].map { String(describing: $0) } ?? (downloads.isDownloaded(id) ? "done" : "none")
+                    if state != last { log.info("Test: download \(state, privacy: .public)"); last = state }
+                    if state == "done" || state.hasPrefix("failed") { break }
+                }
+                guard let item = downloads.items.first(where: { $0.id == id }) else { return }
+                log.info("Test: saved \(item.resolution, privacy: .public), \(item.bytes) bytes, audio \(item.audio != nil), \(item.chapters.count) chapters")
+                open(video)
+                try? await Task.sleep(for: .seconds(8))
+                log.info("Test: playing \(!(self.watching?.player.isPaused ?? true)) at \(Int(self.watching?.player.position ?? 0)) s")
             }
         }
         // `-VelvetScrollPerfTest YES`: scroll like a trackpad at 12 s and log frame timing.

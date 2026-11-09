@@ -73,6 +73,9 @@ final class PlayerSession: Identifiable {
         player.onStall = { [weak self] mbps in self?.stalled(downloadMbps: mbps) }
     }
 
+    /// A downloaded copy's streams (local files), if there is one: played instead of resolving.
+    @ObservationIgnored var localStreams: ((String) -> StreamInfo?)?
+
     func start() {
         loadTask?.cancel()
         phase = .resolving
@@ -82,7 +85,10 @@ final class PlayerSession: Identifiable {
         loadTask = Task {
             let start = ContinuousClock.now
             do {
-                let info = try await resolver.resolve(video.id, isLive: video.kind == .live)
+                let local = localStreams?(video.id)
+                if local != nil { log.info("Playing the downloaded copy of \(self.video.id, privacy: .public)") }
+                let info: StreamInfo
+                if let local { info = local } else { info = try await resolver.resolve(video.id, isLive: video.kind == .live) }
                 try Task.checkCancellation()
                 self.info = info
                 log.info("Streams ready for \(self.video.id, privacy: .public) after \(ContinuousClock.now - start, privacy: .public)")
@@ -341,7 +347,7 @@ final class PlayerSession: Identifiable {
             return
         }
         // High-bitrate video (1440p HDR, 4K): download it from two clients' links at once.
-        if prefs.splitStreams, !info.isLive, (selection.video.bitrate ?? 0) > 10_000,
+        if prefs.splitStreams, !info.isLive, !selection.video.url.isFileURL, (selection.video.bitrate ?? 0) > 10_000,
            let split = await splitSelection(selection) {
             selection = split
         }

@@ -36,6 +36,7 @@ All source files are in `Velvet/`.
 | `Shorts/` | Vertical Shorts player. |
 | `Settings/` | `Preferences` and the settings window. |
 | `Tools/` | yt-dlp and runtime download, process runner. |
+| `Downloads/` | Videos saved for offline viewing (`Downloads`): separate video and audio files that mpv plays together, so they play in Velvet only. |
 | `Updates/` | Velvet's own updates: release feed, signature check, installer. Signing and releases: `docs/signing.md`, `scripts/release.sh`. |
 | `Images/` | Image pipeline (downsampling, memory cache), animated images. |
 | `Views/` | Root view, shared controls (`Controls.swift`: `Chip`, `SegmentedTabs`; use these, not the system segmented picker), the custom sidebar (`Sidebar.swift`) and top bar (`TopBar.swift`), window-level player layer. Pages put their Back button, title and actions in the top bar with `.topBarBack`, `.topBarTitle`, `.topBarActions` and `.topBarRefresh`, not with `.toolbar`. |
@@ -141,6 +142,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetLeakTest YES`, `-VelvetNoRelief YES` | Memory tests. |
 | `-settings.hasSeenWelcome '<false/>'` | Shows the first-run welcome flow. Add `-VelvetWelcomeStep <0–2>` to open a step (0 welcome, 1 sign in, 2 choices), and `-VelvetToolsDir` with an empty folder to see the downloads. The test never writes the flow's state to the shared defaults (only a real first install does). |
 | `-VelvetScrollPerfTest YES` | At 12 s, scrolls the page like a trackpad (one event per display refresh, 2 s down and back; `-VelvetScrollStep` points per event, `-VelvetScrollFrames` events each way) and logs fps, hitches, memory and the watch page's list sizes (category `Test`). Alone for Home, with `-VelvetPlay` for the watch page, with `-VelvetFullscreenAtLaunch YES` for fullscreen. The pointer isn't over the window, so hover costs don't show; measure those by hand with `-VelvetFrameMonitor YES`, which logs frame regularity every 2 s. Measure on macOS 15: macOS 27 hides SwiftUI layout costs that 15 pays. |
+| `-VelvetDownloadTest <videoId>` | Downloads the video at the quality setting (add `-settings.quality '<integer>360</integer>'` for a small file), logs progress, then opens it: the log must say "Playing the downloaded copy". Downloads go to the user's real folder; delete the test video's folder in `~/Library/Application Support/com.subhash.Velvet/Downloads` afterwards. |
 | `-VelvetToolsDir <path>` | Uses this folder for yt-dlp and the runtime instead of the installed app's. Give an empty folder to test a first install (progress in the player, the welcome flow) without touching the user's tools. |
 | `-VelvetUpdateTest YES` | With the `VELVET_UPDATE_FEED` environment variable: opens Settings › About, checks for an update at 3 s and installs it at 6 s, logging each state (category `Test`). Use a scratch copy of a Debug build signed with "Velvet Self-Signed" (docs/signing.md): the install replaces the running copy and relaunches it. |
 | `-settings.<key> <value>` | Overrides a preference. Use `'<true/>'` or `'<false/>'` for Bool values and `'<integer>3</integer>'` for numbers. |
