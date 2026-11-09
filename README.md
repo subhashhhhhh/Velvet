@@ -1,4 +1,4 @@
-<!-- Written in ASD-STE100 Simplified Technical English style. -->
+<!-- Written in ASD-STE100 Simplified Technical English. Keep sentences short: 20 words or fewer in procedures, 25 or fewer in descriptions. One instruction in each step. -->
 
 <p align="center">
   <img src="Velvet/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" height="128" alt="Velvet icon">
@@ -7,13 +7,15 @@
 <h1 align="center">Velvet</h1>
 
 <p align="center">
-  A native YouTube client for macOS that uses little memory.<br>
+  A YouTube client for macOS that uses little memory.<br>
   macOS 15 or later · Apple silicon and Intel · Free and open source (MIT)
 </p>
 
 ---
 
-The YouTube website in a browser can use approximately 2 GB of memory. Velvet uses approximately 200–350 MB when it plays a 1080p video. Velvet is a real Mac app: it has a sidebar, keyboard shortcuts, Picture in Picture, Now Playing and media keys.
+Velvet is a macOS app for YouTube. It uses less memory than the YouTube website in a browser.
+
+When it plays the same 1440p video, Velvet uses approximately 360 MB of memory. Safari uses approximately 1.4 GB.
 
 Velvet uses your YouTube account. Your home feed, subscriptions, history, Watch Later and playlists are the same as on youtube.com.
 
@@ -21,110 +23,161 @@ Velvet is not related to YouTube or Google.
 
 ## 1. Install
 
-### 1.1 Homebrew (recommended)
+### 1.1 Install with Homebrew
+
+Do this command in Terminal:
 
 ```sh
 brew install --cask subhashhhhhh/velvet/velvet
 ```
 
-### 1.2 Download
+### 1.2 Install from a download
 
-1. Download the disk image for your Mac from the [latest release](https://github.com/subhashhhhhh/Velvet/releases/latest):
-   - Apple silicon (M1 or later): `Velvet-<version>-AppleSilicon.dmg`
+1. Find the type of your Mac. Open the Apple menu › **About This Mac**.
+   - If you see **Chip**, your Mac has Apple silicon.
+   - If you see **Processor**, your Mac has an Intel processor.
+2. Go to the [latest release](https://github.com/subhashhhhhh/Velvet/releases/latest).
+3. Download the disk image for your Mac:
+   - Apple silicon: `Velvet-<version>-AppleSilicon.dmg`
    - Intel: `Velvet-<version>-Intel.dmg`
+4. Open the disk image.
+5. Drag **Velvet** to **Applications**.
+6. Start Velvet.
 
-   To find which Mac you have, open the Apple menu › **About This Mac**. Look for **Chip** (Apple silicon) or **Processor** (Intel).
-2. Open the disk image. Drag **Velvet** to **Applications**.
-3. Start Velvet.
+Apple does not notarize Velvet. Notarization needs a paid developer account. Because of this, macOS stops the app the first time that you open a downloaded copy.
 
-Apple does not notarize Velvet, because notarization needs a paid developer account. Thus macOS blocks the app the first time that you open a downloaded copy. To open it, do one of these steps:
+To open the app, do one of these procedures:
 
-- Open **System Settings › Privacy & Security**. Go to **Security** and click **Open Anyway**.
-- Or, do this command in Terminal:
+- Open **System Settings › Privacy & Security**. Go to **Security**. Click **Open Anyway**.
+- Do this command in Terminal:
 
   ```sh
   xattr -cr /Applications/Velvet.app
   ```
 
-The Homebrew install does not need this step.
+NOTE: The Homebrew install does not need these procedures.
 
 ### 1.3 Requirements
 
 - A Mac with Apple silicon or an Intel processor.
 - macOS 15 (Sequoia) or later.
-- An internet connection. On the first start, Velvet downloads yt-dlp and a JavaScript runtime (Deno). Velvet needs these tools to play videos.
+- An internet connection.
 
 ### 1.4 First start
 
-On the first start, Velvet shows a short welcome. It has three steps: what Velvet is, sign in (you can skip it), and a few choices (SponsorBlock, DeArrow and upload notifications). During these steps, Velvet downloads yt-dlp and the JavaScript runtime. The progress shows at the bottom of the window. If you open a video before the downloads are complete, the player shows their progress and starts the video when they are complete.
+On the first start, Velvet shows a welcome. The welcome has three steps:
+
+1. Information about Velvet.
+2. Sign in to your Google account. You can skip this step.
+3. Options for SponsorBlock, DeArrow and upload notifications.
+
+Velvet needs two tools to play videos: yt-dlp and a JavaScript runtime (Deno). On the first start, Velvet downloads these tools. The progress shows at the bottom of the window.
+
+If you open a video before the downloads are complete, the player shows the progress. The video starts when the downloads are complete.
 
 ## 2. Updates
 
-Velvet updates itself. It checks GitHub one time each day. When a new version is available, **Settings › About** shows the release notes and an **Install and Relaunch** button. You can also select **Velvet › Check for Updates…**.
+Velvet looks for a new version one time each day. When a new version is available, **Settings › About** shows the release notes and an **Install and Relaunch** button.
 
-Before Velvet installs an update, it makes sure that the download is complete and that it has the same signature as the installed app. Velvet does not install a changed or replaced download. For more information, refer to [docs/signing.md](docs/signing.md).
+To look for a new version at a different time, select **Velvet › Check for Updates…**.
 
-Velvet also keeps yt-dlp and the JavaScript runtime up to date. YouTube changes frequently, and new versions of yt-dlp follow these changes.
+Before Velvet installs an update, it does these checks:
+
+- The download is complete.
+- The download has the same signature as the installed app.
+
+If a check fails, Velvet does not install the update. For more information, refer to [docs/signing.md](docs/signing.md).
+
+Velvet also updates yt-dlp and the JavaScript runtime. YouTube changes frequently. New versions of yt-dlp follow these changes.
 
 ## 3. Sign in and privacy
 
-1. Click **Sign In** at the bottom of the sidebar.
+To sign in:
+
+1. Click **Sign In** at the right side of the top bar.
 2. Sign in to your Google account in the window that opens.
 
 Velvet keeps your session cookies in a file in `~/Library/Application Support/com.subhash.Velvet`. Only your macOS user account can read this file. Velvet sends the cookies only to YouTube and Google.
 
-Velvet does not collect data about you. It has no analytics and no telemetry. Velvet connects only to these services:
+Velvet does not collect data about you. It has no analytics and no telemetry.
 
-| Service | Why |
-|---|---|
-| YouTube and Google | Feeds, search, videos, comments, notifications and account actions. Velvet reads your search history from Google My Activity (you can turn this off). |
-| GitHub | yt-dlp and runtime downloads, and the daily Velvet update check. |
-| SponsorBlock and DeArrow | Skippable segments, and better titles and thumbnails. Velvet sends only the first characters of a hash of the video ID, so these services cannot see which video you watch. You can turn off each service. |
+Velvet connects only to these services:
+
+| Service | Data that Velvet sends | Why Velvet connects |
+|---|---|---|
+| YouTube and Google | Your session cookies, your searches, and the text that you type in the search box. | Feeds, search, search suggestions, videos, comments, notifications and account actions. If you select it, Velvet also reads your search history from Google My Activity. |
+| GitHub | No personal data. | Downloads of yt-dlp and the JavaScript runtime, the daily update check, and the AiSList list of AI channels (only if you select the AI filter). |
+| SponsorBlock and DeArrow | The first four characters of a hash of the video ID. These services cannot find which video you watch. | Segments to skip, and better titles and thumbnails. |
+| Return YouTube Dislike | The video ID. | Dislike counts. |
+
+You can disable each service in the settings, except YouTube, Google and GitHub.
 
 ## 4. Features
 
 ### 4.1 Browse
 
-- Home feed with your recommendations, and topic chips.
-- Subscriptions, with the newest videos and Shorts from your channels.
-- Search, with suggestions and your search history from all your devices.
+- Home feed with your recommendations and topic chips.
+- Subscriptions: the newest videos and Shorts from your channels.
+- Search with suggestions and your past searches.
 - History, Watch Later, Playlists and Liked videos.
-- Channel pages, with search inside the channel.
+- Channel pages. You can search in a channel and play all its videos.
 - Live streams with live chat.
 - Shorts in a vertical player.
-- Notifications from your account, with an optional macOS notification for new uploads.
-- Continue Watching for videos in a series (Part 2, Episode 3, and so on). Velvet can put the next episode in the queue.
-- A queue: add videos and play them one after the other.
-- Filters: hide watched videos, members-only videos, promotions, and channels that post AI-generated videos.
+- Notifications from your account. Velvet can also show a macOS notification for a new upload.
+- Back and Forward, as in a browser.
 
 ### 4.2 Watch
 
 - Playback with mpv and hardware decoding.
-- Up to 4K, and HDR on displays that support HDR.
-- Resume from the last position.
-- Captions: manual tracks, auto-generated tracks and auto-translated tracks.
+- Quality up to 4K. HDR video shows in HDR on displays that can show it.
+- Velvet starts a video at the position where you stopped it.
+- Captions: manual, auto-generated and auto-translated.
 - Chapters on the seek bar.
-- Theater mode.
-- SponsorBlock: skip sponsor segments and other segments that you select.
-- DeArrow: replace clickbait titles and thumbnails.
-- Comments, with replies.
+- Theater mode and loop.
+- SponsorBlock skips sponsor segments and other segments that you select.
+- DeArrow replaces clickbait titles and thumbnails.
+- Dislike counts from Return YouTube Dislike.
+- Comments with replies. You can search the comments.
+- Related videos with chips: All, From the series, topics, and more.
 - Like, dislike, subscribe, Watch Later and Save to playlist.
 
-### 4.3 Picture in Picture
+### 4.3 Queue and playlists
 
-The video can move to a Picture in Picture (PiP) window when:
+- Add videos to the queue. Velvet plays them one after the other.
+- Drag a video in the queue to change the order.
+- When you play a video from a playlist, the remaining videos go into the queue.
+- Velvet finds videos in a series (Part 2, Episode 3). It can put the next episode in the queue.
+
+### 4.4 Filters
+
+You can hide these videos:
+
+- Videos that you watched.
+- Members-only videos.
+- Promotions.
+- Videos from channels that post AI-generated videos.
+
+### 4.5 Picture in Picture
+
+The video can move to a Picture in Picture (PiP) window when one of these occurs:
 
 - You go to a different Space or app.
 - You scroll past the player.
 - You go to a different page in Velvet.
 
-Each of these behaviors has a setting.
+Each of these has a setting.
 
-### 4.4 System integration
+### 4.6 Slow connections
+
+YouTube sets a speed limit for each video link. For high-quality video (1440p HDR and 4K), Velvet downloads from two links at the same time. This makes the download faster.
+
+If the video stops frequently to load, Velvet decreases the quality by one step. A quality that you select yourself does not change.
+
+### 4.7 System integration
 
 - Now Playing in Control Center.
 - Media keys and headphone buttons.
-- Trackpad swipes to go back and forward.
+- Two-finger swipes on the trackpad to go back and forward.
 
 ## 5. Keyboard shortcuts
 
@@ -152,40 +205,43 @@ Each of these behaviors has a setting.
 | Key | Action |
 |---|---|
 | Command-K or Command-F | Search. |
-| Command-[ / Command-] | Go back / go forward. A two-finger swipe also operates. |
+| Command-[ / Command-] | Go back / go forward. |
 | Command-R | Refresh the page. |
 | Command-S | Collapse or expand the sidebar. |
 | Command-, (comma) | Open the settings. |
 
 ## 6. Settings
 
-Open the settings with Command-, (comma). The settings are in these categories:
+To open the settings, push Command-, (comma). The settings are in these categories:
 
-- **General**: appearance, start page, sidebar, search suggestions and history.
-- **Feed**: videos for each row, Shorts shelf, filters.
-- **Playback**: quality, codec, HDR, autoplay, speed, captions, Picture in Picture, queue, theater mode, hardware decoding, buffer.
-- **Notifications**: macOS notifications for new uploads.
-- **SponsorBlock**: on or off, the skip notice, the action for each segment category, the server.
-- **DeArrow**: titles, thumbnails, originals on hover.
-- **Account**: sign in and sign out.
-- **Advanced**: yt-dlp, the JavaScript runtime, tool updates, storage, reset.
-- **About**: version, updates, links.
+| Category | Settings |
+|---|---|
+| General | Appearance, start page, sidebar, search suggestions and search history. |
+| Feed | Videos in each row, Shorts shelf, filters. |
+| Playback | Quality, codec, HDR, autoplay, speed, captions, dislike counts, series, audio delay, Picture in Picture, queue, theater mode, hardware decoding, buffer, downloads from two links. |
+| Notifications | macOS notifications for new uploads. |
+| SponsorBlock | On or off, skip notice, action for each segment category, server. |
+| DeArrow | Titles, thumbnails, originals on hover. |
+| Account | Sign in and sign out. |
+| Advanced | yt-dlp, JavaScript runtime, tool updates, storage, reset. |
+| About | Version, updates, links. |
 
 ## 7. Known limits
 
-- You cannot drag the timeline in the macOS Picture in Picture window. Use the ±10 s buttons. Other players have the same limit.
-- YouTube changes frequently. A YouTube change can stop a feature. If videos do not play, go to **Settings › Advanced** and click **Check Now** to update yt-dlp.
+- In the macOS Picture in Picture window, you cannot drag the timeline. Use the ±10 s buttons. Other players have the same limit.
+- YouTube changes frequently. A change at YouTube can stop a feature. If videos do not play, go to **Settings › Advanced** and click **Check Now** to update yt-dlp.
 - The search history comes from the Google My Activity web page. If Google changes this page, Velvet shows a shorter history from YouTube.
-- On Intel Macs, hardware decoding of AV1 is not available, and of VP9 only on most Macs from 2017 or later. Velvet selects a codec that your Mac can decode in hardware.
+- YouTube limits the download speed of each video link. On a slow connection, 4K HDR video can stop to load. Velvet then decreases the quality.
+- Intel Macs cannot decode AV1 in hardware. Most Intel Macs from 2017 or later can decode VP9 in hardware. Velvet selects a codec that your Mac can decode in hardware.
 
 ## 8. Report a problem
 
-Open an [issue](https://github.com/subhashhhhhh/Velvet/issues/new). Include:
+Open an [issue](https://github.com/subhashhhhhh/Velvet/issues/new). Include this information:
 
 - The Velvet version (**Settings › About**).
 - The macOS version.
 - What you did, what you expected, and what occurred.
-- For playback problems, the video link.
+- For a playback problem, the video link.
 
 ## 9. Build from source
 
@@ -197,9 +253,11 @@ cd Velvet
 ./install.sh
 ```
 
-The script builds a Release version and puts `Velvet.app` in `/Applications`. With Xcode 26, it first makes a project from `project.yml`. You can do this procedure while Velvet runs. The new version starts when you start Velvet again.
+The script builds a Release version and puts `Velvet.app` in `/Applications`. With Xcode 26, the script first makes a project from `project.yml`.
 
-A build that you make yourself does not have the release signature. Thus it cannot install updates. It shows the release page instead.
+You can do this procedure while Velvet runs. The new version starts when you start Velvet again.
+
+A build that you make yourself does not have the release signature. Because of this, it cannot install updates. It shows the release page.
 
 For information about the source code, refer to [CLAUDE.md](CLAUDE.md).
 
@@ -208,6 +266,8 @@ For information about the source code, refer to [CLAUDE.md](CLAUDE.md).
 - [mpv](https://mpv.io), through [MPVKit](https://github.com/mpvkit/MPVKit), plays the video.
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp), with [Deno](https://deno.com), finds the streams.
 - [SponsorBlock](https://sponsor.ajay.app) and [DeArrow](https://dearrow.ajay.app) supply segments, titles and thumbnails.
+- [Return YouTube Dislike](https://returnyoutubedislike.com) supplies dislike counts.
+- [AiSList](https://aisloplist.com) supplies the list of channels that post AI-generated videos.
 
 ## 11. License
 
