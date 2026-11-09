@@ -215,7 +215,15 @@ private struct SearchField: View {
                             app.searchAssist.isActive = true
                             app.searchAssist.queryChanged(q)
                         }
-                        .onAppear { focused = true }
+                        .onAppear {
+                            focused = true
+                            // The field was only just created; the request above can come
+                            // before it's in the window and be lost, so ask once more after.
+                            Task { @MainActor in
+                                try? await Task.sleep(for: .milliseconds(30))
+                                if editing { focused = true }
+                            }
+                        }
                         // Clicks in the text go to the field itself, so watch them alongside.
                         .simultaneousGesture(TapGesture().onEnded { app.searchAssist.toggleFromClick(query: app.searchText) })
                 } else {
