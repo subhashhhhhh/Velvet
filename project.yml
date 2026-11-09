@@ -27,7 +27,7 @@ targets:
       base:
         PRODUCT_NAME: Velvet
         PRODUCT_BUNDLE_IDENTIFIER: com.subhash.Velvet
-        MARKETING_VERSION: "1.0"
+        MARKETING_VERSION: "1.0.1"
         CURRENT_PROJECT_VERSION: "1"
         MACOSX_DEPLOYMENT_TARGET: "15.0"
         GENERATE_INFOPLIST_FILE: YES
