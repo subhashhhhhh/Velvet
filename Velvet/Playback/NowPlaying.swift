@@ -2,7 +2,7 @@ import AppKit
 import MediaPlayer
 import OSLog
 
-private let log = Logger(subsystem: "com.subhash.Velvet", category: "NowPlaying")
+nonisolated private let log = Logger(subsystem: "com.subhash.Velvet", category: "NowPlaying")
 
 /// Publishes the current video to Control Center / the menu bar Now Playing widget and
 /// handles media keys (play/pause, ±10s, scrubbing) via MPRemoteCommandCenter.
@@ -100,8 +100,7 @@ final class NowPlaying {
 
     /// MediaPlayer asks for the image on its own queue, so this must not be main-actor isolated.
     private nonisolated static func artwork(_ image: NSImage) -> MPMediaItemArtwork {
-        nonisolated(unsafe) let image = image
-        return MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
+        MPMediaItemArtwork(boundsSize: image.size) { @Sendable _ in image }
     }
 
     // MARK: - Media keys / remote commands

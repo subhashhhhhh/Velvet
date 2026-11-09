@@ -50,7 +50,7 @@ final class GridTracker {
 
     static func key(_ id: String, grid: Int) -> String { "\(grid)|\(id)" }
 
-    static let space = "VideoGridContent"
+    nonisolated static let space = "VideoGridContent"
 
     /// Run when the sidebar starts moving: returns what to do once the new layout is in, to
     /// put the first visible card back where it was on screen.

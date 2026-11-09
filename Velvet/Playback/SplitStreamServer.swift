@@ -69,7 +69,8 @@ nonisolated final class SplitStreamServer: @unchecked Sendable {
                     if case .failed = state { ready.signal() }
                 }
                 listener.newConnectionHandler = { [weak self] connection in
-                    self?.queue.async { self?.accept(connection) }
+                    guard let self else { return }
+                    self.queue.async { self.accept(connection) }
                 }
                 // Its own queue: we wait for it to be ready while holding `queue`.
                 listener.start(queue: DispatchQueue(label: "com.subhash.Velvet.split-stream.listener"))

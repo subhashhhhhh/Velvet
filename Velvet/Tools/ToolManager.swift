@@ -242,7 +242,7 @@ final class ToolManager {
             let release = try await Self.latestRelease(tool)
 
             status[tool] = .downloading(received: 0, total: 0)
-            let downloaded = try await Self.download(release.url) { received, total in
+            let downloaded = try await Self.download(release.url) { [weak self] received, total in
                 Task { @MainActor [weak self] in
                     guard let self, case .downloading = self.status[tool] else { return }
                     self.status[tool] = .downloading(received: received, total: total)

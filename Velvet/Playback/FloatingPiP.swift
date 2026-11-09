@@ -165,13 +165,17 @@ final class FloatingPiP: NSObject, NSWindowDelegate {
 
     private func animate(_ duration: Double, _ changes: @escaping (NSAnimationContext) -> Void, completion: (() -> Void)? = nil) {
         animating = true
+        // AppKit calls the completion handler on the main thread.
+        nonisolated(unsafe) let completion = completion
         NSAnimationContext.runAnimationGroup({ ctx in
             ctx.duration = duration
             ctx.timingFunction = CAMediaTimingFunction(controlPoints: 0.2, 0.9, 0.25, 1)
             changes(ctx)
         }, completionHandler: { [weak self] in
-            self?.animating = false
-            completion?()
+            MainActor.assumeIsolated {
+                self?.animating = false
+                completion?()
+            }
         })
     }
 }
