@@ -27,7 +27,8 @@ nonisolated enum CaptionParser {
             }
         }
         if case .object(let auto) = json["automatic_captions"] {
-            if let (key, list) = auto.first(where: { $0.key.hasSuffix("-orig") }), let url = vtt(list) {
+            if let key = originalTrackKey(in: auto, json: json, preferredLanguage: preferredLanguage),
+               let list = auto[key], let url = vtt(list) {
                 let lang = String(key.dropLast("-orig".count))
                 let name = (list[0]["name"].string ?? lang).replacingOccurrences(of: " (Original)", with: "")
                 out.append(CaptionTrack(id: key, languageCode: lang, label: "\(name) (auto-generated)",
@@ -41,6 +42,25 @@ nonisolated enum CaptionParser {
             }
         }
         return out
+    }
+
+    /// The auto-generated track in the language actually spoken. Usually there's one "-orig"
+    /// track, but auto-dubbed videos list one per dubbed audio language ("ar-orig", "ko-orig",
+    /// …), so taking the first one picked a random language. Prefer the video's language, then
+    /// the original audio track's, then the viewer's.
+    private static func originalTrackKey(in auto: [String: JSON], json: JSON, preferredLanguage: String) -> String? {
+        let originals = auto.keys.filter { $0.hasSuffix("-orig") }.sorted()
+        guard originals.count > 1 else { return originals.first }
+        func base(_ code: String) -> String { String(code.prefix { $0 != "-" && $0 != "_" }).lowercased() }
+        func match(_ language: String?) -> String? {
+            guard let language, !language.isEmpty else { return nil }
+            return originals.first { $0 == "\(language)-orig" }
+                ?? originals.first { base($0) == base(language) }
+        }
+        let originalAudio = json["formats"].array.first { f in
+            f["vcodec"].string == "none" && (f["format_note"].string ?? "").lowercased().contains("original")
+        }?["language"].string
+        return match(json["language"].string) ?? match(originalAudio) ?? match(preferredLanguage) ?? originals.first
     }
 }
 
