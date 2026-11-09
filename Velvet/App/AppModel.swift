@@ -115,7 +115,18 @@ final class AppModel {
     @ObservationIgnored private var animateSlotUntil = Date.distantPast
     private static let theaterAnimation = Animation.smooth(duration: 0.3)
 
-    func updatePlayerSlot(_ slot: CGRect) {
+    /// Where each layout puts the player (key: theater mode). While the layout switches, the
+    /// outgoing slot is still on screen and still reports its frame, sometimes after the new
+    /// one; only the current mode's slot may move the player.
+    @ObservationIgnored private var slots: [Bool: CGRect] = [:]
+
+    func updatePlayerSlot(_ slot: CGRect, theater: Bool) {
+        slots[theater] = slot
+        guard theater == settings.theaterMode else { return }
+        setPlayerSlot(slot)
+    }
+
+    private func setPlayerSlot(_ slot: CGRect) {
         guard slot != playerSlot else { return }
         if Date() < animateSlotUntil {
             withAnimation(Self.theaterAnimation) { playerSlot = slot }
@@ -124,11 +135,15 @@ final class AppModel {
         }
     }
 
-    /// T: the player spans the page, or goes back into its column.
+    /// T: the player spans the page, or goes back into its column. Rapid presses just retarget
+    /// the animation.
     func toggleTheaterMode() {
         guard isShowingWatchPage, !playerFullscreen else { return }
         animateSlotUntil = Date().addingTimeInterval(0.5)
         withAnimation(Self.theaterAnimation) { settings.theaterMode.toggle() }
+        // Go straight for the other layout's last known slot: a slot view that never left the
+        // screen (toggled back mid-animation) won't report a change.
+        if let known = slots[settings.theaterMode] { setPlayerSlot(known) }
     }
     var watchViewport: CGRect = .zero { didSet { playerVisibilityChanged() } }
 
@@ -265,9 +280,12 @@ final class AppModel {
             player?.onPictureInPicturePauseChange = nil
             guard let self else { return }
             self.pipPlayer = nil
-            // PiP was carrying a video whose page is gone: X ends it, "return" reopens the page.
+            let ours = self.closingPiPOurselves
+            self.closingPiPOurselves = false
+            // PiP was carrying a video whose page is gone: ✕ ends it, "return" reopens the page.
+            // If Velvet closed it itself, keep the video: show its page rather than stop it.
             if self.watchPageHidden, let watching = self.watching, watching.player === player {
-                if restored { self.watchPageHidden = false } else { self.closePlayer() }
+                if restored || ours { self.watchPageHidden = false } else { self.closePlayer() }
             }
         }
         player.onPictureInPicturePauseChange = { [weak self] paused in self?.pip.setPlaying(!paused) }
@@ -314,6 +332,7 @@ final class AppModel {
     /// `forcePictureInPicture`: the user asked for PiP explicitly (the I key), so the
     /// "keep playing when leaving" preference doesn't apply.
     func leaveWatchPage(forcePictureInPicture: Bool = false) {
+        returnFromPiPTask?.cancel()
         guard let watching, !watchPageHidden else {
             if shortsOverlay != nil { closePlayer() }
             return
@@ -329,18 +348,27 @@ final class AppModel {
     }
 
     /// Back to the page of the video playing in PiP.
+    @ObservationIgnored private var returnFromPiPTask: Task<Void, Never>?
+
     func showWatchPage() {
         guard watchPageHidden else { return }
         watchPageHidden = false
-        // Let the page lay out its player so PiP can animate back into it.
-        Task {
+        // Let the page lay out its player so PiP can animate back into it. Cancelled if the
+        // page is left again first (I pressed twice quickly).
+        returnFromPiPTask?.cancel()
+        returnFromPiPTask = Task {
             try? await Task.sleep(for: .milliseconds(150))
+            guard !Task.isCancelled, !watchPageHidden else { return }
             exitPictureInPicture()
         }
     }
 
+    /// Set while Velvet closes PiP itself, so the close isn't taken for the user's ✕.
+    @ObservationIgnored private var closingPiPOurselves = false
+
     func exitPictureInPicture() {
         guard pip.isActive else { return }
+        closingPiPOurselves = true
         let inline = pipPlayer?.inlineView
         pip.exit(returnTo: inline?.window, rect: inline.map { $0.convert($0.bounds, to: nil) })
     }
@@ -417,6 +445,7 @@ final class AppModel {
     }
 
     @ObservationIgnored private var keyMonitor: Any?
+    @ObservationIgnored private var nextIKeyAllowed = Date.distantPast
 
     /// The I key in both directions: from the watch page to the page under it (video in PiP),
     /// and back. Handled app-wide because once the page is hidden there's no player view to
@@ -430,6 +459,10 @@ final class AppModel {
                       event.charactersIgnoringModifiers?.lowercased() == "i",
                       event.modifierFlags.isDisjoint(with: [.command, .option, .control]),
                       event.window === self.mainWindow, !Self.isTyping(in: event.window) else { return false }
+                // PiP's window animates in and out (~0.5 s); presses during that are swallowed
+                // so its open and close can't interleave.
+                guard Date() >= self.nextIKeyAllowed else { return true }
+                self.nextIKeyAllowed = Date().addingTimeInterval(0.6)
                 if self.watchPageHidden {
                     self.showWatchPage()
                 } else if self.isShowingWatchPage {
@@ -887,9 +920,10 @@ final class AppModel {
                         isARepeat: false, keyCode: key == "i" ? 34 : 17) {
                         NSApp.postEvent(event, atStart: false)
                     }
-                    try? await Task.sleep(for: .seconds(1))
-                    log.info("Test: after \(key, privacy: .public): watch page shown=\(self.isShowingWatchPage), hidden=\(self.watchPageHidden), PiP=\(self.pip.isActive), theater=\(self.settings.theaterMode)")
-                    try? await Task.sleep(for: .seconds(3))
+                    // `-VelvetKeyGap <seconds>` (default 4) presses faster, e.g. 0.15 to mash a key.
+                    let gap = UserDefaults.standard.double(forKey: "VelvetKeyGap")
+                    try? await Task.sleep(for: .seconds(gap > 0 ? gap : 4))
+                    log.info("Test: after \(key, privacy: .public): watch page shown=\(self.isShowingWatchPage), hidden=\(self.watchPageHidden), PiP=\(self.pip.isActive), theater=\(self.settings.theaterMode), playing=\(!(self.watching?.player.isPaused ?? true))")
                 }
             }
         }

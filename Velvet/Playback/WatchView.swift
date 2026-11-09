@@ -18,12 +18,12 @@ struct WatchView: View {
                 VStack(spacing: 0) {
                 if theater {
                     // Theater: the player spans the page in a black band, the page continues below.
-                    playerSlot(width: geo.size.width, height: theaterHeight(in: geo.size))
+                    playerSlot(width: geo.size.width, height: theaterHeight(in: geo.size), theater: true)
                 }
                 HStack(alignment: .top, spacing: Self.columnSpacing) {
                     VStack(alignment: .leading, spacing: 18) {
                         if !theater {
-                            playerSlot(width: size.width, height: size.height)
+                            playerSlot(width: size.width, height: size.height, theater: false)
                                 .frame(maxWidth: .infinity)
                         }
                         WatchInfoView(session: session)
@@ -82,10 +82,10 @@ struct WatchView: View {
     /// Exact player size: full column width at the video's aspect ratio, shrunk (keeping the
     /// ratio) only when that would leave too little room below it. No letterbox padding.
     /// The player's slot. The player itself is drawn by RootView's PlayerLayer on top of it.
-    private func playerSlot(width: CGFloat, height: CGFloat) -> some View {
+    private func playerSlot(width: CGFloat, height: CGFloat, theater: Bool) -> some View {
         Color.clear
             .frame(width: width, height: height)
-            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.updatePlayerSlot($0) }
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.updatePlayerSlot($0, theater: theater) }
     }
 
     /// Theater band: the video's height at full width, capped so the title still shows below

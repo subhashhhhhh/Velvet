@@ -95,7 +95,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetChannel <channelId>` | Opens the channel page. |
 | `-VelvetChip <n>` | Selects home topic chip n, then tests the topic cache. |
 | `-VelvetNavigateTest YES` | Goes to History (video moves to PiP), then opens the video again. |
-| `-VelvetKeyTest "t,i,i"` | With `-VelvetPlay`: from 8 s, posts each key as a real key event, 4 s apart, and logs the page state. |
+| `-VelvetKeyTest "t,i,i"` | With `-VelvetPlay`: from 8 s, posts each key as a real key event, 4 s apart (`-VelvetKeyGap <seconds>` to change), and logs the page state. |
 | `-VelvetMinimizeTest YES` | Does what the I key does at 8 s: back to the previous page, video in PiP. |
 | `-VelvetDumpJSON <videoId> -VelvetDumpDir <path>` | Saves raw signed-in responses (watch page, comments, replies, home) for parser work. Read-only. |
 | `-VelvetQueue <id1,id2>` | Starts with these videos in the queue. Use a short `-VelvetPlay` video near its end to test auto-advance. |
