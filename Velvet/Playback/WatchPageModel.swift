@@ -10,6 +10,7 @@ final class WatchPageModel {
 
     // Account actions (optimistic: update first, roll back on failure).
     private(set) var likeStatus: LikeStatus = .none
+    private(set) var isSubscribed = false
     private(set) var playlists: [PlaylistOption] = []
     private(set) var actionError: String?
 
@@ -63,6 +64,7 @@ final class WatchPageModel {
             }
             details = d
             likeStatus = d.likeStatus
+            isSubscribed = d.isSubscribed
             related = d.related
             relatedToken = d.relatedContinuation
             commentsToken = d.commentsToken
@@ -97,6 +99,23 @@ final class WatchPageModel {
             } catch {
                 likeStatus = previous
                 actionError = "Couldn't update your rating: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    // MARK: - Subscription
+
+    func setSubscribed(_ subscribed: Bool) {
+        guard signedIn else { actionError = "Sign in to subscribe."; return }
+        guard let channelId = details?.channel?.id else { return }
+        let previous = isSubscribed
+        isSubscribed = subscribed
+        Task {
+            do {
+                if subscribed { try await client.subscribe(to: channelId) } else { try await client.unsubscribe(from: channelId) }
+            } catch {
+                isSubscribed = previous
+                actionError = "Couldn't update your subscription: \(error.localizedDescription)"
             }
         }
     }

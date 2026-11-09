@@ -99,6 +99,7 @@ private struct WatchInfoView: View {
     @State private var descriptionExpanded = false
     @State private var branding: DeArrowBranding?
     @State private var titleHovered = false
+    @State private var confirmingUnsubscribe = false
 
     private var page: WatchPageModel { session.page }
     private var video: Video { session.video }
@@ -137,11 +138,34 @@ private struct WatchInfoView: View {
     }
 
     private var channel: some View {
-        Button {
-            if let id = page.details?.channel?.id ?? video.channelId { app.openChannel(id) }
-        } label: { channelLabel }
-        .buttonStyle(.plain)
-        .help("Go to channel")
+        HStack(spacing: 16) {
+            Button {
+                if let id = page.details?.channel?.id ?? video.channelId { app.openChannel(id) }
+            } label: { channelLabel }
+            .buttonStyle(.plain)
+            .help("Go to channel")
+            subscribeButton
+        }
+        .confirmationDialog("Unsubscribe from \(page.details?.channel?.name ?? "this channel")?", isPresented: $confirmingUnsubscribe) {
+            Button("Unsubscribe", role: .destructive) { page.setSubscribed(false) }
+        }
+    }
+
+    /// Shown once the page knows the channel (and so whether you're subscribed).
+    @ViewBuilder
+    private var subscribeButton: some View {
+        if page.details?.channel?.id != nil {
+            if page.isSubscribed {
+                Button { confirmingUnsubscribe = true } label: { Label("Subscribed", systemImage: "checkmark") }
+                    .buttonStyle(PillButtonStyle())
+                    .background(.quaternary, in: Capsule())
+            } else {
+                Button("Subscribe") { page.setSubscribed(true) }
+                    .buttonStyle(PillButtonStyle())
+                    .foregroundStyle(Color(nsColor: .windowBackgroundColor))
+                    .background(.primary, in: Capsule())
+            }
+        }
     }
 
     private var channelLabel: some View {

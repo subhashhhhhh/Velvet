@@ -36,6 +36,11 @@ nonisolated enum WatchParser {
             .first { $0["sectionIdentifier"].string == "comment-item-section" }
         let commentsToken = commentsSection?.first("continuationCommand")?["token"].string
 
+        // The button's own flag, else the subscription entity the newer layout links to it.
+        let subscribed = secondary.first("subscribeButtonRenderer")?["subscribed"].bool
+            ?? json["frameworkUpdates"].first("subscriptionStateEntity")?["subscribed"].bool
+            ?? false
+
         return WatchDetails(
             videoId: videoId,
             title: title,
@@ -46,6 +51,7 @@ nonisolated enum WatchParser {
             description: secondary["attributedDescription"]["content"].string
                 ?? secondary["description"].text ?? "",
             channel: channel,
+            isSubscribed: subscribed,
             likeCount: likeTitle.flatMap { $0.first?.isNumber == true ? $0 : nil },
             likeCountWhenLiked: likedTitle.flatMap { $0.first?.isNumber == true ? $0 : nil },
             likeStatus: status,
