@@ -71,7 +71,18 @@ struct QueuePreview: View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Label("Queue · \(items.count)", systemImage: "list.number").font(.headline)
+                    if let source = app.queue.source {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Label("Playing from \(source)", systemImage: "music.note.list")
+                                .font(.headline)
+                                .lineLimit(1)
+                            Text("\(items.count) more")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Label("Queue · \(items.count)", systemImage: "list.number").font(.headline)
+                    }
                     Spacer()
                     Button("Play Next", systemImage: "forward.end.fill") { app.playNextInQueue() }
                         .buttonStyle(.borderless)

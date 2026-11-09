@@ -3,7 +3,11 @@ import SwiftUI
 /// Videos to play after the current one ("Play Next" / "Add to Queue").
 @Observable
 final class PlaybackQueue {
-    private(set) var items: [Video] = []
+    private(set) var items: [Video] = [] {
+        didSet { if items.isEmpty { source = nil } }
+    }
+    /// The playlist the queue was filled from, while it's playing through it.
+    private(set) var source: String?
 
     var isEmpty: Bool { items.isEmpty }
 
@@ -26,6 +30,13 @@ final class PlaybackQueue {
     }
 
     func clear() { items.removeAll() }
+
+    /// Playing a playlist: its remaining videos replace the queue, like an album in Music.
+    func replace(with videos: [Video], source: String) {
+        var seen = Set<String>()
+        items = videos.filter { seen.insert($0.id).inserted }
+        self.source = items.isEmpty ? nil : source
+    }
 
     func popFirst() -> Video? { items.isEmpty ? nil : items.removeFirst() }
 }

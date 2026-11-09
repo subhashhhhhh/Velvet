@@ -4,6 +4,8 @@ import SwiftUI
 struct SectionedFeedView: View {
     let feed: SectionedFeedModel
     var emptyMessage = "Nothing here yet."
+    /// Set for playlists: clicking a video plays the playlist from there (the rest queued).
+    var playlistTitle: String?
     @Environment(AppModel.self) private var app
     @State private var layout = GridLayout()
     @State private var tracker = GridTracker()
@@ -56,7 +58,13 @@ struct SectionedFeedView: View {
     private func grid(_ videos: [Video]) -> some View {
         LazyVGrid(columns: VideoGrid.gridItems(columnCount), alignment: .leading, spacing: 18) {
             ForEach(videos) { video in
-                Button { app.open(video) } label: { VideoCard(video: video) }
+                Button {
+                    if let playlistTitle {
+                        app.play(video, inPlaylist: feed.sections.flatMap(\.videos), title: playlistTitle)
+                    } else {
+                        app.open(video)
+                    }
+                } label: { VideoCard(video: video) }
                     .buttonStyle(.plain)
                     .trackedInGrid(video.id, by: tracker)
                     .onAppear {
@@ -99,7 +107,8 @@ struct LibraryFeedPage: View {
                                    message: "Sign in to see your \(destination.title.lowercased()).")
             case .signedIn:
                 if let feed = app.libraryFeed(for: destination) {
-                    SectionedFeedView(feed: feed, emptyMessage: destination == .history ? "No watch history yet." : "No videos saved yet.")
+                    SectionedFeedView(feed: feed, emptyMessage: destination == .history ? "No watch history yet." : "No videos saved yet.",
+                                      playlistTitle: destination == .watchLater ? "Watch Later" : nil)
                         .id(app.authRevision)
                 }
             }
@@ -213,7 +222,7 @@ struct PlaylistDetailView: View {
     var body: some View {
         Group {
             if let feed {
-                SectionedFeedView(feed: feed, emptyMessage: "This playlist is empty.")
+                SectionedFeedView(feed: feed, emptyMessage: "This playlist is empty.", playlistTitle: feed.title ?? summary.title)
             } else {
                 // Not empty: an empty view takes no space and never runs its .task.
                 ProgressView().controlSize(.large).frame(maxWidth: .infinity, maxHeight: .infinity)

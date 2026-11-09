@@ -724,6 +724,15 @@ final class AppModel {
     }
 
     /// Plays a queued video now (from the Queue page), taking it out of the queue.
+    /// A video clicked in a playlist: play it, with the rest of the playlist queued after it.
+    func play(_ video: Video, inPlaylist videos: [Video], title: String) {
+        let index = videos.firstIndex { $0.id == video.id } ?? 0
+        // Shorts open their own player and upcoming videos can't play yet; skip both.
+        let rest = videos.dropFirst(index + 1).filter { $0.kind != .short && $0.kind != .upcoming }
+        queue.replace(with: Array(rest), source: title)
+        open(video)
+    }
+
     func playFromQueue(_ video: Video) {
         queue.remove(video.id)
         open(video)
@@ -1003,6 +1012,16 @@ final class AppModel {
                     if let p = playlistsModel?.playlists.first(where: { $0.id != "WL" }) {
                         log.info("Test: opening playlist \(p.title, privacy: .public)")
                         open(p)
+                        // `-VelvetPlaylistPlay YES`: then play its second video, as a click would.
+                        if UserDefaults.standard.bool(forKey: "VelvetPlaylistPlay") {
+                            let feed = SectionedFeedModel(browseId: p.browseId, client: client)
+                            await feed.loadIfNeeded()
+                            let videos = feed.sections.flatMap(\.videos)
+                            if videos.count > 1 {
+                                play(videos[1], inPlaylist: videos, title: p.title)
+                                log.info("Test: playing \(videos[1].id, privacy: .public) of \(videos.count); queue \(self.queue.items.count) from \(self.queue.source ?? "nil", privacy: .public), next \(self.queue.items.first?.id ?? "-", privacy: .public) (playlist's third: \(videos.count > 2 ? videos[2].id : "-", privacy: .public))")
+                            }
+                        }
                         return
                     }
                 }
