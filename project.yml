@@ -6,6 +6,11 @@ options:
   deploymentTarget:
     macOS: "15.0"
   createIntermediateGroups: true
+  # AppIcon.icon (Icon Composer) is one file for actool, not a folder of resources.
+  fileTypes:
+    icon:
+      file: true
+      buildPhase: resources
 packages:
   MPVKit:
     url: https://github.com/mpvkit/MPVKit

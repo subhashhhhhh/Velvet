@@ -1,6 +1,12 @@
 // Draws Velvet's app icon: dark brushed velvet with a crimson play button.
 // Regenerate: swiftc -O Design/AppIcon.swift -o /tmp/appicon && /tmp/appicon <out-dir>,
-// then copy icon_<px>.png into Velvet/Assets.xcassets/AppIcon.appiconset (see its Contents.json).
+// then copy <out-dir>/Velvet-1024.png to Velvet/AppIcon.icon/Assets/Velvet.png.
+//
+// The icon is an Icon Composer file (Velvet/AppIcon.icon) with this image as its only layer,
+// full bleed: macOS 26 and later give it the system's shape and shadow. For macOS 15, Xcode
+// draws rounded fallback images from it. (A plain icon set can't serve both: a full-bleed
+// square shows unrounded on macOS 15, and a pre-rounded one showed a blank placeholder on
+// macOS 27.)
 
 import AppKit
 import CoreGraphics

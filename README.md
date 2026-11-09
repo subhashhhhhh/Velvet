@@ -1,7 +1,7 @@
 <!-- Written in ASD-STE100 Simplified Technical English. Keep sentences short: 20 words or fewer in procedures, 25 or fewer in descriptions. One instruction in each step. -->
 
 <p align="center">
-  <img src="Velvet/Assets.xcassets/AppIcon.appiconset/icon_256x256.png" width="128" height="128" alt="Velvet icon">
+  <img src="docs/icon.png" width="128" height="128" alt="Velvet icon">
 </p>
 
 <h1 align="center">Velvet</h1>
