@@ -58,8 +58,16 @@ final class AppModel {
     /// The submitted query; non-nil shows search results instead of the destination.
     var activeSearch: String?
 
+    let alerts = SystemNotifications()
+    @ObservationIgnored private(set) lazy var inbox = InboxModel(client: client, preferences: settings, alerts: alerts)
+    var showingInbox = false
+
     init() {
         destination = settings.startPage
+        alerts.onOpen = { [weak self] video in
+            self?.bringToFront()
+            self?.open(video)
+        }
         #if DEBUG
         // `-VelvetSearch "query"` opens straight into results; handy for testing.
         if let q = UserDefaults.standard.string(forKey: "VelvetSearch"), !q.isEmpty {
@@ -337,7 +345,7 @@ final class AppModel {
     /// Brings Velvet's window forward from another app. Since macOS 14, a self-requested
     /// `NSApp.activate()` is ignored while the user is in another app (cooperative activation),
     /// so ask LaunchServices to open Velvet instead — like a Dock click, which switches Spaces.
-    private func bringToFront() {
+    func bringToFront() {
         suppressAutoPiPUntil = Date().addingTimeInterval(4)
         NSApp.activate()
         let config = NSWorkspace.OpenConfiguration()
@@ -735,6 +743,8 @@ final class AppModel {
                 do {
                     let watch = try await client.next(videoId: id)
                     save(watch, "watch.json")
+                    let details = WatchParser.details(from: watch, videoId: id)
+                    log.info("Dump: watch subscribed \(details?.isSubscribed ?? false), bell \(details?.bell?.setting?.label ?? "-", privacy: .public), \(details?.bell?.params.count ?? 0) choices")
                     if let token = WatchParser.details(from: watch, videoId: id)?.commentsToken {
                         let comments = try await client.next(continuation: token)
                         save(comments, "comments.json")
@@ -750,6 +760,19 @@ final class AppModel {
                     let promoted = Set(videos.map(\.id)).subtracting(VideoParser.videos(in: home, skipping: VideoParser.promotionKeys).map(\.id))
                     log.info("Dump: home promotions hidden: \(promoted.count)")
                     log.info("Dump: home \(videos.count) videos, notInterested=\(videos.filter { $0.notInterestedToken != nil }.count), dontRecommend=\(videos.filter { $0.dontRecommendChannelToken != nil }.count)")
+                    if UserDefaults.standard.bool(forKey: "VelvetDumpNotifications") {
+                        save(try await client.unseenNotificationCount(), "unseen.json")
+                        save(try await client.notificationMenu(), "notifications.json")
+                        save(try await client.browse("FEchannels"), "channels.json")
+                        if let channel = UserDefaults.standard.string(forKey: "VelvetDumpChannel") {
+                            let page = try await client.browse(channel)
+                            save(page, "channel.json")
+                            let bell = ChannelParser.header(from: page, channelId: channel)?.bell
+                            log.info("Dump: channel bell \(bell?.setting?.label ?? "-", privacy: .public), \(bell?.params.count ?? 0) choices")
+                        }
+                        let inbox = NotificationParser.inbox(from: try await client.notificationMenu())
+                        log.info("Dump: inbox \(inbox.items.count) items, \(inbox.items.filter { $0.videoId != nil }.count) with video, \(inbox.items.filter { $0.readToken != nil }.count) with read token, more: \(inbox.continuation != nil)")
+                    }
                     log.info("Dump finished")
                 } catch {
                     log.error("Dump failed: \(error.localizedDescription, privacy: .public)")
@@ -791,6 +814,10 @@ final class AppModel {
                     log.info("Test: back on \(self.watching?.video.id ?? "nothing", privacy: .public) at \(self.watching?.player.position ?? -1, format: .fixed(precision: 1))s, playing=\(!(self.watching?.player.isPaused ?? true)), loading=\(self.watching?.player.isLoading ?? false)")
                 }
             }
+        }
+        // `-VelvetInboxTest YES`: open the notifications popover at 6s.
+        if UserDefaults.standard.bool(forKey: "VelvetInboxTest") {
+            Task { try? await Task.sleep(for: .seconds(6)); showingInbox = true }
         }
         // `-VelvetQueue id1,id2`: start with these videos queued.
         for id in (UserDefaults.standard.string(forKey: "VelvetQueue") ?? "").split(separator: ",") {
@@ -907,6 +934,7 @@ final class AppModel {
     }
 
     func signOut() async {
+        inbox.stopPolling()
         await client.setAuth(nil)
         await client.invalidateConfig()
         SessionStore.shared.clear()
@@ -923,6 +951,17 @@ final class AppModel {
         authState = .signedIn
         authRevision += 1
         await refreshAccount()
+        inbox.startPolling()
+        if settings.uploadAlerts { await alerts.requestPermission() }
+    }
+
+    /// Turning upload alerts on: ask macOS for permission and check right away.
+    func uploadAlertsChanged() {
+        guard authState == .signedIn else { return }
+        Task {
+            if settings.uploadAlerts { await alerts.requestPermission() }
+            await inbox.poll()
+        }
     }
 
     func refreshAccount() async {

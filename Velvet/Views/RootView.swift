@@ -12,6 +12,11 @@ struct RootView: View {
             detail
         }
         .overlay(alignment: .topLeading) { PlayerLayer() }
+        .toolbar {
+            if app.authState == .signedIn {
+                ToolbarItem(placement: .primaryAction) { InboxButton() }
+            }
+        }
         .searchable(text: $app.searchText, placement: .toolbar, prompt: "Search YouTube")
         .onSubmit(of: .search) { app.submitSearch() }
         .sheet(isPresented: $app.showingSignIn) {

@@ -99,6 +99,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetQueue <id1,id2>` | Starts with these videos in the queue. Use a short `-VelvetPlay` video near its end to test auto-advance. |
 | `-VelvetSidebarTest YES` | Hides the sidebar at 8 s and shows it at 12 s, like the toolbar button. Logs the grid layout (category `Layout`). Add `-VelvetSlowSidebar YES` for a 10× slower grid animation. |
 | `-VelvetShortsBackTest <shortId>` | With `-VelvetPlay`: opens the Short at 8 s and goes Back at 16 s. The video must resume where it was. |
+| `-VelvetInboxTest YES` | Opens the notifications popover at 6 s. Reading the inbox marks it seen on YouTube. Add `-settings.uploadAlerts '<false/>'` in tests to avoid the macOS permission prompt. |
 | `-VelvetWindowWidth <points>` | Sets the window width. Use it for layout checks. |
 | `-VelvetPiPTest YES`, `-VelvetPiPSkipTest YES` | Tests PiP and the PiP skip buttons. |
 | `-VelvetScrollPiPTest YES` | Scrolls the watch page to start and stop PiP. `-VelvetScrollY <points>` sets the depth. |

@@ -125,6 +125,11 @@ final class Preferences {
     var autoCaptions: Bool { didSet { save(autoCaptions, .autoCaptions) } }
     var queueAutoAdvance: Bool { didSet { save(queueAutoAdvance, .queueAutoAdvance) } }
 
+    // Notifications
+    /// macOS notifications for new items in your YouTube inbox (uploads from belled channels).
+    var uploadAlerts: Bool { didSet { save(uploadAlerts, .uploadAlerts) } }
+    var notificationCheckMinutes: Int { didSet { save(notificationCheckMinutes, .notificationCheckMinutes) } }
+
     // SponsorBlock
     var sponsorBlockEnabled: Bool { didSet { save(sponsorBlockEnabled, .sponsorBlockEnabled) } }
     var sponsorActions: [SponsorCategory: SponsorAction] { didSet { saveCodable(sponsorActions, .sponsorActions) } }
@@ -171,6 +176,8 @@ final class Preferences {
         pipStyle = PiPStyle(rawValue: get(.pipStyle, "")) ?? .floating
         autoCaptions = get(.autoCaptions, false)
         queueAutoAdvance = get(.queueAutoAdvance, true)
+        uploadAlerts = get(.uploadAlerts, true)
+        notificationCheckMinutes = get(.notificationCheckMinutes, 5)
 
         sponsorBlockEnabled = get(.sponsorBlockEnabled, true)
         var actions = Dictionary(uniqueKeysWithValues: SponsorCategory.allCases.map { ($0, $0.defaultAction) })
@@ -205,7 +212,7 @@ final class Preferences {
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
         autoPictureInPicture = fresh.autoPictureInPicture; pipOnScroll = fresh.pipOnScroll
-        autoCaptions = fresh.autoCaptions; queueAutoAdvance = fresh.queueAutoAdvance; pipOnNavigate = fresh.pipOnNavigate; pipStyle = fresh.pipStyle
+        autoCaptions = fresh.autoCaptions; queueAutoAdvance = fresh.queueAutoAdvance; uploadAlerts = fresh.uploadAlerts; notificationCheckMinutes = fresh.notificationCheckMinutes; pipOnNavigate = fresh.pipOnNavigate; pipStyle = fresh.pipStyle
         sponsorBlockEnabled = fresh.sponsorBlockEnabled; sponsorActions = fresh.sponsorActions
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
         deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
@@ -218,6 +225,7 @@ final class Preferences {
     private enum Key: CaseIterable {
         case startPage, showShortsShelf, shortsAfterRows, videosPerRow, videosPerRowSidebarHidden, hideWatched, hideMembersOnly, hidePromotions
         case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions, pipOnNavigate, pipStyle, queueAutoAdvance
+        case uploadAlerts, notificationCheckMinutes
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
         case jsRuntime, autoUpdateTools

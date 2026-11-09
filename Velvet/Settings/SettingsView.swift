@@ -218,6 +218,7 @@ private struct AccountPane: View {
                 } footer: {
                     Text("Your session is stored only on this Mac, readable by your user account alone.")
                 }
+                NotificationsSection()
             case .signedOut, .unknown:
                 Section {
                     LabeledContent("Google Account") {
@@ -229,6 +230,34 @@ private struct AccountPane: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct NotificationsSection: View {
+    @Environment(AppModel.self) private var app
+    @State private var allowed = true
+
+    var body: some View {
+        @Bindable var settings = app.settings
+        Section {
+            Toggle("Notify me about new uploads", isOn: $settings.uploadAlerts)
+                .onChange(of: settings.uploadAlerts) { app.uploadAlertsChanged(); Task { allowed = await app.alerts.isAllowed } }
+            Picker("Check every", selection: $settings.notificationCheckMinutes) {
+                ForEach([2, 5, 10, 15, 30], id: \.self) { Text("\($0) minutes").tag($0) }
+            }
+            if settings.uploadAlerts && !allowed {
+                LabeledContent("Notifications are off for Velvet in macOS.") {
+                    Button("Open Settings…") {
+                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension")!)
+                    }
+                }
+            }
+        } header: {
+            Text("Notifications")
+        } footer: {
+            Text("Alerts come from your YouTube notifications: uploads from channels whose bell is on (All or Personalized), replies and mentions. Velvet checks while it's running, even with its window closed. Reading them marks them seen on YouTube, as opening the bell there does.")
+        }
+        .task { allowed = await app.alerts.isAllowed }
     }
 }
 
