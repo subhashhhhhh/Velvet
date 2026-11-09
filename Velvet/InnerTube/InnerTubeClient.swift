@@ -183,6 +183,31 @@ actor InnerTubeClient {
         return json
     }
 
+    // MARK: Notifications
+
+    /// The notification inbox (YouTube's bell menu); `token` continues it.
+    func notificationMenu(continuation token: String? = nil) async throws -> JSON {
+        var body: [String: JSON] = ["notificationsMenuRequestType": "NOTIFICATIONS_MENU_REQUEST_TYPE_INBOX"]
+        if let token { body["ctoken"] = .string(token) }
+        return try await post("notification/get_notification_menu", body)
+    }
+
+    /// How many notifications are new since the inbox was last opened. Reading the inbox
+    /// (`notificationMenu`) resets this count on YouTube, like clicking the bell there.
+    func unseenNotificationCount() async throws -> JSON {
+        try await post("notification/get_unseen_count", [:])
+    }
+
+    /// Marks a notification read (the request comes with the notification).
+    func recordNotificationInteraction(_ serialized: String) async throws {
+        _ = try await post("notification/record_interactions", ["serializedRecordNotificationInteractionsRequests": [.string(serialized)]])
+    }
+
+    /// Sets a subscribed channel's bell (All / Personalized / None).
+    func setChannelNotifications(params: String) async throws {
+        _ = try await post("notification/modify_channel_preference", ["params": .string(params)])
+    }
+
     /// The signed-in account's name, handle and photo.
     func accountMenu() async throws -> JSON {
         try await post("account/account_menu", [:])

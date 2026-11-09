@@ -79,7 +79,6 @@ struct ChannelView: View {
 private struct ChannelHeaderView: View {
     let header: ChannelHeader
     let model: ChannelModel
-    @State private var confirmingUnsubscribe = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -104,24 +103,14 @@ private struct ChannelHeaderView: View {
                 subscribeButton
             }
         }
-        .confirmationDialog("Unsubscribe from \(header.name)?", isPresented: $confirmingUnsubscribe) {
-            Button("Unsubscribe", role: .destructive) { model.setSubscribed(false) }
-        }
     }
 
-    @ViewBuilder
     private var subscribeButton: some View {
-        if model.isSubscribed {
-            Button { confirmingUnsubscribe = true } label: { Label("Subscribed", systemImage: "checkmark") }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-        } else {
-            Button("Subscribe") { model.setSubscribed(true) }
-                .buttonStyle(.borderedProminent)
-                .tint(.primary)
-                .foregroundStyle(Color(nsColor: .windowBackgroundColor))
-                .controlSize(.large)
-        }
+        SubscribeButton(channelName: header.name, isSubscribed: model.isSubscribed, bell: model.bell,
+                        onSubscribe: { model.setSubscribed(true) },
+                        onUnsubscribe: { model.setSubscribed(false) },
+                        onBell: { model.setBell($0) })
+            .controlSize(.large)
     }
 }
 

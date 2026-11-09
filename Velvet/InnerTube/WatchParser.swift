@@ -52,6 +52,7 @@ nonisolated enum WatchParser {
                 ?? secondary["description"].text ?? "",
             channel: channel,
             isSubscribed: subscribed,
+            bell: subscribed ? NotificationParser.bell(in: secondary) : nil,
             likeCount: likeTitle.flatMap { $0.first?.isNumber == true ? $0 : nil },
             likeCountWhenLiked: likedTitle.flatMap { $0.first?.isNumber == true ? $0 : nil },
             likeStatus: status,

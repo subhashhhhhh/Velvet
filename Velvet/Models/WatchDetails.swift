@@ -25,6 +25,8 @@ nonisolated struct WatchDetails: Sendable {
     var channel: ChannelInfo?
     /// The signed-in user is subscribed to the channel.
     var isSubscribed = false
+    /// The channel's notification bell (subscribed channels only).
+    var bell: ChannelBell?
     /// Formatted like count as shown when you haven't liked it, e.g. "68K".
     var likeCount: String?
     /// The count YouTube shows once you've liked it (it's preformatted, so we can't add 1 ourselves).

@@ -102,8 +102,6 @@ private struct WatchInfoView: View {
     @State private var descriptionExpanded = false
     @State private var branding: DeArrowBranding?
     @State private var titleHovered = false
-    @State private var confirmingUnsubscribe = false
-
     private var page: WatchPageModel { session.page }
     private var video: Video { session.video }
 
@@ -149,25 +147,16 @@ private struct WatchInfoView: View {
             .help("Go to channel")
             subscribeButton
         }
-        .confirmationDialog("Unsubscribe from \(page.details?.channel?.name ?? "this channel")?", isPresented: $confirmingUnsubscribe) {
-            Button("Unsubscribe", role: .destructive) { page.setSubscribed(false) }
-        }
     }
 
     /// Shown once the page knows the channel (and so whether you're subscribed).
     @ViewBuilder
     private var subscribeButton: some View {
-        if page.details?.channel?.id != nil {
-            if page.isSubscribed {
-                Button { confirmingUnsubscribe = true } label: { Label("Subscribed", systemImage: "checkmark") }
-                    .buttonStyle(PillButtonStyle())
-                    .background(.quaternary, in: Capsule())
-            } else {
-                Button("Subscribe") { page.setSubscribed(true) }
-                    .buttonStyle(PillButtonStyle())
-                    .foregroundStyle(Color(nsColor: .windowBackgroundColor))
-                    .background(.primary, in: Capsule())
-            }
+        if let channel = page.details?.channel, channel.id != nil {
+            SubscribeButton(channelName: channel.name, isSubscribed: page.isSubscribed, bell: page.bell,
+                            onSubscribe: { page.setSubscribed(true) },
+                            onUnsubscribe: { page.setSubscribed(false) },
+                            onBell: { page.setBell($0) })
         }
     }
 

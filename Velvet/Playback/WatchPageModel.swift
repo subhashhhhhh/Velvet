@@ -11,6 +11,7 @@ final class WatchPageModel {
     // Account actions (optimistic: update first, roll back on failure).
     private(set) var likeStatus: LikeStatus = .none
     private(set) var isSubscribed = false
+    private(set) var bell: ChannelBell?
     private(set) var playlists: [PlaylistOption] = []
     private(set) var actionError: String?
 
@@ -68,6 +69,7 @@ final class WatchPageModel {
             details = d
             likeStatus = d.likeStatus
             isSubscribed = d.isSubscribed
+            bell = d.bell
             related = d.related
             relatedToken = d.relatedContinuation
             commentsToken = d.commentsToken
@@ -111,14 +113,30 @@ final class WatchPageModel {
     func setSubscribed(_ subscribed: Bool) {
         guard signedIn else { actionError = "Sign in to subscribe."; return }
         guard let channelId = details?.channel?.id else { return }
-        let previous = isSubscribed
+        let previous = (isSubscribed, bell)
         isSubscribed = subscribed
+        bell = subscribed ? ChannelBell.afterSubscribing(to: channelId) : nil
         Task {
             do {
                 if subscribed { try await client.subscribe(to: channelId) } else { try await client.unsubscribe(from: channelId) }
             } catch {
-                isSubscribed = previous
+                (isSubscribed, bell) = previous
                 actionError = "Couldn't update your subscription: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    // MARK: - Notification bell
+
+    func setBell(_ setting: BellSetting) {
+        guard let current = bell, let params = current.params[setting], current.setting != setting else { return }
+        bell?.setting = setting
+        Task {
+            do {
+                try await client.setChannelNotifications(params: params)
+            } catch {
+                bell?.setting = current.setting
+                actionError = "Couldn't change notifications: \(error.localizedDescription)"
             }
         }
     }

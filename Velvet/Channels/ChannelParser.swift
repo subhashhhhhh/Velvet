@@ -18,6 +18,8 @@ nonisolated struct ChannelHeader: Sendable {
     var videoCount: String?
     var description: String?
     var isSubscribed: Bool
+    /// The channel's notification bell (subscribed channels only).
+    var bell: ChannelBell?
     var tabs: [ChannelTab]
 }
 
@@ -68,8 +70,26 @@ nonisolated enum ChannelParser {
             videoCount: videoCount,
             description: h["description"]["descriptionPreviewViewModel"]["description"]["content"].string,
             isSubscribed: subscribed,
+            bell: subscribed ? bell(in: h, json: json) : nil,
             tabs: tabs
         )
+    }
+
+    /// The bell's choices; the current one from the menu's selection, else from the
+    /// notification-state entity the subscribe button links to.
+    private static func bell(in header: JSON, json: JSON) -> ChannelBell? {
+        guard var bell = NotificationParser.bell(in: header) else { return nil }
+        if bell.setting == nil, let key = header.first("subsNotificationStateKey")?.string {
+            for m in json["frameworkUpdates"]["entityBatchUpdate"]["mutations"].array where m["entityKey"].string == key {
+                switch m["payload"]["subscriptionNotificationStateEntity"]["state"].string {
+                case "SUBSCRIPTION_NOTIFICATION_STATE_ALL": bell.setting = .all
+                case "SUBSCRIPTION_NOTIFICATION_STATE_OCCASIONAL": bell.setting = .personalized
+                case "SUBSCRIPTION_NOTIFICATION_STATE_OFF": bell.setting = .none
+                default: break
+                }
+            }
+        }
+        return bell
     }
 
     static func sortChips(in json: JSON) -> [SortChip] {

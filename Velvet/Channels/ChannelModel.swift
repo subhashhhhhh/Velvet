@@ -81,6 +81,7 @@ final class ChannelModel: Identifiable {
     private(set) var header: ChannelHeader?
     private(set) var error: String?
     private(set) var isSubscribed = false
+    private(set) var bell: ChannelBell?
     private(set) var actionError: String?
     var selectedTab: ChannelTab.Kind = .videos
     private(set) var tabs: [ChannelTab.Kind: ChannelTabContent] = [:]
@@ -106,6 +107,7 @@ final class ChannelModel: Identifiable {
             }
             header = h
             isSubscribed = h.isSubscribed
+            bell = h.bell
             for tab in h.tabs { tabs[tab.kind] = ChannelTabContent(tab: tab, channelId: id, client: client) }
             if tabs[selectedTab] == nil, let first = h.tabs.first { selectedTab = first.kind }
             MemoryRelief.soon()
@@ -116,14 +118,30 @@ final class ChannelModel: Identifiable {
 
     func setSubscribed(_ subscribed: Bool) {
         guard isSignedIn() else { actionError = "Sign in to subscribe."; return }
-        let previous = isSubscribed
+        let previous = (isSubscribed, bell)
         isSubscribed = subscribed
+        bell = subscribed ? ChannelBell.afterSubscribing(to: id) : nil
         Task {
             do {
                 if subscribed { try await client.subscribe(to: id) } else { try await client.unsubscribe(from: id) }
             } catch {
-                isSubscribed = previous
+                (isSubscribed, bell) = previous
                 actionError = "Couldn't update your subscription: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    // MARK: - Notification bell
+
+    func setBell(_ setting: BellSetting) {
+        guard let current = bell, let params = current.params[setting], current.setting != setting else { return }
+        bell?.setting = setting
+        Task {
+            do {
+                try await client.setChannelNotifications(params: params)
+            } catch {
+                bell?.setting = current.setting
+                actionError = "Couldn't change notifications: \(error.localizedDescription)"
             }
         }
     }
