@@ -34,6 +34,8 @@ nonisolated struct WatchDetails: Sendable {
     var likeStatus: LikeStatus
     var related: [Video]
     var relatedContinuation: String?
+    /// Filters above the related videos (All, From the series, a topic, For you, Watched).
+    var relatedChips: [RelatedChip] = []
     var commentsToken: String?
     /// "Top chat" token when the video is a live stream with chat.
     var liveChatToken: String?
@@ -93,4 +95,11 @@ nonisolated struct PlaylistOption: Identifiable, Hashable, Sendable {
     var isPrivate: Bool
 
     var isWatchLater: Bool { id == "WL" }
+}
+
+/// A related-videos filter. "All" has no token: it restores the list the page came with.
+nonisolated struct RelatedChip: Hashable, Sendable, Identifiable {
+    var id: String { title }
+    let title: String
+    let token: String?
 }

@@ -68,7 +68,7 @@ final class AppModel {
         let entry = await series.watching(session.video, title: details.title,
                                           channelId: details.channel?.id, channelName: details.channel?.name)
         guard let entry, let next = entry.next, watching === session, queue.isEmpty else { return }
-        queue.replace(with: [next.video], source: entry.name)
+        queue.start([session.video, next.video], at: 0, source: entry.name)
     }
 
     /// DeArrow branding for `video` per current settings (nil when off or nothing better exists).
@@ -902,16 +902,17 @@ final class AppModel {
     /// Plays a queued video now (from the Queue page), taking it out of the queue.
     /// A video clicked in a playlist: play it, with the rest of the playlist queued after it.
     func play(_ video: Video, inPlaylist videos: [Video], title: String) {
-        let index = videos.firstIndex { $0.id == video.id } ?? 0
         // Shorts open their own player and upcoming videos can't play yet; skip both.
-        let rest = videos.dropFirst(index + 1).filter { $0.kind != .short && $0.kind != .upcoming }
-        queue.replace(with: Array(rest), source: title)
+        let playable = videos.filter { ($0.kind != .short && $0.kind != .upcoming) || $0.id == video.id }
+        let index = playable.firstIndex { $0.id == video.id } ?? 0
+        queue.start(playable, at: index, source: title)
         open(video)
     }
 
+    /// A video clicked in the queue panel: everything before it counts as played.
     func playFromQueue(_ video: Video) {
-        queue.remove(video.id)
-        open(video)
+        guard let target = queue.jump(to: video.id) else { open(video); return }
+        if watching?.video.id != target.id { open(target) }
     }
 
     /// Loads `next` while `current` holds the PiP window, then swaps them, so there's
@@ -1201,6 +1202,21 @@ final class AppModel {
                 log.info("Test: AI filter: \(self.aiFilter.blocked.count) blocked, \(self.aiFilter.likely.count) likely; home \(videos.count) videos, \(known.count) with handles (e.g. \(known.first?.channelHandle ?? "-", privacy: .public)), \(hidden.count) hidden")
             }
         }
+        // `-VelvetRelatedChipTest YES` (with -VelvetPlay): log the related chips, pick the second,
+        // then go back to All, logging the related list each time.
+        if UserDefaults.standard.bool(forKey: "VelvetRelatedChipTest") {
+            Task {
+                try? await Task.sleep(for: .seconds(8))
+                guard let page = watching?.page else { return }
+                log.info("Test: related chips \(page.relatedChips.map { "\($0.title)\($0.token == nil ? "*" : "")" }.joined(separator: ", "), privacy: .public); \(page.related.count) related")
+                guard page.relatedChips.count > 1 else { return }
+                let all = page.related.first?.title ?? "-"
+                await page.selectRelatedChip(page.relatedChips[1])
+                log.info("Test: \(page.relatedChips[1].title, privacy: .public): \(page.related.count) related, first \(page.related.first?.title ?? "-", privacy: .public)")
+                await page.selectRelatedChip(page.relatedChips[0])
+                log.info("Test: back to All: \(page.related.count) related, first unchanged \(page.related.first?.title == all)")
+            }
+        }
         // `-VelvetHistoryTest YES`: History → a video → a channel, then Back, Back, Forward,
         // logging the page after each step.
         if UserDefaults.standard.bool(forKey: "VelvetHistoryTest") {
@@ -1248,7 +1264,7 @@ final class AppModel {
                             let videos = feed.sections.flatMap(\.videos)
                             if videos.count > 1 {
                                 play(videos[1], inPlaylist: videos, title: p.title)
-                                log.info("Test: playing \(videos[1].id, privacy: .public) of \(videos.count); queue \(self.queue.items.count) from \(self.queue.source ?? "nil", privacy: .public), next \(self.queue.items.first?.id ?? "-", privacy: .public) (playlist's third: \(videos.count > 2 ? videos[2].id : "-", privacy: .public))")
+                                log.info("Test: playing \(videos[1].id, privacy: .public) of \(videos.count); queue \(self.queue.items.count) upcoming, \(self.queue.played.count) played, from \(self.queue.source ?? "nil", privacy: .public), next \(self.queue.items.first?.id ?? "-", privacy: .public) (playlist's third: \(videos.count > 2 ? videos[2].id : "-", privacy: .public))")
                             }
                         }
                         return

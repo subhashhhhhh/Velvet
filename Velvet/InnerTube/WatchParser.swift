@@ -30,6 +30,10 @@ nonisolated enum WatchParser {
         let related = VideoParser.videos(in: secondaryColumn).filter { $0.id != videoId }
         let relatedToken = secondaryColumn.all("continuationItemRenderer")
             .compactMap { $0["continuationEndpoint"]["continuationCommand"]["token"].string }.last
+        let relatedChips = secondaryColumn.all("chipCloudChipRenderer").compactMap { c -> RelatedChip? in
+            guard let title = c["text"].text else { return nil }
+            return RelatedChip(title: title, token: c["navigationEndpoint"]["continuationCommand"]["token"].string)
+        }
 
         let commentsSection = results["results"]["results"]["contents"].array
             .map { $0["itemSectionRenderer"] }
@@ -58,6 +62,7 @@ nonisolated enum WatchParser {
             likeStatus: status,
             related: related,
             relatedContinuation: relatedToken,
+            relatedChips: relatedChips,
             commentsToken: commentsToken,
             liveChatToken: LiveChatParser.initialToken(from: json)
         )

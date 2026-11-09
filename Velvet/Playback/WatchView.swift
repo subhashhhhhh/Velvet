@@ -73,7 +73,7 @@ struct WatchView: View {
     }
 
     private static let padding: CGFloat = 20
-    private static let relatedWidth: CGFloat = 360
+    private static let relatedWidth: CGFloat = 400
     private static let columnSpacing: CGFloat = 24
 
     /// Exact player size: full column width at the video's aspect ratio, shrunk (keeping the
@@ -403,6 +403,17 @@ private struct RelatedList: View {
         let lastId = related.last?.id
         VStack(alignment: .leading, spacing: 10) {
             if columns { Text("Up Next").font(.headline) }
+            if page.relatedChips.count > 1 {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(page.relatedChips) { chip in
+                            Chip(title: chip.title, isOn: chip.title == (page.selectedRelatedChip ?? page.relatedChips.first?.title)) {
+                                Task { await page.selectRelatedChip(chip) }
+                            }
+                        }
+                    }
+                }
+            }
             LazyVStack(alignment: .leading, spacing: columns ? 18 : 10) {
                 ForEach(segments) { segment in
                     switch segment {
@@ -451,9 +462,9 @@ private struct RelatedRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            RemoteImage(url: brandedThumbnail ?? video.thumbnail(minWidth: 336),
-                        fallback: brandedThumbnail == nil ? nil : video.thumbnail(minWidth: 336))
-                .frame(width: 168, height: 94.5)
+            RemoteImage(url: brandedThumbnail ?? video.thumbnail(minWidth: 400),
+                        fallback: brandedThumbnail == nil ? nil : video.thumbnail(minWidth: 400))
+                .frame(width: 200, height: 112.5)
                 .overlay(alignment: .topLeading) {
                     if video.isMembersOnly { MembersOnlyBadge().scaleEffect(0.85, anchor: .topLeading).padding(4) }
                 }

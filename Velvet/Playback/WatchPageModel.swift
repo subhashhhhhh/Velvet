@@ -87,6 +87,7 @@ final class WatchPageModel {
             bell = d.bell
             related = d.related
             relatedToken = d.relatedContinuation
+            relatedChips = d.relatedChips
             commentsToken = d.commentsToken
             if let token = d.liveChatToken {
                 let chat = LiveChatModel(client: client)
@@ -195,6 +196,37 @@ final class WatchPageModel {
     func dismissError() { actionError = nil }
 
     // MARK: - Related
+
+    // MARK: Related filters
+
+    private(set) var relatedChips: [RelatedChip] = []
+    private(set) var selectedRelatedChip: String?
+    /// The list the page came with, for going back to "All" without a request.
+    @ObservationIgnored private var allRelated: (videos: [Video], token: String?)?
+
+    func selectRelatedChip(_ chip: RelatedChip) async {
+        guard chip.title != (selectedRelatedChip ?? relatedChips.first?.title), !isLoadingRelated else { return }
+        if allRelated == nil { allRelated = (related, relatedToken) }
+        selectedRelatedChip = chip.title
+        guard let token = chip.token else {
+            related = allRelated?.videos ?? related
+            relatedToken = allRelated?.token
+            return
+        }
+        isLoadingRelated = true
+        related = []
+        defer { isLoadingRelated = false }
+        do {
+            let page = WatchParser.relatedPage(from: try await client.next(continuation: token))
+            // A slower response for a chip that's no longer selected is dropped.
+            guard selectedRelatedChip == chip.title else { return }
+            related = page.videos.filter { $0.id != videoId }
+            relatedToken = page.continuation
+            MemoryRelief.soon()
+        } catch {
+            log.error("Related chip failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
 
     func loadMoreRelated() async {
         guard let token = relatedToken, !isLoadingRelated else { return }
