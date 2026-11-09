@@ -11,10 +11,31 @@ struct ShortsPlayerView: View {
 
     private static let panelWidth: CGFloat = 400
 
+    /// The video's shape (width ÷ height), 9:16 until mpv reports it. Shorts can be anything
+    /// from 9:16 to square (a few older ones are landscape).
+    private var aspect: CGFloat {
+        guard let size = controller.session?.player.videoSize, size.width > 0, size.height > 0 else { return 9 / 16 }
+        return min(max(size.width / size.height, 9 / 16), 16 / 9)
+    }
+
+    /// Full height at the video's shape; narrower windows (or the comments panel) shrink it.
+    private func cardSize(in container: CGSize) -> CGSize {
+        var height = max(320, container.height - 40)
+        // Room left beside the actions, the up/down buttons, spacing and the side panel.
+        let maxWidth = container.width - 40 - 64 - 50 - 18 * 3
+            - (controller.panel != .none ? Self.panelWidth + 18 : 0)
+        var width = height * aspect
+        if width > maxWidth, maxWidth > 100 {
+            width = maxWidth
+            height = width / aspect
+        }
+        return CGSize(width: width.rounded(), height: height.rounded())
+    }
+
     var body: some View {
         GeometryReader { geo in
-            let height = max(320, geo.size.height - 40)
-            let width = height * 9 / 16
+            let card = cardSize(in: geo.size)
+            let (width, height) = (card.width, card.height)
             HStack(alignment: .center, spacing: 18) {
                 Spacer(minLength: 0)
                 ZStack {
@@ -45,6 +66,8 @@ struct ShortsPlayerView: View {
             .padding(.horizontal, 20)
             .frame(width: geo.size.width, height: geo.size.height)
             .background(ScrollPager { delta in controller.go(delta) })
+            // A Short that isn't 9:16 (square, 3:4) reshapes its card once mpv knows its size.
+            .animation(.smooth(duration: 0.25), value: aspect)
         }
         .animation(.easeOut(duration: 0.2), value: controller.panel)
         .navigationTitle("Shorts")

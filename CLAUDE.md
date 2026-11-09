@@ -89,6 +89,7 @@ Start the Debug build with these arguments to test a feature:
 | Argument | Result |
 |---|---|
 | `-VelvetPlay <videoId>` | Opens the video at launch. |
+| `-VelvetShort <videoId>` | Opens the Short in the Shorts player at launch. |
 | `-VelvetStart <seconds>` | Starts playback at this time. |
 | `-VelvetSearch "<query>"` | Opens the search results. |
 | `-VelvetChannel <channelId>` | Opens the channel page. |

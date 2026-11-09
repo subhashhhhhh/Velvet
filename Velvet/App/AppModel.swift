@@ -815,6 +815,10 @@ final class AppModel {
                 }
             }
         }
+        // `-VelvetShort <id>`: open that Short in the Shorts player.
+        if let id = UserDefaults.standard.string(forKey: "VelvetShort"), !id.isEmpty {
+            open(Video(id: id, title: "Short \(id)", kind: .short))
+        }
         // `-VelvetInboxTest YES`: open the notifications popover at 6s.
         if UserDefaults.standard.bool(forKey: "VelvetInboxTest") {
             Task { try? await Task.sleep(for: .seconds(6)); showingInbox = true }
