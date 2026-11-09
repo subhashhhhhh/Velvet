@@ -34,7 +34,10 @@ struct ChannelView: View {
                     if !header.tabs.isEmpty {
                         tabBar(header.tabs)
                     }
-                    if let tab = model.currentTab {
+                    if let results = model.searchResults {
+                        ChannelTabGrid(content: results, columns: VideoGrid.columns(layout, prefs: app.settings)) { openPlaylist = $0 }
+                            .id("search \(results.query ?? "")")
+                    } else if let tab = model.currentTab {
                         ChannelTabGrid(content: tab, columns: VideoGrid.columns(layout, prefs: app.settings)) { openPlaylist = $0 }.id(tab.tab.id)
                     }
                 }
@@ -56,11 +59,15 @@ struct ChannelView: View {
             // The home feed's chips, for the same look.
             HStack(spacing: 8) {
                 ForEach(tabs) { tab in
-                    Chip(title: tab.title, isOn: model.selectedTab == tab.kind) { model.selectedTab = tab.kind }
+                    Chip(title: tab.title, isOn: model.searchResults == nil && model.selectedTab == tab.kind) {
+                        model.clearSearch()
+                        model.selectedTab = tab.kind
+                    }
                 }
             }
             Spacer()
-            if let tab = model.currentTab, !tab.chips.isEmpty {
+            ChannelSearchField(model: model)
+            if model.searchResults == nil, let tab = model.currentTab, !tab.chips.isEmpty {
                 Menu {
                     ForEach(tab.chips) { chip in
                         Button { Task { await tab.select(chip) } } label: {
@@ -171,5 +178,34 @@ private struct ChannelTabGrid: View {
             }
         }
         .task { await content.loadIfNeeded() }
+    }
+}
+
+/// Searches the channel's videos (YouTube's channel search). Esc or ✕ goes back to the tabs.
+private struct ChannelSearchField: View {
+    let model: ChannelModel
+    @State private var text = ""
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass").font(.system(size: 11, weight: .medium)).foregroundStyle(.secondary)
+            TextField("Search channel", text: $text)
+                .textFieldStyle(.plain)
+                .font(.system(size: 13))
+                .onSubmit { model.search(text) }
+                .onExitCommand { text = ""; model.clearSearch() }
+            if !text.isEmpty || model.searchResults != nil {
+                Button { text = ""; model.clearSearch() } label: {
+                    Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
+                }
+                .buttonStyle(.plain)
+                .help("Back to the channel's videos")
+            }
+        }
+        .padding(.horizontal, 10)
+        .frame(width: 200, height: 30)
+        .background(RoundedRectangle(cornerRadius: 8, style: .continuous).fill(.primary.opacity(0.1)))
+        // A chip that's already been cleared by a tab chip empties the field too.
+        .onChange(of: model.searchResults == nil) { _, cleared in if cleared { text = "" } }
     }
 }

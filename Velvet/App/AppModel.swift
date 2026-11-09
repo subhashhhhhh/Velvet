@@ -1106,7 +1106,19 @@ final class AppModel {
                 }
             }
         }
-        if let id = UserDefaults.standard.string(forKey: "VelvetChannel"), !id.isEmpty { openChannel(id) }
+        if let id = UserDefaults.standard.string(forKey: "VelvetChannel"), !id.isEmpty {
+            openChannel(id)
+            // `-VelvetChannelSearch "words"`: search inside the channel and log the results.
+            if let q = UserDefaults.standard.string(forKey: "VelvetChannelSearch"), !q.isEmpty {
+                Task {
+                    try? await Task.sleep(for: .seconds(4))
+                    channel?.search(q)
+                    try? await Task.sleep(for: .seconds(5))
+                    let results = channel?.searchResults
+                    log.info("Test: channel search \(q, privacy: .public): \(results?.videos.count ?? -1) videos, first \(results?.videos.first?.title ?? "-", privacy: .public)")
+                }
+            }
+        }
         // `-VelvetNavigateTest YES` (with -VelvetPlay): sidebar to History at 10s, reopen the video at 18s.
         if UserDefaults.standard.bool(forKey: "VelvetNavigateTest") {
             Task {

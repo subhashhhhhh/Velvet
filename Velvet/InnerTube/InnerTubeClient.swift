@@ -72,9 +72,10 @@ actor InnerTubeClient {
 
     // MARK: - Endpoints
 
-    func browse(_ browseId: String, params: String? = nil) async throws -> JSON {
+    func browse(_ browseId: String, params: String? = nil, query: String? = nil) async throws -> JSON {
         var body: [String: JSON] = ["browseId": .string(browseId)]
         if let params { body["params"] = .string(params) }
+        if let query { body["query"] = .string(query) }
         return try await post("browse", body)
     }
 

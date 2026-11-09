@@ -17,12 +17,18 @@ final class ChannelTabContent {
     var selectedChip: SortChip? { chips.first(where: \.selected) }
 
     @ObservationIgnored private var continuation: String?
+    /// Set for a search inside the channel (its videos matching these words).
+    let query: String?
     @ObservationIgnored private let channelId: String
     @ObservationIgnored private let client: InnerTubeClient
     @ObservationIgnored private let log = Logger(subsystem: "com.subhash.Velvet", category: "Channel")
 
-    init(tab: ChannelTab, channelId: String, client: InnerTubeClient) {
+    /// The channel page's search tab, as youtube.com requests it.
+    static let searchParams = "EgZzZWFyY2jyBgQKAloA"
+
+    init(tab: ChannelTab, channelId: String, client: InnerTubeClient, query: String? = nil) {
         self.tab = tab
+        self.query = query
         self.channelId = channelId
         self.client = client
     }
@@ -53,7 +59,8 @@ final class ChannelTabContent {
         do {
             let json: JSON
             switch request {
-            case .first: json = try await client.browse(channelId, params: tab.params)
+            case .first:
+                json = try await client.browse(channelId, params: query == nil ? tab.params : Self.searchParams, query: query)
             case .more(let t), .sort(let t): json = try await client.browse(continuation: t)
             }
             if case .more = request {} else { videos = []; shorts = []; playlists = [] }
@@ -96,6 +103,19 @@ final class ChannelModel: Identifiable {
     }
 
     var currentTab: ChannelTabContent? { tabs[selectedTab] }
+
+    /// A search inside the channel, shown instead of the selected tab.
+    private(set) var searchResults: ChannelTabContent?
+
+    func search(_ query: String) {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { clearSearch(); return }
+        guard q != searchResults?.query else { return }
+        searchResults = ChannelTabContent(tab: ChannelTab(kind: .videos, title: "Search", params: ""),
+                                          channelId: id, client: client, query: q)
+    }
+
+    func clearSearch() { searchResults = nil }
 
     func load() async {
         guard header == nil else { return }

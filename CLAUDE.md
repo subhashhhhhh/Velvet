@@ -92,7 +92,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetShort <videoId>` | Opens the Short in the Shorts player at launch. Add `-VelvetShortsSwipeTest YES` to go to the next Short at 8 s and back at 14 s; `-VelvetSlowShorts YES` slows the slide to 3 s. |
 | `-VelvetStart <seconds>` | Starts playback at this time. |
 | `-VelvetSearch "<query>"` | Opens the search results. |
-| `-VelvetChannel <channelId>` | Opens the channel page. |
+| `-VelvetChannel <channelId>` | Opens the channel page. Add `-VelvetChannelSearch "words"` to search inside it at 4 s and log the results. |
 | `-VelvetChip <n>` | Selects home topic chip n, then tests the topic cache. |
 | `-VelvetNavigateTest YES` | Goes to History (video moves to PiP), then opens the video again. |
 | `-VelvetKeyTest "t,i,i"` | With `-VelvetPlay`: from 8 s, posts each key as a real key event, 4 s apart (`-VelvetKeyGap <seconds>` to change), and logs the page state and search text. Write `cmd+k` for ⌘K. |
