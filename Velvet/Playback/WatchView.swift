@@ -9,18 +9,33 @@ struct WatchView: View {
     private var video: Video { session.video }
     private var page: WatchPageModel { session.page }
 
+    /// The side column's height (wide layout): the page must be at least that tall.
+    @State private var sideHeight: CGFloat = 0
+    /// The scroll content's height, for the spacer that makes room for the side column.
+    @State private var contentHeight: CGFloat = 0
+    /// A last, empty row that makes the page as tall as the side column when the main
+    /// column is shorter. (A minimum height on the stack itself broke its lazy layout.)
+    @State private var spacerHeight: CGFloat = 0
+
+    // The page is one lazy stack, the scroll view's direct content: the top (player, details)
+    // and then each comment as its own row. The side column (related videos, chat, queue) is
+    // laid over the right of it rather than beside it in an HStack. On macOS 15 a lazy stack
+    // nested inside columns re-placed its rows on every scroll step: a fullscreen watch page on
+    // an M1 scrolled at ~45 fps with ~100 hitches in 3 s. As the scroll view's direct content
+    // it stays lazy (rows off screen are freed, a new page of comments costs only its rows).
     var body: some View {
         GeometryReader { geo in
             let theater = app.settings.theaterMode
             let wide = geo.size.width >= 1050
             let size = playerSize(in: geo.size, wide: wide)
+            let sideInset = wide ? Self.relatedWidth + Self.columnSpacing : 0
+            let bandHeight = theater ? theaterHeight(in: geo.size) : 0
             ScrollView {
-                VStack(spacing: 0) {
-                if theater {
-                    // Theater: the player spans the page in a black band, the page continues below.
-                    playerSlot(width: geo.size.width, height: theaterHeight(in: geo.size), theater: true)
-                }
-                HStack(alignment: .top, spacing: Self.columnSpacing) {
+                LazyVStack(alignment: .leading, spacing: 0) {
+                    if theater {
+                        // Theater: the player spans the page in a black band, the page continues below.
+                        playerSlot(width: geo.size.width, height: bandHeight, theater: true)
+                    }
                     VStack(alignment: .leading, spacing: 18) {
                         if !theater {
                             playerSlot(width: size.width, height: size.height, theater: false)
@@ -35,17 +50,30 @@ struct WatchView: View {
                             QueuePreview()
                             RelatedList(page: page, columns: true)
                         }
-                        CommentsSection(page: page, player: session.player)
                     }
-                    .frame(maxWidth: .infinity)
+                    .padding([.top, .leading], Self.padding)
+                    .padding(.trailing, Self.padding + sideInset)
+                    .padding(.bottom, 18)
+                    CommentsSection(page: page, player: session.player,
+                                    layout: .inline(leading: Self.padding, trailing: Self.padding + sideInset))
+                    Color.clear.frame(height: Self.padding + spacerHeight)
+                }
+                .overlay(alignment: .topTrailing) {
                     if wide {
                         SideColumn(page: page, chatHeight: max(360, size.height + 120))
                             .frame(width: Self.relatedWidth)
+                            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sideHeight = $0 }
+                            .padding(.top, bandHeight + Self.padding)
+                            .padding(.trailing, Self.padding)
                     }
                 }
-                .padding(Self.padding)
-                }
             }
+            .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, height in
+                contentHeight = height
+                updateSpacer(wide: wide, bandHeight: bandHeight)
+            }
+            .onChange(of: sideHeight) { updateSpacer(wide: wide, bandHeight: bandHeight) }
+            .onChange(of: wide) { updateSpacer(wide: wide, bandHeight: bandHeight) }
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.watchViewport = $0 }
         }
         .navigationTitle(page.details?.title ?? video.title)
@@ -70,6 +98,14 @@ struct WatchView: View {
             }
             return .systemAction
         })
+    }
+
+    /// Sizes the last row so the page is at least as tall as the side column.
+    private func updateSpacer(wide: Bool, bandHeight: CGFloat) {
+        let needed = wide ? bandHeight + Self.padding * 2 + sideHeight : 0
+        let main = contentHeight - spacerHeight
+        let next = max(0, (needed - main).rounded())
+        if abs(next - spacerHeight) > 1 { spacerHeight = next }
     }
 
     private static let padding: CGFloat = 20
@@ -400,7 +436,6 @@ private struct RelatedList: View {
     }
 
     var body: some View {
-        let lastId = related.last?.id
         VStack(alignment: .leading, spacing: 10) {
             if columns { Text("Up Next").font(.headline) }
             if page.relatedChips.count > 1 {
@@ -414,13 +449,15 @@ private struct RelatedList: View {
                     }
                 }
             }
-            LazyVStack(alignment: .leading, spacing: columns ? 18 : 10) {
+            // A plain stack: this list sits in the side column (laid over the page) or inside one
+            // row of the page's lazy stack, where a nested lazy stack would re-place its rows on
+            // every scroll step (slow on macOS 15). It's a few dozen rows; the marker loads more.
+            VStack(alignment: .leading, spacing: columns ? 18 : 10) {
                 ForEach(segments) { segment in
                     switch segment {
                     case .shorts(let shorts):
                         ShortsShelf(shorts: shorts, cardWidth: columns ? 150 : 112) { app.open($0) }
                             .padding(.vertical, 6)
-                            .onAppear { if shorts.last?.id == lastId { Task { await page.loadMoreRelated() } } }
                     case .videos(let videos):
                         if columns {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 240), spacing: 14, alignment: .top)], spacing: 14) {
@@ -432,14 +469,12 @@ private struct RelatedList: View {
                             ForEach(videos) { v in
                                 Button { app.open(v) } label: { RelatedRow(video: v) }
                                     .buttonStyle(.plain)
-                                    .onAppear {
-                                        if v.id == lastId { Task { await page.loadMoreRelated() } }
-                                    }
                             }
                         }
                     }
                 }
             }
+            LoadMoreMarker(count: page.related.count) { await page.loadMoreRelated() }
             if page.isLoadingRelated || (page.details == nil && page.loadError == nil) {
                 ProgressView().frame(maxWidth: .infinity)
             }
@@ -500,6 +535,15 @@ struct CommentsSection: View {
     let page: WatchPageModel
     let player: MPVPlayer
     var showsHeader = true
+
+    enum Layout {
+        /// Self-contained, in a panel with its own scroll view (Shorts).
+        case panel
+        /// Each part and each comment a separate row of the watch page's lazy stack, inset
+        /// from its sides.
+        case inline(leading: CGFloat, trailing: CGFloat)
+    }
+    var layout: Layout = .panel
     @Environment(AppModel.self) private var app
     /// Filters the comments loaded so far (YouTube has no comment search).
     @State private var query = ""
@@ -517,6 +561,44 @@ struct CommentsSection: View {
     }
 
     var body: some View {
+        switch layout {
+        case .panel:
+            VStack(alignment: .leading, spacing: 16) {
+                header
+                LazyVStack(alignment: .leading, spacing: 18) {
+                    ForEach(shown) { c in
+                        CommentRow(comment: c, page: page, threadId: c.id)
+                            .onAppear { loadMoreIfLast(c) }
+                    }
+                }
+                footer
+            }
+            .padding(.top, 6)
+        case .inline(let leading, let trailing):
+            // Separate rows (no container): in a lazy stack each becomes its own row.
+            header
+                .padding(.top, 6)
+                .padding(.bottom, 16)
+                .padding(.leading, leading).padding(.trailing, trailing)
+            ForEach(shown) { c in
+                CommentRow(comment: c, page: page, threadId: c.id)
+                    .padding(.bottom, 18)
+                    .padding(.leading, leading).padding(.trailing, trailing)
+                    .onAppear { loadMoreIfLast(c) }
+            }
+            footer
+                .padding(.leading, leading).padding(.trailing, trailing)
+        }
+    }
+
+    /// The last comment on screen asks for the next page (rows appear as they scroll in).
+    private func loadMoreIfLast(_ c: Comment) {
+        // While searching, more pages load only when asked.
+        if !searching, c.id == page.comments.last?.id { Task { await page.loadMoreComments() } }
+    }
+
+    @ViewBuilder
+    private var header: some View {
         VStack(alignment: .leading, spacing: 16) {
             if showsHeader {
                 HStack {
@@ -554,23 +636,18 @@ struct CommentsSection: View {
                 }
                 .font(.callout)
             }
-            LazyVStack(alignment: .leading, spacing: 18) {
-                ForEach(shown) { c in
-                    CommentRow(comment: c, page: page, threadId: c.id)
-                        .onAppear {
-                            // While searching, more pages load only when asked.
-                            if !searching, c.id == page.comments.last?.id { Task { await page.loadMoreComments() } }
-                        }
-                }
-            }
-            if page.isLoadingComments {
-                ProgressView().frame(maxWidth: .infinity)
-            } else if page.hasComments && !page.commentsLoaded && !searching {
-                // Fetch the first page only once the section scrolls into view.
-                Color.clear.frame(height: 1).onAppear { Task { await page.loadMoreComments() } }
-            }
         }
-        .padding(.top, 6)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder
+    private var footer: some View {
+        if page.isLoadingComments {
+            ProgressView().frame(maxWidth: .infinity)
+        } else if page.hasComments && !page.commentsLoaded && !searching {
+            // Fetch the first page only once the section scrolls into view.
+            Color.clear.frame(height: 1).onAppear { Task { await page.loadMoreComments() } }
+        }
     }
 
     private var searchField: some View {
@@ -864,5 +941,22 @@ private struct NextEpisodeCard: View {
             .padding(12)
             .background(.quinary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
+    }
+}
+
+/// The end of a list in a plain stack: loads the next page when it scrolls into view. (A row's
+/// onAppear would fire for every row at once outside a lazy stack.) Recreated when the list
+/// grows, so a marker that's still on screen after a short page reports itself again.
+private struct LoadMoreMarker: View {
+    let count: Int
+    let load: () async -> Void
+
+    var body: some View {
+        Color.clear
+            .frame(height: 1)
+            .onScrollVisibilityChange(threshold: 0.01) { visible in
+                if visible { Task { await load() } }
+            }
+            .id(count)
     }
 }
