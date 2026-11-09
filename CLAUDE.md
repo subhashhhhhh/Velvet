@@ -99,7 +99,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetMinimizeTest YES` | Does what the I key does at 8 s: back to the previous page, video in PiP. |
 | `-VelvetDumpJSON <videoId> -VelvetDumpDir <path>` | Saves raw signed-in responses (watch page, comments, replies, home) for parser work. Read-only. |
 | `-VelvetQueue <id1,id2>` | Starts with these videos in the queue. Use a short `-VelvetPlay` video near its end to test auto-advance. |
-| `-VelvetSidebarTest YES` | Collapses the sidebar to its rail at 8 s and expands it at 12 s, like the top bar button. The state is saved, so run `defaults write com.subhash.Velvet Sidebar.collapsed -bool false` after the test. Logs the grid layout (category `Layout`). Add `-VelvetSlowSidebar YES` for a 10× slower grid animation. |
+| `-VelvetSidebarTest YES` | Collapses the sidebar to its rail at 8 s and expands it at 12 s, like the top bar button. Debug builds don't save the sidebar state or the window frame, because they share the installed app's defaults and saved state. Logs the grid layout (category `Layout`). Add `-VelvetSlowSidebar YES` for a 10× slower grid animation. |
 | `-VelvetShortsBackTest <shortId>` | With `-VelvetPlay`: opens the Short at 8 s and goes Back at 16 s. The video must resume where it was. |
 | `-VelvetInboxTest YES` | Opens the notifications popover at 6 s. `-VelvetInboxTab comments` opens it on the Comments tab. Reading the inbox marks it seen on YouTube. Add `-settings.uploadAlerts '<false/>'` in tests to avoid the macOS permission prompt. |
 | `-VelvetMarkReadTest YES` | Marks the newest unread notification read, reloads the inbox and logs whether it stayed read. Changes that one notification's read state. |

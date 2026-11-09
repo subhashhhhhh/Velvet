@@ -134,6 +134,7 @@ private struct SidebarList: View {
             .font(.system(size: 11, weight: .semibold))
             .foregroundStyle(.tertiary)
             .textCase(.uppercase)
+            .tracking(0.4)
             .padding(.horizontal, 10)
             .padding(.top, 18)
             .padding(.bottom, 4)

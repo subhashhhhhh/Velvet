@@ -100,7 +100,14 @@ final class AppModel {
     /// The sidebar is (or is animating to being) a narrow icon rail. Grids pick their column
     /// count from this.
     var isSidebarCollapsed = UserDefaults.standard.bool(forKey: "Sidebar.collapsed") {
-        didSet { UserDefaults.standard.set(isSidebarCollapsed, forKey: "Sidebar.collapsed") }
+        didSet {
+            #if DEBUG
+            // Test copies share the installed app's defaults; don't change the user's sidebar.
+            return
+            #else
+            UserDefaults.standard.set(isSidebarCollapsed, forKey: "Sidebar.collapsed")
+            #endif
+        }
     }
     /// How much wider the page gets when the sidebar collapses to its rail.
     var sidebarWidth: CGFloat { SidebarMetrics.fullWidth - SidebarMetrics.railWidth }
@@ -535,9 +542,15 @@ final class AppModel {
         #endif
         windowFullscreen = mainWindow.styleMask.contains(.fullScreen)
         // A restored window may only report fullscreen a moment after it appears.
+        log.info("Window fullscreen state at launch: \(self.windowFullscreen), options \(NSApp.presentationOptions.rawValue)")
         Task { [weak self] in
-            try? await Task.sleep(for: .seconds(1.5))
-            if self?.mainWindow?.styleMask.contains(.fullScreen) == true { self?.hideToolbarInFullscreen() }
+            for delay in [0.5, 1.5, 4.0] {
+                try? await Task.sleep(for: .seconds(delay))
+                guard let self, let window = self.mainWindow else { return }
+                let toolbar = NSApp.windows.filter { $0 !== window && $0.frame.height == 52 }.map { "\($0.className) \(Int($0.frame.minY)) alpha \($0.alphaValue) visible \($0.isVisible)" }
+                self.log.info("Fullscreen check: fullscreen \(window.styleMask.contains(.fullScreen)), options \(NSApp.presentationOptions.rawValue), toolbar visible \(window.toolbar?.isVisible ?? false), windows \(toolbar, privacy: .public)")
+                if window.styleMask.contains(.fullScreen) { self.hideToolbarInFullscreen() }
+            }
         }
         for observer in fullscreenObservers { NotificationCenter.default.removeObserver(observer) }
         fullscreenObservers = [(NSWindow.willEnterFullScreenNotification, true), (NSWindow.willExitFullScreenNotification, false)].map { name, entering in

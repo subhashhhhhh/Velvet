@@ -78,7 +78,15 @@ struct RootView: View {
             }
         }
         #endif
-        .background(WindowReader { app.mainWindow = $0 })
+        .background(WindowReader { window in
+            #if DEBUG
+            // Test copies share the installed app's identity, so they'd otherwise save their
+            // window size and place (and fullscreen) as the user's.
+            window?.isRestorable = false
+            window?.setFrameAutosaveName("")
+            #endif
+            app.mainWindow = window
+        })
     }
 
     @ViewBuilder
