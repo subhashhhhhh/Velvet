@@ -90,7 +90,7 @@ CAUTION: Do not quit or kill the Velvet app that the user operates. The script i
 Ask the user before each release. A release goes to all users.
 
 1. Increase `MARKETING_VERSION` in `Velvet.xcodeproj` and in `project.yml` (the same value; `1.2` or `1.2.3`). Commit and push.
-2. Write the release notes in `dist/notes-<version>.md`: what changed, for users. Do not write install instructions; the script adds them.
+2. Write the release notes in `docs/releases/<version>.md` and commit them: what changed, for users. Do not write install instructions; the script adds them.
 3. Do `scripts/release.sh --publish`. It builds and signs the app for Apple silicon and for Intel, makes a DMG and a zip for each, creates the GitHub release, writes `updates/latest.json` (the in-app updater reads it) and updates the Homebrew cask.
 
 The release signature is the "Velvet Self-Signed" certificate in the login keychain. Installed copies accept only updates with this signature. Do not make a new certificate. Refer to `docs/signing.md`.

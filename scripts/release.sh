@@ -7,8 +7,8 @@
 #                                 updates/latest.json and the Homebrew cask
 #
 # The version comes from MARKETING_VERSION in the project. Release notes for
-# --publish are read from dist/notes-<version>.md: the changelog only; the
-# download and install instructions are appended here.
+# --publish are read from docs/releases/<version>.md (in git): the changelog
+# only; the download and install instructions are appended here.
 #
 # Every build is signed with the "Velvet Self-Signed" certificate in the login
 # keychain (docs/signing.md). The in-app updater only installs a download signed
@@ -45,9 +45,15 @@ TAP_REPO="subhashhhhhh/homebrew-velvet"
 security find-identity -p codesigning | grep -q "\"$IDENTITY\"" \
   || { echo "The \"$IDENTITY\" signing identity isn't in the keychain (see docs/signing.md)" >&2; exit 1; }
 
+NOTES="$ROOT/docs/releases/$VERSION.md"
 if [[ "${1:-}" == "--publish" ]]; then
+  # Everything --publish needs, checked before anything is built or published: a failure
+  # halfway would leave a live release that the cask or the updater can't use.
   [[ -z "$(git status --porcelain)" ]] || { echo "Commit your changes first" >&2; exit 1; }
   ! gh release view "v$VERSION" --repo "$REPO" >/dev/null 2>&1 || { echo "v$VERSION is already released; raise MARKETING_VERSION" >&2; exit 1; }
+  [[ -f "$NOTES" ]] || { echo "Missing release notes: $NOTES" >&2; exit 1; }
+  gh api "repos/$TAP_REPO/contents/Casks/velvet.rb" --silent 2>/dev/null \
+    || { echo "The Homebrew tap $TAP_REPO (with Casks/velvet.rb) doesn't exist yet; start it from packaging/velvet.rb" >&2; exit 1; }
 fi
 
 mkdir -p "$DIST"
@@ -100,8 +106,7 @@ assets=(Velvet-$VERSION-AppleSilicon.dmg Velvet-$VERSION-Intel.dmg Velvet-$VERSI
 
 [[ "${1:-}" == "--publish" ]] || exit 0
 
-notes="$DIST/notes-$VERSION.md"
-[[ -f "$notes" ]] || { echo "Missing $notes" >&2; exit 1; }
+notes="$NOTES"
 body="$BUILD/body.md"
 {
   cat "$notes"

@@ -69,7 +69,7 @@ On the first start, Velvet shows a welcome. The welcome has three steps:
 
 1. Information about Velvet.
 2. Sign in to your Google account. You can skip this step.
-3. Options for SponsorBlock, DeArrow and upload notifications.
+3. Options for SponsorBlock, DeArrow, your full search history and upload notifications.
 
 Velvet needs two tools to play videos: yt-dlp and a JavaScript runtime (Deno). On the first start, Velvet downloads these tools. The progress shows at the bottom of the window.
 
@@ -97,7 +97,7 @@ To sign in:
 1. Click **Sign In** at the right side of the top bar.
 2. Sign in to your Google account in the window that opens.
 
-Velvet keeps your session cookies in a file in `~/Library/Application Support/com.subhash.Velvet`. Only your macOS user account can read this file. Velvet sends the cookies only to YouTube and Google.
+Velvet keeps your session cookies in a file in `~/Library/Application Support/com.subhash.Velvet`. The file is not encrypted. Its permissions let only your macOS user account read it, but other apps that run as your user can read it, and backups include it. Velvet sends the cookies only to YouTube and Google. To remove them, sign out.
 
 Velvet does not collect data about you. It has no analytics and no telemetry.
 
@@ -105,9 +105,11 @@ Velvet connects only to these services:
 
 | Service | Data that Velvet sends | Why Velvet connects |
 |---|---|---|
-| YouTube and Google | Your session cookies, your searches, and the text that you type in the search box. | Feeds, search, search suggestions, videos, comments, notifications and account actions. If you select it, Velvet also reads your search history from Google My Activity. |
+| YouTube and Google | Your session cookies, your searches, and the text that you type in the search box. | Feeds, search, search suggestions, videos, comments, notifications and account actions. When you are signed in, Velvet also reads your search history (from all your devices) from Google My Activity. This is on by default. You can turn it off in the welcome or in **Settings › General**. |
 | GitHub | No personal data. | Downloads of yt-dlp and the JavaScript runtime, the daily update check, and the AiSList list of AI channels (only if you select the AI filter). |
-| SponsorBlock and DeArrow | The first four characters of a hash of the video ID. These services cannot find which video you watch. | Segments to skip, and better titles and thumbnails. |
+| SponsorBlock (sponsor.ajay.app) | The first four characters of a hash of the video ID. The service cannot find which video you watch. | Segments to skip. |
+| DeArrow titles (sponsor.ajay.app) | The first four characters of a hash of the video ID. | Better titles, and the time of a better thumbnail. |
+| DeArrow thumbnails (dearrow-thumb.ajay.app) | The video ID. This service can see which videos you look at. | The images of better thumbnails. To stop this, set **Settings › DeArrow › Thumbnails** to **Original**. |
 | Return YouTube Dislike | The video ID. | Dislike counts. |
 
 You can disable each service in the settings, except YouTube, Google and GitHub.
@@ -123,7 +125,7 @@ You can disable each service in the settings, except YouTube, Google and GitHub.
 - Channel pages. You can search in a channel and play all its videos.
 - Live streams with live chat.
 - Shorts in a vertical player.
-- Notifications from your account. Velvet can also show a macOS notification for a new upload.
+- Notifications from your account. Velvet can also show a macOS notification for a new upload. To find new uploads, Velvet reads your notifications. Then YouTube marks them as seen on all your devices, as when you open the bell on youtube.com.
 - Back and Forward, as in a browser.
 
 ### 4.2 Watch
@@ -257,7 +259,7 @@ The script builds a Release version and puts `Velvet.app` in `/Applications`. Wi
 
 You can do this procedure while Velvet runs. The new version starts when you start Velvet again.
 
-A build that you make yourself does not have the release signature. Because of this, it cannot install updates. It shows the release page.
+A build that you make yourself installs updates only if it has the release signature (the maintainer's certificate). Other builds cannot install updates. They show the release page.
 
 For information about the source code, refer to [CLAUDE.md](CLAUDE.md).
 

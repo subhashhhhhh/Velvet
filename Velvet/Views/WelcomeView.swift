@@ -168,7 +168,7 @@ private struct ChoicesStep: View {
                           isOn: $settings.sponsorBlockEnabled)
                 Divider().padding(.leading, 44)
                 ChoiceRow(symbol: "textformat", title: "Better titles and thumbnails",
-                          detail: "DeArrow replaces clickbait with titles and thumbnails from viewers.",
+                          detail: "DeArrow replaces clickbait with titles and thumbnails from viewers. Its thumbnail server sees which videos you look at.",
                           isOn: Binding(
                             get: { settings.deArrowTitles || settings.deArrowThumbnails != .off },
                             set: { on in
@@ -177,8 +177,12 @@ private struct ChoicesStep: View {
                             }))
                 if app.authState == .signedIn {
                     Divider().padding(.leading, 44)
+                    ChoiceRow(symbol: "clock.arrow.circlepath", title: "Full search history",
+                              detail: "The search box lists your past searches from all your devices, read from Google My Activity.",
+                              isOn: $settings.searchHistoryFromMyActivity)
+                    Divider().padding(.leading, 44)
                     ChoiceRow(symbol: "bell", title: "Notify me about new uploads",
-                              detail: "From channels whose bell is on. macOS asks for permission.",
+                              detail: "From channels whose bell is on. Velvet reads your YouTube notifications to find them, which marks them seen on YouTube. macOS asks for permission.",
                               isOn: $settings.uploadAlerts)
                 }
             }
