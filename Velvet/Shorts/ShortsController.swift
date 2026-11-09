@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 /// Drives the Shorts player: one PlayerSession for the current Short, prefetching the next.
 @Observable
@@ -8,6 +8,20 @@ final class ShortsController {
     let sequence: ShortsSequence
     private(set) var session: PlayerSession?
     var panel: Panel = .none
+    /// The last move: +1 next (slides up), −1 previous (slides down).
+    private(set) var direction = 1
+    /// During a slide, the card keeps the outgoing Short's shape (width ÷ height), so both
+    /// slide through the same frame; it reshapes to the new video after.
+    private(set) var slideAspect: CGFloat?
+    @ObservationIgnored private var slideEnd: Task<Void, Never>?
+
+    static let slide: Animation = {
+        #if DEBUG
+        // `-VelvetSlowShorts YES`: a 3 s slide, to inspect it frame by frame.
+        if UserDefaults.standard.bool(forKey: "VelvetSlowShorts") { return .smooth(duration: 3) }
+        #endif
+        return .smooth(duration: 0.35)
+    }()
 
     @ObservationIgnored private weak var app: AppModel?
     @ObservationIgnored private var started = false
@@ -33,7 +47,16 @@ final class ShortsController {
         let before = sequence.index
         sequence.move(delta)
         guard sequence.index != before else { return }
-        playCurrent()
+        direction = delta > 0 ? 1 : -1
+        if slideAspect == nil, let size = session?.player.videoSize, size.width > 0, size.height > 0 {
+            slideAspect = size.width / size.height
+        }
+        withAnimation(Self.slide) { playCurrent(animated: true) }
+        slideEnd?.cancel()
+        slideEnd = Task {
+            try? await Task.sleep(for: .milliseconds(UserDefaults.standard.bool(forKey: "VelvetSlowShorts") ? 3200 : 450))
+            if !Task.isCancelled { slideAspect = nil }
+        }
     }
 
     func pause() { session?.player.pause() }
@@ -44,9 +67,18 @@ final class ShortsController {
         session = nil
     }
 
-    private func playCurrent() {
+    private func playCurrent(animated: Bool = false) {
         guard !closed, let app, let video = sequence.current else { return }
-        session?.close()
+        if animated, let old = session {
+            // It slides out with its last frame showing: pause now, close after the slide.
+            old.player.pause()
+            Task {
+                try? await Task.sleep(for: .milliseconds(UserDefaults.standard.bool(forKey: "VelvetSlowShorts") ? 3200 : 450))
+                old.close()
+            }
+        } else {
+            session?.close()
+        }
         let s = app.makeSession(for: video)
         session = s
         s.start()

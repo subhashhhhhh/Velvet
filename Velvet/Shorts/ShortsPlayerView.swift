@@ -14,6 +14,7 @@ struct ShortsPlayerView: View {
     /// The video's shape (width ÷ height), 9:16 until mpv reports it. Shorts can be anything
     /// from 9:16 to square (a few older ones are landscape).
     private var aspect: CGFloat {
+        if let held = controller.slideAspect { return min(max(held, 9 / 16), 16 / 9) }
         guard let size = controller.session?.player.videoSize, size.width > 0, size.height > 0 else { return 9 / 16 }
         return min(max(size.width / size.height, 9 / 16), 16 / 9)
     }
@@ -42,6 +43,10 @@ struct ShortsPlayerView: View {
                     if let session = controller.session {
                         ShortCardPlayer(session: session) { toggle(.description) }
                             .id(session.id)
+                            // Swiping slides the next Short in from below (previous: from above).
+                            .transition(.asymmetric(
+                                insertion: .move(edge: controller.direction > 0 ? .bottom : .top),
+                                removal: .move(edge: controller.direction > 0 ? .top : .bottom)))
                     } else {
                         RoundedRectangle(cornerRadius: 18, style: .continuous).fill(.black)
                         statusView
@@ -49,6 +54,9 @@ struct ShortsPlayerView: View {
                 }
                 .frame(width: width, height: height)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                // mpv's video layer ignores the rounded mask; a plain clip keeps a sliding
+                // card's video inside the frame.
+                .clipped()
 
                 if let session = controller.session {
                     ShortActions(session: session, panel: controller.panel, toggle: toggle)
@@ -66,7 +74,8 @@ struct ShortsPlayerView: View {
             .padding(.horizontal, 20)
             .frame(width: geo.size.width, height: geo.size.height)
             .background(ScrollPager { delta in controller.go(delta) })
-            // A Short that isn't 9:16 (square, 3:4) reshapes its card once mpv knows its size.
+            // A Short that isn't 9:16 (square, 3:4) reshapes its card once mpv knows its size
+            // (after a swipe's slide: the card keeps its shape while sliding).
             .animation(.smooth(duration: 0.25), value: aspect)
         }
         .animation(.easeOut(duration: 0.2), value: controller.panel)
