@@ -48,7 +48,7 @@ nonisolated enum WatchParser {
             shortViewCount: views["shortViewCount"].text,
             publishedRelative: primary["relativeDateText"].text,
             publishedDate: primary["dateText"].text,
-            description: secondary["attributedDescription"]["content"].string
+            description: expandedDescription(secondary["attributedDescription"])
                 ?? secondary["description"].text ?? "",
             channel: channel,
             isSubscribed: subscribed,
@@ -60,6 +60,35 @@ nonisolated enum WatchParser {
             commentsToken: commentsToken,
             liveChatToken: LiveChatParser.initialToken(from: json)
         )
+    }
+
+    /// The description with every link written out in full. YouTube shortens link text
+    /// ("/ discord", "https://studio.blender.org/projects/b...") and keeps the real target in
+    /// `commandRuns`; shown as-is, those were plain text or links to the truncated address.
+    private static func expandedDescription(_ description: JSON) -> String? {
+        guard let content = description["content"].string else { return nil }
+        var text = content as NSString
+        // From the end, so earlier ranges stay valid. Indices are UTF-16 offsets, like NSString's.
+        let runs = description["commandRuns"].array.sorted { ($0["startIndex"].int ?? 0) > ($1["startIndex"].int ?? 0) }
+        for run in runs {
+            guard let start = run["startIndex"].int, let length = run["length"].int,
+                  start >= 0, length > 0, start + length <= text.length,
+                  let link = run.first("urlEndpoint")?["url"].string,
+                  let target = realTarget(of: link) else { continue }
+            let range = NSRange(location: start, length: length)
+            if text.substring(with: range) == target { continue }
+            text = text.replacingCharacters(in: range, with: target) as NSString
+        }
+        return text as String
+    }
+
+    /// YouTube wraps outside links in its redirect page; the destination is its `q` parameter.
+    private static func realTarget(of link: String) -> String? {
+        guard let components = URLComponents(string: link) else { return nil }
+        if components.path == "/redirect", let q = components.queryItems?.first(where: { $0.name == "q" })?.value {
+            return q
+        }
+        return link
     }
 
     /// Related videos from a `next` continuation (scrolling the related column).
