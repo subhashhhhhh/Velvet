@@ -1,10 +1,13 @@
 # Template for Casks/velvet.rb in subhashhhhhh/homebrew-velvet. scripts/release.sh
 # fills in version and sha256 in the tap's copy on each release.
 cask "velvet" do
-  version "1.0"
-  sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  arch arm: "AppleSilicon", intel: "Intel"
 
-  url "https://github.com/subhashhhhhh/Velvet/releases/download/v#{version}/Velvet-#{version}-AppleSilicon.dmg"
+  version "1.0"
+  sha256 arm:   "0000000000000000000000000000000000000000000000000000000000000000",
+         intel: "0000000000000000000000000000000000000000000000000000000000000000"
+
+  url "https://github.com/subhashhhhhh/Velvet/releases/download/v#{version}/Velvet-#{version}-#{arch}.dmg"
   name "Velvet"
   desc "Native, low-memory YouTube client"
   homepage "https://github.com/subhashhhhhh/Velvet"
@@ -15,7 +18,6 @@ cask "velvet" do
   end
 
   auto_updates true
-  depends_on arch: :arm64
   depends_on macos: :sequoia
 
   app "Velvet.app"

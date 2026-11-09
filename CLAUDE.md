@@ -11,7 +11,7 @@ The primary goal is low memory usage. Each change must keep memory usage low.
 
 Velvet uses these items:
 
-- macOS 15 (Sequoia) or later, Apple silicon only. Do not use APIs that need a later macOS without an `#available` check.
+- macOS 15 (Sequoia) or later, on Apple silicon and Intel. Do not use APIs that need a later macOS without an `#available` check. Do not add code or downloads that only work on one processor; use `#if arch(x86_64)` where they differ (as in `ToolManager` and `ReleaseFeed`).
 - Two project files: `Velvet.xcodeproj` (Xcode 27 format) and `project.yml` (xcodegen, for Xcode 26). Keep the build settings the same in the two files. `install.sh` selects the correct one.
 - Swift 6 and SwiftUI. The default actor isolation is the main actor.
 - mpv (MPVKit 1.0.0) for playback.
@@ -91,7 +91,7 @@ Ask the user before each release. A release goes to all users.
 
 1. Increase `MARKETING_VERSION` in `Velvet.xcodeproj` and in `project.yml` (the same value; `1.2` or `1.2.3`). Commit and push.
 2. Write the release notes in `dist/notes-<version>.md`: what changed, for users. Do not write install instructions; the script adds them.
-3. Do `scripts/release.sh --publish`. It builds and signs the app, makes the DMG and the zip, creates the GitHub release, writes `updates/latest.json` (the in-app updater reads it) and updates the Homebrew cask.
+3. Do `scripts/release.sh --publish`. It builds and signs the app for Apple silicon and for Intel, makes a DMG and a zip for each, creates the GitHub release, writes `updates/latest.json` (the in-app updater reads it) and updates the Homebrew cask.
 
 The release signature is the "Velvet Self-Signed" certificate in the login keychain. Installed copies accept only updates with this signature. Do not make a new certificate. Refer to `docs/signing.md`.
 

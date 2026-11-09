@@ -8,7 +8,7 @@
 
 <p align="center">
   A native YouTube client for macOS that uses little memory.<br>
-  macOS 15 or later · Apple silicon · Free and open source (MIT)
+  macOS 15 or later · Apple silicon and Intel · Free and open source (MIT)
 </p>
 
 ---
@@ -29,7 +29,11 @@ brew install --cask subhashhhhhh/velvet/velvet
 
 ### 1.2 Download
 
-1. Download `Velvet-<version>-AppleSilicon.dmg` from the [latest release](https://github.com/subhashhhhhh/Velvet/releases/latest).
+1. Download the disk image for your Mac from the [latest release](https://github.com/subhashhhhhh/Velvet/releases/latest):
+   - Apple silicon (M1 or later): `Velvet-<version>-AppleSilicon.dmg`
+   - Intel: `Velvet-<version>-Intel.dmg`
+
+   To find which Mac you have, open the Apple menu › **About This Mac**. Look for **Chip** (Apple silicon) or **Processor** (Intel).
 2. Open the disk image. Drag **Velvet** to **Applications**.
 3. Start Velvet.
 
@@ -46,7 +50,7 @@ The Homebrew install does not need this step.
 
 ### 1.3 Requirements
 
-- A Mac with Apple silicon (M1 or later).
+- A Mac with Apple silicon or an Intel processor.
 - macOS 15 (Sequoia) or later.
 - An internet connection. On the first start, Velvet downloads yt-dlp and a JavaScript runtime (Deno). Velvet needs these tools to play videos.
 
@@ -168,7 +172,7 @@ Open the settings with Command-, (comma). The settings are in these categories:
 - You cannot drag the timeline in the macOS Picture in Picture window. Use the ±10 s buttons. Other players have the same limit.
 - YouTube changes frequently. A YouTube change can stop a feature. If videos do not play, go to **Settings › Advanced** and click **Check Now** to update yt-dlp.
 - The search history comes from the Google My Activity web page. If Google changes this page, Velvet shows a shorter history from YouTube.
-- Velvet is for Apple silicon only.
+- On Intel Macs, hardware decoding of AV1 is not available, and of VP9 only on most Macs from 2017 or later. Velvet selects a codec that your Mac can decode in hardware.
 
 ## 8. Report a problem
 
