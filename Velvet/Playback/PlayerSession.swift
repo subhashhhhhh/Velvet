@@ -212,48 +212,21 @@ final class PlayerSession: Identifiable {
 
     // MARK: Suspend (a Short opened from this video's page)
 
-    @ObservationIgnored private var suspendedAt: Double?
-    @ObservationIgnored private var playOnResume = true
+    @ObservationIgnored private var playOnResume = false
 
-    /// Remembers the moment and unloads the stream, freeing its buffers while Shorts play.
-    /// The page (comments, related) and the resolved stream links stay.
+    /// Pauses for the Shorts opened from this video's page. The stream stays loaded (about
+    /// 40 MB of buffers, measured) so Back continues instantly instead of rebuffering.
     func suspend() {
-        let position = player.position
-        suspendedAt = position
         playOnResume = !player.isPaused
-        tracker?.flush(at: position, state: "paused")
+        player.pause()
+        tracker?.flush(at: player.position, state: "paused")
         saveProgress()
-        loadTask?.cancel()
-        player.stop()
     }
 
-    /// Picks up where `suspend()` left off: the same links if they're still fresh (no yt-dlp
-    /// run), else newly resolved ones. Live streams rejoin at the live edge.
+    /// Continues where `suspend()` left off.
     func resume() {
-        guard let at = suspendedAt else { return }
-        suspendedAt = nil
-        if isLive { goLive(); return }
-        guard case .ready = phase, let info else {
-            // It never finished loading: start again from the remembered spot.
-            startPosition = at
-            start()
-            return
-        }
-        let autoplay = playOnResume
-        loadTask = Task {
-            var streams = info
-            if info.isExpired {
-                // Only the links are stale; the page stays as it is.
-                await resolver.invalidate(video.id)
-                guard let fresh = try? await resolver.resolve(video.id, isLive: false) else {
-                    phase = .failed("Couldn't reload this video. Try again in a moment.")
-                    return
-                }
-                self.info = fresh
-                streams = fresh
-            }
-            try? await play(streams, at: at, autoplay: autoplay)
-        }
+        if playOnResume { player.play() }
+        playOnResume = false
     }
 
     func close() {
