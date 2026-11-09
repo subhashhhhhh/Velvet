@@ -270,14 +270,18 @@ private struct SwipeIndicator: View {
             .font(.system(size: 18, weight: .bold))
             .foregroundStyle(progress >= 0.5 ? Color(nsColor: .windowBackgroundColor) : .primary)
             .frame(width: 44, height: 44)
-            .background(Circle().fill(progress >= 0.5 ? AnyShapeStyle(.primary) : AnyShapeStyle(.regularMaterial)))
+            // Solid, not a material: a blur behind a view that moves every frame is redrawn
+            // every frame.
+            .background(Circle().fill(progress >= 0.5 ? AnyShapeStyle(.primary) : AnyShapeStyle(Color(nsColor: .controlBackgroundColor))))
+            .overlay(Circle().strokeBorder(.primary.opacity(progress >= 0.5 ? 0 : 0.12)))
+            // Only the fill changes animate: where it is follows the fingers exactly.
+            .animation(.easeOut(duration: 0.12), value: progress >= 0.5)
             .shadow(color: .black.opacity(0.25), radius: 8, y: 2)
             .scaleEffect(0.7 + 0.3 * progress)
             .opacity(progress == 0 ? 0 : 1)
             // Slides in from just off the edge.
             .offset(x: (back ? 1 : -1) * (progress * 90 - 50))
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: back ? .leading : .trailing)
-            .animation(.easeOut(duration: 0.12), value: progress >= 0.5)
             .allowsHitTesting(false)
     }
 }

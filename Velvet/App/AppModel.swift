@@ -621,13 +621,19 @@ final class AppModel {
                               dampenAmountThresholdMin: forward ? -1 : 0, max: back ? 1 : 0) { [weak self] amount, phase, complete, _ in
             MainActor.assumeIsolated {
                 guard let self else { return }
-                self.swipeAmount = amount
-                // .ended: let go past the threshold (it animates on to ±1); .cancelled: not far enough.
+                // .ended: let go past the threshold; .cancelled: not far enough (the arrow then
+                // slides back out with the amounts that follow).
                 if phase == .ended, !navigated {
                     navigated = true
+                    // The arrow goes at once and the page changes. AppKit would go on animating
+                    // the amount to ±1, but those frames came while the new page was being
+                    // built and stuttered, which made a quick swipe feel laggy.
+                    self.swipeAmount = 0
                     if towardsBack { self.goBack() } else { self.goForward() }
+                    return
                 }
-                if complete { self.swipeAmount = 0 }
+                if navigated { return }
+                self.swipeAmount = complete ? 0 : amount
             }
         }
         return true
