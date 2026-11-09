@@ -138,6 +138,11 @@ final class AppModel {
     /// Opens a video. Shorts open in the vertical Shorts player; other videos resume where you left off.
     func open(_ video: Video, at position: Double? = nil) {
         pipHandoff = nil // a queued video still loading for PiP is dropped (its task closes it)
+        // The video set aside for a Short: carry on where it was rather than starting over.
+        if let suspended = suspendedWatch, suspended.video.id == video.id, position == nil {
+            backFromShorts()
+            return
+        }
         if video.kind == .short && position == nil {
             openShorts(startingWith: video)
             return
@@ -164,6 +169,8 @@ final class AppModel {
 
     func closePlayer() {
         pipHandoff = nil
+        suspendedWatch?.close()
+        suspendedWatch = nil
         watchPageHidden = false
         if pip.isActive { exitPictureInPicture() }
         if playerFullscreen { togglePlayerFullscreen() }
@@ -464,13 +471,36 @@ final class AppModel {
     /// The sidebar Shorts tab (YouTube picks the first one).
     private(set) var shortsTab: ShortsController?
 
+    /// The video whose page a Short was opened from (e.g. its related Shorts). Back from the
+    /// Shorts returns to it at the same moment instead of starting it over.
+    private var suspendedWatch: PlayerSession?
+
     func openShorts(startingWith video: Video) {
+        let fromWatchPage = isShowingWatchPage
         watchPageHidden = false
         if pip.isActive { exitPictureInPicture() }
-        watching?.close(); watching = nil
+        if playerFullscreen { togglePlayerFullscreen() }
+        suspendedWatch?.close(); suspendedWatch = nil
+        if fromWatchPage, let watching {
+            watching.suspend()
+            suspendedWatch = watching
+        } else {
+            watching?.close()
+        }
+        watching = nil
         shortsTab?.pause()
         shortsOverlay?.close()
         shortsOverlay = ShortsController(sequence: ShortsSequence(seed: video, client: client), app: self)
+    }
+
+    /// Back from Shorts opened over a page: to the suspended video if there is one.
+    func backFromShorts() {
+        guard let suspended = suspendedWatch else { closePlayer(); return }
+        suspendedWatch = nil
+        shortsOverlay?.close()
+        shortsOverlay = nil
+        watching = suspended
+        suspended.resume()
     }
 
 
@@ -744,6 +774,21 @@ final class AppModel {
                     try? await Task.sleep(for: .seconds(delay))
                     log.info("Test: toggling the sidebar")
                     withAnimation { sidebarVisibility = isSidebarCollapsed ? .all : .detailOnly }
+                }
+            }
+        }
+        // `-VelvetShortsBackTest <shortId>` (with -VelvetPlay): open that Short at 8s, Back at 16s.
+        if let short = UserDefaults.standard.string(forKey: "VelvetShortsBackTest"), !short.isEmpty {
+            Task {
+                try? await Task.sleep(for: .seconds(8))
+                log.info("Test: opening a Short at \(Int(self.watching?.player.position ?? -1))s")
+                open(Video(id: short, title: "Test short", kind: .short))
+                try? await Task.sleep(for: .seconds(8))
+                log.info("Test: Back from Shorts")
+                backFromShorts()
+                for _ in 0..<6 {
+                    try? await Task.sleep(for: .seconds(1))
+                    log.info("Test: back on \(self.watching?.video.id ?? "nothing", privacy: .public) at \(self.watching?.player.position ?? -1, format: .fixed(precision: 1))s, playing=\(!(self.watching?.player.isPaused ?? true)), loading=\(self.watching?.player.isLoading ?? false)")
                 }
             }
         }

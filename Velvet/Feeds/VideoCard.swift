@@ -121,6 +121,7 @@ struct ShortCard: View {
             Text(video.title)
                 .font(.system(size: 12, weight: .semibold))
                 .lineLimit(2)
+                .help(video.title) // titles are cut to two lines at this width
             if let views = video.viewCount {
                 Text(views).font(.system(size: 11)).foregroundStyle(.secondary)
             }

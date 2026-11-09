@@ -51,7 +51,7 @@ struct ShortsPlayerView: View {
         .toolbar {
             if showsBack {
                 ToolbarItem(placement: .navigation) {
-                    Button("Back", systemImage: "chevron.backward") { app.closePlayer() }
+                    Button("Back", systemImage: "chevron.backward") { app.backFromShorts() }
                         .keyboardShortcut("[", modifiers: .command)
                 }
             }
