@@ -1,6 +1,7 @@
 import Foundation
 import CryptoKit
 import OSLog
+import Security
 
 /// A cookie in a Codable, Sendable form we fully control.
 nonisolated struct StoredCookie: Codable, Hashable, Sendable {
@@ -131,34 +132,77 @@ actor YouTubeSession: InnerTubeAuthProvider {
     }
 }
 
-/// Persists session cookies to a user-only (0600) file in Application Support,
-/// the same way browsers keep their cookie jars. Swap for Keychain once the app
-/// is signed with a stable identity.
+/// Keeps the session cookies in the login keychain, as one generic-password item. The keychain
+/// encrypts it, and its access list admits Velvet as signed with the release certificate:
+/// another app (or a build signed otherwise) gets macOS's permission prompt instead.
+/// Until 1.0 the cookies were a 0600 JSON file in Application Support; the first load moves
+/// that file in and deletes it.
 nonisolated struct SessionStore: Sendable {
     static let shared = SessionStore()
 
-    let url: URL = {
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appending(path: "com.subhash.Velvet", directoryHint: .isDirectory)
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true,
-                                                 attributes: [.posixPermissions: 0o700])
-        return dir.appending(path: "session.json")
-    }()
+    private static let service = "com.subhash.Velvet.session"
+    private static let account = "YouTube"
+
+    /// Where older versions kept the session.
+    private let legacyFile: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appending(path: "com.subhash.Velvet", directoryHint: .isDirectory)
+        .appending(path: "session.json")
+
+    private var log: Logger { Logger(subsystem: "com.subhash.Velvet", category: "Session") }
+
+    private var query: [String: Any] {
+        [kSecClass as String: kSecClassGenericPassword,
+         kSecAttrService as String: Self.service,
+         kSecAttrAccount as String: Self.account]
+    }
 
     func load() -> [StoredCookie]? {
-        guard let data = try? Data(contentsOf: url) else { return nil }
+        // Only older versions write the file, so when it's there it's the newest session:
+        // move it into the keychain.
+        if let data = try? Data(contentsOf: legacyFile),
+           let cookies = try? JSONDecoder().decode([StoredCookie].self, from: data) {
+            if write(data) {
+                try? FileManager.default.removeItem(at: legacyFile)
+                log.info("Moved the session from session.json into the keychain")
+            }
+            return cookies
+        }
+        guard let data = read() else { return nil }
         return try? JSONDecoder().decode([StoredCookie].self, from: data)
     }
 
     func save(_ cookies: [StoredCookie]) {
         guard let data = try? JSONEncoder().encode(cookies) else { return }
-        do {
-            try data.write(to: url, options: [.atomic])
-            try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
-        } catch {
-            Logger(subsystem: "com.subhash.Velvet", category: "Session").error("Session save failed: \(error.localizedDescription, privacy: .public)")
-        }
+        _ = write(data)
     }
 
-    func clear() { try? FileManager.default.removeItem(at: url) }
+    func clear() {
+        SecItemDelete(query as CFDictionary)
+        try? FileManager.default.removeItem(at: legacyFile)
+    }
+
+    private func read() -> Data? {
+        var q = query
+        q[kSecReturnData as String] = true
+        q[kSecMatchLimit as String] = kSecMatchLimitOne
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(q as CFDictionary, &result)
+        if status != errSecSuccess && status != errSecItemNotFound {
+            log.error("Keychain read failed: \(status)")
+        }
+        return status == errSecSuccess ? result as? Data : nil
+    }
+
+    private func write(_ data: Data) -> Bool {
+        var status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        if status == errSecItemNotFound {
+            var add = query
+            add[kSecValueData as String] = data
+            add[kSecAttrLabel as String] = "Velvet: YouTube sign-in"
+            add[kSecAttrDescription as String] = "Session cookies"
+            status = SecItemAdd(add as CFDictionary, nil)
+        }
+        if status != errSecSuccess { log.error("Keychain write failed: \(status)") }
+        return status == errSecSuccess
+    }
 }

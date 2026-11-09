@@ -97,7 +97,7 @@ To sign in:
 1. Click **Sign In** at the right side of the top bar.
 2. Sign in to your Google account in the window that opens.
 
-Velvet keeps your session cookies in a file in `~/Library/Application Support/com.subhash.Velvet`. The file is not encrypted. Its permissions let only your macOS user account read it, but other apps that run as your user can read it, and backups include it. Velvet sends the cookies only to YouTube and Google. To remove them, sign out.
+Velvet keeps your session cookies in your login keychain, as the item **Velvet: YouTube sign-in**. The keychain encrypts them. Only Velvet can read them without your permission: if another app tries, macOS asks you first. Velvet sends the cookies only to YouTube and Google. To remove them, sign out.
 
 Velvet does not collect data about you. It has no analytics and no telemetry.
 

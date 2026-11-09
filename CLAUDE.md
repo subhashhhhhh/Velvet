@@ -59,10 +59,13 @@ All source files are in `Velvet/`.
 To build a Debug version, do this command:
 
 ```sh
-xcodebuild -project Velvet.xcodeproj -scheme Velvet -derivedDataPath <scratchpad>/dd build
+xcodebuild -project Velvet.xcodeproj -scheme Velvet -derivedDataPath <scratchpad>/dd \
+  CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Velvet Self-Signed" DEVELOPMENT_TEAM="" OTHER_CODE_SIGN_FLAGS="--timestamp=none" build
 ```
 
 Show only the errors. Use `grep -E "error:|BUILD"` on the output.
+
+Sign Debug builds with the release certificate, as above. The session cookies are in the login keychain, and its access list admits only builds with the release signature. A Debug build signed in another way makes macOS show a keychain prompt on the user's screen, and the test does not continue.
 
 ## 5. Install
 
