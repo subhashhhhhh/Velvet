@@ -110,6 +110,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetAccountTest YES` | Opens the account panel (top bar picture) at 6 s. |
 | `-VelvetSettingsTest YES` | Opens the Settings window at 3 s. `-VelvetSettingsPane <pane>` (general, feed, playback, notifications, sponsorBlock, deArrow, account, advanced) picks the pane. Logs the window size and how far down the window buttons sit (26 pt, as in the main window). |
 | `-VelvetPlaylistTest YES` | Opens your first playlist (after Watch Later) when the sidebar has loaded them. |
+| `-VelvetFullscreenAtLaunch YES` | Puts the window in macOS fullscreen as soon as it exists. Check with the window list that the toolbar window sits off screen (y = -52). It takes over the user's screen. |
 | `-VelvetWindowFullscreenTest YES` | Puts the window in macOS fullscreen from 6 s to 12 s (the top bar and sidebar must fill the screen) and logs which view a click on the top bar reaches (it must be the SwiftUI hosting view). It takes over the user's screen for 6 s. |
 | `-VelvetLeakTest YES`, `-VelvetNoRelief YES` | Memory tests. |
 | `-settings.<key> <value>` | Overrides a preference. Use `'<true/>'` or `'<false/>'` for Bool values and `'<integer>3</integer>'` for numbers. |

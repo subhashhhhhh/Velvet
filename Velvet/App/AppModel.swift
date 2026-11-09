@@ -245,6 +245,22 @@ final class AppModel {
     @ObservationIgnored private var fullscreenObservers: [NSObjectProtocol] = []
     /// The window is in (or going into) macOS fullscreen: no title bar or window buttons.
     var windowFullscreen = false
+
+    /// The toolbar should only come down with the menu bar in fullscreen (RootView sets that),
+    /// but macOS reads the setting when a window enters fullscreen. A window restored in
+    /// fullscreen at launch never enters it, and keeps the toolbar as an opaque band over the
+    /// top bar until it's minimized and back. So set it on the app directly.
+    func hideToolbarInFullscreen() {
+        Task {
+            try? await Task.sleep(for: .milliseconds(300))
+            let options = NSApp.presentationOptions
+            // AppKit throws for this option unless fullscreen's own options are in effect.
+            guard options.contains(.fullScreen), options.contains(.autoHideMenuBar),
+                  !options.contains(.autoHideToolbar) else { return }
+            NSApp.presentationOptions = options.union(.autoHideToolbar)
+            log.info("Fullscreen at launch: toolbar set to auto-hide")
+        }
+    }
     @ObservationIgnored private weak var pipPlayer: MPVPlayer?
 
     /// The player currently on screen (watch page, a Short), if any.
@@ -510,13 +526,27 @@ final class AppModel {
                 self.windowVisibilityChanged(visible: visible)
             }
         }
+        #if DEBUG
+        // `-VelvetFullscreenAtLaunch YES`: go fullscreen as soon as the window exists, like a
+        // window restored in fullscreen.
+        if UserDefaults.standard.bool(forKey: "VelvetFullscreenAtLaunch"), !mainWindow.styleMask.contains(.fullScreen) {
+            mainWindow.toggleFullScreen(nil)
+        }
+        #endif
         windowFullscreen = mainWindow.styleMask.contains(.fullScreen)
+        // A restored window may only report fullscreen a moment after it appears.
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(1.5))
+            if self?.mainWindow?.styleMask.contains(.fullScreen) == true { self?.hideToolbarInFullscreen() }
+        }
         for observer in fullscreenObservers { NotificationCenter.default.removeObserver(observer) }
         fullscreenObservers = [(NSWindow.willEnterFullScreenNotification, true), (NSWindow.willExitFullScreenNotification, false)].map { name, entering in
             NotificationCenter.default.addObserver(forName: name, object: mainWindow, queue: .main) { [weak self] _ in
                 MainActor.assumeIsolated { self?.windowFullscreen = entering }
             }
-        }
+        } + [NotificationCenter.default.addObserver(forName: NSWindow.didEnterFullScreenNotification, object: mainWindow, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.hideToolbarInFullscreen() }
+        }]
         // Occlusion updates can trail a Space swipe by 2–3 s (seen on macOS 15). The Space
         // change itself is announced as soon as the swipe lands, so react to that too.
         if let spaceObserver { NSWorkspace.shared.notificationCenter.removeObserver(spaceObserver) }
