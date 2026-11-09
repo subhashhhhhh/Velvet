@@ -114,6 +114,7 @@ nonisolated enum VideoParser {
             watchedFraction: resume.map { $0 / 100 }
         )
         video.isMembersOnly = badges.contains("BADGE_STYLE_TYPE_MEMBERS_ONLY")
+        applyFeedback(r["menu"].all("menuServiceItemRenderer"), to: &video)
         return video
     }
 
@@ -188,6 +189,7 @@ nonisolated enum VideoParser {
             watchedFraction: progress.map { $0 / 100 }
         )
         video.isMembersOnly = rowBadges.contains("BADGE_MEMBERS_ONLY")
+        applyFeedback(r["metadata"].all("listItemViewModel"), to: &video)
         return video
     }
 
@@ -217,6 +219,19 @@ nonisolated enum VideoParser {
             viewCount: r["viewCountText"].text,
             thumbnails: thumbnails(r["thumbnail"]["thumbnails"])
         )
+    }
+
+    // MARK: - Feedback
+
+    /// Picks "Not interested" / "Don't recommend channel" from a card's menu items
+    /// (`listItemViewModel` on lockups, `menuServiceItemRenderer` on older cards).
+    private static func applyFeedback(_ items: [JSON], to video: inout Video) {
+        for item in items {
+            guard let title = (item["title"].text ?? item["text"].text)?.lowercased(),
+                  let token = item.first("feedbackEndpoint")?["feedbackToken"].string else { continue }
+            if title.hasPrefix("not interested") { video.notInterestedToken = token }
+            else if title.hasPrefix("don't recommend") || title.hasPrefix("don’t recommend") { video.dontRecommendChannelToken = token }
+        }
     }
 
     // MARK: - Helpers

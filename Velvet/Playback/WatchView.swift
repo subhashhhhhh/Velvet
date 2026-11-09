@@ -342,7 +342,7 @@ private struct RelatedList: View {
 
     /// Related videos minus members-only ones when those are hidden (watched ones stay: rewatching is common here).
     private var related: [Video] {
-        app.settings.hideMembersOnly ? page.related.filter { !$0.isMembersOnly } : page.related
+        page.related.filter { !app.dismissedVideos.contains($0.id) && !(app.settings.hideMembersOnly && $0.isMembersOnly) }
     }
 
     var body: some View {

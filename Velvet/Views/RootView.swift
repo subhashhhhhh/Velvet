@@ -20,6 +20,26 @@ struct RootView: View {
                 onCancel: { app.showingSignIn = false }
             )
         }
+        .sheet(item: $app.playlistPickerVideo) { PlaylistPicker(video: $0) }
+        .alert("Couldn't Complete That", isPresented: Binding(get: { app.actionError != nil }, set: { if !$0 { app.actionError = nil } })) {
+            Button("OK") { app.actionError = nil }
+        } message: {
+            Text(app.actionError ?? "")
+        }
+        .overlay(alignment: .bottom) {
+            if let toast = app.toast {
+                Text(toast)
+                    .font(.callout.weight(.medium))
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(.regularMaterial, in: Capsule())
+                    .shadow(radius: 8, y: 2)
+                    .padding(.bottom, 24)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .allowsHitTesting(false)
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: app.toast)
         .task { await app.start() }
         .background(WindowReader { app.mainWindow = $0 })
     }

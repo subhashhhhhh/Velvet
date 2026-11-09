@@ -21,7 +21,8 @@ struct FeedView: View {
 
     /// Videos after applying the "hide watched" / "hide members-only" preferences.
     private var visible: [Video] {
-        prefs.hideWatched || prefs.hideMembersOnly ? feed.videos.filter(prefs.shows) : feed.videos
+        let dismissed = app.dismissedVideos
+        return feed.videos.filter { !dismissed.contains($0.id) && (!(prefs.hideWatched || prefs.hideMembersOnly) || prefs.shows($0)) }
     }
 
     var body: some View {

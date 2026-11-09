@@ -148,6 +148,14 @@ actor InnerTubeClient {
         _ = try await post("browse/edit_playlist", ["playlistId": .string(playlistId), "actions": [action]])
     }
 
+    /// Sends recommendation feedback ("Not interested", "Don't recommend channel").
+    func feedback(_ token: String) async throws {
+        let json = try await post("feedback", ["feedbackTokens": [.string(token)], "isFeedbackTokenUnencrypted": false, "shouldMerge": false])
+        if json["feedbackResponses"].array.contains(where: { $0["isProcessed"].bool == false }) {
+            throw InnerTubeError.refused("YouTube didn't accept the feedback.")
+        }
+    }
+
     // MARK: Comments
 
     func createComment(_ text: String, params: String) async throws -> JSON {

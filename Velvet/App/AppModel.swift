@@ -499,6 +499,59 @@ final class AppModel {
         self.destination = destination
     }
 
+    // MARK: - Video actions (context menus)
+
+    /// A short confirmation shown at the bottom of the window ("Saved to Watch Later").
+    private(set) var toast: String?
+    @ObservationIgnored private var toastTask: Task<Void, Never>?
+    /// An action failed; shown as an alert.
+    var actionError: String?
+    /// Videos removed with "Not interested" / "Don't recommend channel"; feeds hide them.
+    private(set) var dismissedVideos: Set<String> = []
+    /// The video whose "Save to Playlist" sheet is open.
+    var playlistPickerVideo: Video?
+
+    func showToast(_ message: String) {
+        toast = message
+        toastTask?.cancel()
+        toastTask = Task {
+            try? await Task.sleep(for: .seconds(2.5))
+            guard !Task.isCancelled else { return }
+            toast = nil
+        }
+    }
+
+    func saveToWatchLater(_ video: Video) {
+        guard authState == .signedIn else { actionError = "Sign in to use Watch Later."; return }
+        Task {
+            do {
+                try await client.setVideo(video.id, inPlaylist: "WL", true)
+                showToast("Saved to Watch Later")
+            } catch {
+                actionError = "Couldn't save to Watch Later: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// "Not interested" (or, with `channel`, "Don't recommend channel"): tells YouTube and
+    /// hides the video at once; for a channel, every loaded video from it.
+    func sendFeedback(for video: Video, channel: Bool) {
+        guard let token = channel ? video.dontRecommendChannelToken : video.notInterestedToken else { return }
+        let hidden = channel && video.channelId != nil
+            ? Set(homeFeed?.videos.filter { $0.channelId == video.channelId }.map(\.id) ?? []).union([video.id])
+            : [video.id]
+        dismissedVideos.formUnion(hidden)
+        Task {
+            do {
+                try await client.feedback(token)
+                showToast(channel ? "You won't be recommended this channel" : "Video removed from your recommendations")
+            } catch {
+                dismissedVideos.subtract(hidden)
+                actionError = "Couldn't send that to YouTube: \(error.localizedDescription)"
+            }
+        }
+    }
+
     // MARK: - Account
 
     enum AuthState: Equatable {
@@ -575,7 +628,10 @@ final class AppModel {
                             save(try await client.next(continuation: r), "replies.json")
                         }
                     }
-                    save(try await client.browse("FEwhat_to_watch"), "home.json")
+                    let home = try await client.browse("FEwhat_to_watch")
+                    save(home, "home.json")
+                    let videos = VideoParser.videos(in: home)
+                    log.info("Dump: home \(videos.count) videos, notInterested=\(videos.filter { $0.notInterestedToken != nil }.count), dontRecommend=\(videos.filter { $0.dontRecommendChannelToken != nil }.count)")
                     log.info("Dump finished")
                 } catch {
                     log.error("Dump failed: \(error.localizedDescription, privacy: .public)")

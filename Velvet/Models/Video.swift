@@ -29,6 +29,9 @@ nonisolated struct Video: Identifiable, Hashable, Sendable {
     var watchedFraction: Double?
     /// Only the channel's paying members can watch it.
     var isMembersOnly = false
+    /// Feedback tokens from the card's menu, for tuning recommendations (home and related only).
+    var notInterestedToken: String?
+    var dontRecommendChannelToken: String?
 
     /// Smallest thumbnail at least `minWidth` pixels wide, else the largest available.
     /// Falls back to YouTube's predictable `mqdefault` (320×180) URL.

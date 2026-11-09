@@ -155,14 +155,28 @@ struct VideoContextMenu: View {
     }
 
     var body: some View {
-        Button("Copy Link") {
+        if app.authState == .signedIn {
+            Button("Save to Watch Later", systemImage: "clock") { app.saveToWatchLater(video) }
+            Button("Save to Playlist…", systemImage: "text.badge.plus") { app.playlistPickerVideo = video }
+            if video.notInterestedToken != nil || video.dontRecommendChannelToken != nil {
+                Divider()
+                if video.notInterestedToken != nil {
+                    Button("Not Interested", systemImage: "eye.slash") { app.sendFeedback(for: video, channel: false) }
+                }
+                if video.dontRecommendChannelToken != nil {
+                    Button("Don't Recommend Channel", systemImage: "nosign") { app.sendFeedback(for: video, channel: true) }
+                }
+            }
+            Divider()
+        }
+        Button("Copy Link", systemImage: "link") {
             NSPasteboard.general.clearContents()
             NSPasteboard.general.setString(watchURL.absoluteString, forType: .string)
         }
-        Button("Open in Browser") { NSWorkspace.shared.open(watchURL) }
+        Button("Open in Browser", systemImage: "safari") { NSWorkspace.shared.open(watchURL) }
         if let channelId = video.channelId {
             Divider()
-            Button("Go to Channel") { app.openChannel(channelId) }
+            Button("Go to Channel", systemImage: "person.crop.square") { app.openChannel(channelId) }
         }
     }
 }
