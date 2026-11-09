@@ -259,6 +259,12 @@ final class MPVPlayer {
             ("vo", "gpu-next"),
             ("gpu-api", "vulkan"),
             ("gpu-context", "moltenvk"),
+            // Core Audio needs interleaved stereo on macOS 27: it rejects the planar float that
+            // YouTube's Opus decodes to (mpv-player/mpv#18384), and mpv then falls back to
+            // AVFoundation, which queues 3–4 s of audio, so mute, volume and speed changes
+            // were heard that late. YouTube audio is stereo, so nothing is downmixed.
+            ("audio-format", "float"),
+            ("audio-channels", "stereo"),
             ("hwdec", options.hardwareDecoding ? "videotoolbox" : "no"),
             // HDR video: output in its own colour space (an HDR swapchain on the Metal layer)
             // instead of tone-mapping it down to SDR. mpv only switches for HDR content.
