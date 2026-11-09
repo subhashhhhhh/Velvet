@@ -66,6 +66,7 @@ struct ChannelView: View {
                 }
             }
             Spacer()
+            playAllButton
             ChannelSearchField(model: model)
             if model.searchResults == nil, let tab = model.currentTab, !tab.chips.isEmpty {
                 Menu {
@@ -178,6 +179,32 @@ private struct ChannelTabGrid: View {
             }
         }
         .task { await content.loadIfNeeded() }
+    }
+}
+
+extension ChannelView {
+    /// Plays the videos shown (the tab in its sort order, or the search results) through the
+    /// queue, like a playlist.
+    @ViewBuilder
+    fileprivate var playAllButton: some View {
+        let content = model.searchResults ?? model.currentTab
+        if let content, !content.videos.isEmpty, content.tab.kind != .shorts {
+            Button {
+                let name = model.header?.name ?? "Channel"
+                let title = content.query.map { "\(name): “\($0)”" } ?? name
+                app.play(content.videos[0], inPlaylist: content.videos, title: title)
+            } label: {
+                Label("Play All", systemImage: "play.fill")
+                    .font(.callout.weight(.semibold))
+                    .foregroundStyle(Color(nsColor: .windowBackgroundColor))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.primary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .help("Play these videos in order, with the rest in the queue")
+        }
     }
 }
 
