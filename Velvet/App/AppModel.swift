@@ -59,6 +59,17 @@ final class AppModel {
     let progress = WatchProgressStore()
     let deArrow = DeArrowService()
     @ObservationIgnored private(set) lazy var aiFilter = AIChannelFilter(preferences: settings)
+    @ObservationIgnored private(set) lazy var series = SeriesTracker(client: client)
+
+    /// A series episode's page has loaded: track it, and with nothing queued, queue the next
+    /// episode so it plays when this one ends.
+    func noteSeriesEpisode(_ session: PlayerSession, details: WatchDetails) async {
+        guard settings.seriesTracking, !session.isLive else { return }
+        let entry = await series.watching(session.video, title: details.title,
+                                          channelId: details.channel?.id, channelName: details.channel?.name)
+        guard let entry, let next = entry.next, watching === session, queue.isEmpty else { return }
+        queue.replace(with: [next.video], source: entry.name)
+    }
 
     /// DeArrow branding for `video` per current settings (nil when off or nothing better exists).
     func branding(for video: Video) async -> DeArrowBranding? {
@@ -1174,7 +1185,7 @@ final class AppModel {
                     // `-VelvetKeyGap <seconds>` (default 4) presses faster, e.g. 0.15 to mash a key.
                     let gap = UserDefaults.standard.double(forKey: "VelvetKeyGap")
                     try? await Task.sleep(for: .seconds(gap > 0 ? gap : 4))
-                    log.info("Test: after \(token, privacy: .public): search=\(self.searchText, privacy: .public), watch page shown=\(self.isShowingWatchPage), hidden=\(self.watchPageHidden), PiP=\(self.pip.isActive), theater=\(self.settings.theaterMode), looping=\(self.watching?.player.isLooping ?? false), playing=\(!(self.watching?.player.isPaused ?? true))")
+                    log.info("Test: after \(token, privacy: .public): search=\(self.searchText, privacy: .public), queue=\(self.queue.items.count) from \(self.queue.source ?? "-", privacy: .public), watch page shown=\(self.isShowingWatchPage), hidden=\(self.watchPageHidden), PiP=\(self.pip.isActive), theater=\(self.settings.theaterMode), looping=\(self.watching?.player.isLooping ?? false), playing=\(!(self.watching?.player.isPaused ?? true))")
                 }
             }
         }

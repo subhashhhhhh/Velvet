@@ -273,6 +273,7 @@ private struct PlaybackPane: View {
                     .disabled(!PictureInPicture.isAvailable)
                 Toggle("Show captions automatically", isOn: $settings.autoCaptions)
                 Toggle("Show dislike counts", isOn: $settings.showDislikes)
+                Toggle("Follow series (Part 2, Episode 3…) and queue the next episode", isOn: $settings.seriesTracking)
                 Stepper(value: $settings.audioDelayMs, in: -500...1000, step: 25) {
                     LabeledContent("Audio delay", value: settings.audioDelayMs == 0 ? "None" : "\(settings.audioDelayMs) ms")
                 }

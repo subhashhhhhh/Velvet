@@ -6,6 +6,8 @@ struct SectionedFeedView: View {
     var emptyMessage = "Nothing here yet."
     /// Set for playlists: clicking a video plays the playlist from there (the rest queued).
     var playlistTitle: String?
+    /// Shown above the feed, inside its scroll (History's Continue Watching row).
+    var header: AnyView?
     @Environment(AppModel.self) private var app
     @State private var layout = GridLayout()
     @State private var tracker = GridTracker()
@@ -30,6 +32,7 @@ struct SectionedFeedView: View {
             } else {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 22) {
+                        if let header { header }
                         ForEach(feed.sections) { section in
                             if let title = section.title {
                                 Text(title).font(.title3.weight(.semibold))
@@ -108,7 +111,8 @@ struct LibraryFeedPage: View {
             case .signedIn:
                 if let feed = app.libraryFeed(for: destination) {
                     SectionedFeedView(feed: feed, emptyMessage: destination == .history ? "No watch history yet." : "No videos saved yet.",
-                                      playlistTitle: destination == .watchLater ? "Watch Later" : nil)
+                                      playlistTitle: destination == .watchLater ? "Watch Later" : nil,
+                                      header: destination == .history && app.settings.seriesTracking ? AnyView(SeriesShelf()) : nil)
                         .id(app.authRevision)
                 }
             }
@@ -230,5 +234,61 @@ struct PlaylistDetailView: View {
         .navigationTitle(feed?.title ?? summary.title)
         .topBarTitle(feed?.title ?? summary.title)
         .task { if feed == nil { feed = SectionedFeedModel(browseId: summary.browseId, client: app.client) } }
+    }
+}
+
+/// History's Continue Watching row: one card per series in progress, opening the next episode
+/// (or the last one watched when the next wasn't found).
+private struct SeriesShelf: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        let entries = app.series.inProgress
+        if !entries.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Continue Watching", systemImage: "rectangle.stack.badge.play").font(.title3.weight(.semibold))
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 14) {
+                        ForEach(entries.prefix(20)) { entry in
+                            Button { app.open((entry.next ?? entry.video).video) } label: { SeriesCard(entry: entry) }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    Button("Remove from Continue Watching", systemImage: "minus.circle") { app.series.remove(entry.key) }
+                                }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private struct SeriesCard: View {
+    let entry: SeriesTracker.Entry
+    @State private var hovering = false
+
+    var body: some View {
+        let shown = entry.next ?? entry.video
+        VStack(alignment: .leading, spacing: 6) {
+            RemoteImage(url: shown.thumbnail)
+                .frame(width: 240, height: 135)
+                .background(.quaternary)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(alignment: .bottomLeading) {
+                    Text(entry.next != nil ? "Up next" : "Watched \(entry.label)")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 6).padding(.vertical, 3)
+                        .background(.black.opacity(0.75), in: RoundedRectangle(cornerRadius: 4))
+                        .foregroundStyle(.white)
+                        .padding(6)
+                }
+            Text(entry.name).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+            Text(entry.channelName ?? "").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+        }
+        .frame(width: 240)
+        .padding(6)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(hovering ? AnyShapeStyle(.quinary) : AnyShapeStyle(.clear)))
+        .contentShape(Rectangle())
+        .onHover { hovering = $0 }
     }
 }

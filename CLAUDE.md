@@ -133,6 +133,8 @@ WARNING: Do not capture the full screen. It shows the private data of the user.
 
 WARNING: Do not capture windows of the "Picture in Picture" process. These windows can show content from other apps. Verify PiP through the logs.
 
+CAUTION: The Debug app shares `~/Library/Application Support/Velvet` with the installed app. Opening a series episode in a test adds it to the user's Continue Watching (`series.json`); back the file up first and restore it after.
+
 CAUTION: Do not do account actions (like, subscribe, Watch Later, playlists) in a test. These actions change the account of the user.
 
 ## 8. Known limits

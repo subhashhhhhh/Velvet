@@ -31,6 +31,7 @@ struct WatchView: View {
                             LiveChatPanel(chat: chat).frame(height: 420)
                         }
                         if !wide {
+                            NextEpisodeCard(videoId: session.video.id)
                             QueuePreview()
                             RelatedList(page: page, columns: true)
                         }
@@ -48,6 +49,9 @@ struct WatchView: View {
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.watchViewport = $0 }
         }
         .navigationTitle(page.details?.title ?? video.title)
+        .task(id: page.details?.videoId) {
+            if let details = page.details { await app.noteSeriesEpisode(session, details: details) }
+        }
         .onReceive(NotificationCenter.default.publisher(for: NSWindow.didExitFullScreenNotification)) { _ in
             // Covers leaving fullscreen via the green button or Mission Control, not just our controls.
             app.windowDidExitFullscreen()
@@ -325,6 +329,7 @@ private struct SideColumn: View {
 
     var body: some View {
         VStack(spacing: 12) {
+            NextEpisodeCard(videoId: page.videoId)
             QueuePreview()
             column
         }
@@ -808,6 +813,38 @@ private struct CompactableLabelStyle: LabelStyle {
             configuration.icon
         } else {
             HStack(spacing: 6) { configuration.icon; configuration.title }
+        }
+    }
+}
+
+/// "Next in this series" with Play and Add to Queue, when the video is a series episode and
+/// the next one was found (and isn't already queued).
+private struct NextEpisodeCard: View {
+    let videoId: String
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        if app.settings.seriesTracking, let entry = app.series.entry(for: videoId), let next = entry.next,
+           !app.queue.items.contains(where: { $0.id == next.id }) {
+            HStack(spacing: 12) {
+                RemoteImage(url: next.thumbnail)
+                    .frame(width: 112, height: 63)
+                    .background(.quaternary)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Next in this series").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                    Text(next.title).font(.system(size: 13, weight: .semibold)).lineLimit(2)
+                    HStack(spacing: 8) {
+                        Button("Play", systemImage: "play.fill") { app.open(next.video) }
+                        Button("Add to Queue", systemImage: "text.badge.plus") { app.addToQueue(next.video) }
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.callout)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .background(.quinary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
         }
     }
 }
