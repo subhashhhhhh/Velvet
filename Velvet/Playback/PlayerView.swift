@@ -218,6 +218,7 @@ struct PlayerView: View {
                 guard !app.queue.isEmpty, app.watching === session else { return .ignored }
                 app.playNextInQueue()
             case "c": session.toggleCaptions()
+            case "r": player.setLooping(!player.isLooping)
             case ",": player.setSpeed(player.speed - 0.25)
             case ".": player.setSpeed(player.speed + 0.25)
             case "0", "1", "2", "3", "4", "5", "6", "7", "8", "9":
@@ -271,6 +272,13 @@ struct PlayerControls: View {
                     }
                     Spacer()
                     if !session.captionTracks.isEmpty { captionsMenu }
+                    if !session.isLive {
+                        Button { player.setLooping(!player.isLooping) } label: {
+                            Image(systemName: player.isLooping ? "repeat.1" : "repeat")
+                                .foregroundStyle(player.isLooping ? .white : .white.opacity(0.55))
+                        }
+                        .help(player.isLooping ? "Stop looping (R)" : "Loop (R)")
+                    }
                     speedMenu
                     qualityMenu
                     if PictureInPicture.isAvailable {

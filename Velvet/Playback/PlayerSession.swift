@@ -45,7 +45,8 @@ final class PlayerSession: Identifiable {
             hardwareDecoding: preferences.hardwareDecoding,
             bufferMB: preferences.bufferMB,
             speed: video.kind == .short ? 1 : preferences.defaultSpeed,
-            loop: video.kind == .short
+            loop: video.kind == .short,
+            audioDelay: Double(preferences.audioDelayMs) / 1000
         ))
         let player = self.player
         self.sponsor = SponsorSkipper(

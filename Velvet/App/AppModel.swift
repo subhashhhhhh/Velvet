@@ -1150,7 +1150,7 @@ final class AppModel {
                     // "cmd+k" presses ⌘K.
                     let command = token.hasPrefix("cmd+")
                     let key = command ? String(token.dropFirst(4)) : token
-                    let codes: [String: UInt16] = ["i": 34, "t": 17, "k": 40, "f": 3]
+                    let codes: [String: UInt16] = ["i": 34, "t": 17, "k": 40, "f": 3, "r": 15]
                     if let window = mainWindow, let event = NSEvent.keyEvent(
                         with: .keyDown, location: .zero, modifierFlags: command ? .command : [], timestamp: ProcessInfo.processInfo.systemUptime,
                         windowNumber: window.windowNumber, context: nil, characters: key, charactersIgnoringModifiers: key,
@@ -1160,7 +1160,7 @@ final class AppModel {
                     // `-VelvetKeyGap <seconds>` (default 4) presses faster, e.g. 0.15 to mash a key.
                     let gap = UserDefaults.standard.double(forKey: "VelvetKeyGap")
                     try? await Task.sleep(for: .seconds(gap > 0 ? gap : 4))
-                    log.info("Test: after \(token, privacy: .public): search=\(self.searchText, privacy: .public), watch page shown=\(self.isShowingWatchPage), hidden=\(self.watchPageHidden), PiP=\(self.pip.isActive), theater=\(self.settings.theaterMode), playing=\(!(self.watching?.player.isPaused ?? true))")
+                    log.info("Test: after \(token, privacy: .public): search=\(self.searchText, privacy: .public), watch page shown=\(self.isShowingWatchPage), hidden=\(self.watchPageHidden), PiP=\(self.pip.isActive), theater=\(self.settings.theaterMode), looping=\(self.watching?.player.isLooping ?? false), playing=\(!(self.watching?.player.isPaused ?? true))")
                 }
             }
         }

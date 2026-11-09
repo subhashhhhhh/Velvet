@@ -197,6 +197,8 @@ final class MPVPlayer {
     private(set) var volume: Double = 100
     private(set) var isMuted = false
     private(set) var speed: Double = 1
+    /// Plays the video again from the start when it ends (so the queue doesn't advance).
+    private(set) var isLooping = false
     private(set) var videoSize: CGSize?
     private(set) var failure: String?
     /// mpv's active hardware decoder ("videotoolbox"), or "no"/empty for software decoding.
@@ -221,9 +223,12 @@ final class MPVPlayer {
         var speed = 1.0
         /// Shorts loop forever, like YouTube's.
         var loop = false
+        /// Seconds; positive plays the audio later (Bluetooth latency).
+        var audioDelay = 0.0
     }
 
     init(options: Options) {
+        isLooping = options.loop
         layer.backgroundColor = NSColor.black.cgColor
         layer.framebufferOnly = true
         // mpv renders at the video's own resolution; Core Animation scales the frames to whatever
@@ -270,6 +275,7 @@ final class MPVPlayer {
             ("stream-lavf-o", "request_size=10485760"),
             ("speed", String(options.speed)),
             ("loop-file", options.loop ? "inf" : "no"),
+            ("audio-delay", String(options.audioDelay)),
             ("volume", "100"),
             ("volume-max", "150"),
             // Captions: YouTube-like translucent box, clear of the controls.
@@ -457,6 +463,13 @@ final class MPVPlayer {
     func toggleMute() { core?.setFlag("mute", !isMuted) }
 
     func setSpeed(_ value: Double) { core?.setDouble("speed", max(0.25, min(4, value))) }
+
+    func setLooping(_ on: Bool) {
+        isLooping = on
+        core?.set("loop-file", on ? "inf" : "no")
+    }
+
+    func setAudioDelay(milliseconds: Int) { core?.setDouble("audio-delay", Double(milliseconds) / 1000) }
 
     func stop() { core?.command(["stop"]) }
 
