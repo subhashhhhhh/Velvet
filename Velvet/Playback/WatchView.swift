@@ -281,6 +281,10 @@ private struct WatchInfoView: View {
             .background(.quaternary, in: Capsule())
             .fixedSize()
 
+            if app.settings.downloadsEnabled, session.video.kind == .video {
+                DownloadPill(video: session.video, compact: compact)
+            }
+
             Menu {
                 Button("Copy Link") { copy(watchURL(at: nil)) }
                 Button("Copy Link at Current Time") { copy(watchURL(at: session.player.position)) }
@@ -988,7 +992,7 @@ private struct LinkTextView: NSViewRepresentable {
 }
 
 /// Icon and title, or just the icon when space is tight.
-private struct CompactableLabelStyle: LabelStyle {
+struct CompactableLabelStyle: LabelStyle {
     var compact: Bool
     func makeBody(configuration: Configuration) -> some View {
         if compact {

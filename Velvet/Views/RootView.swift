@@ -144,6 +144,8 @@ struct RootView: View {
                 PlaylistsPage()
             case .queue:
                 QueueView()
+            case .downloads:
+                DownloadsView()
             case .live:
                 SectionedFeedView(feed: app.liveFeed, emptyMessage: "Nothing is live right now.")
                     .navigationTitle("Live")

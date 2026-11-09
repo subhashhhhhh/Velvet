@@ -62,6 +62,8 @@ final class Downloads {
     @ObservationIgnored private let resolver: StreamResolver
     @ObservationIgnored private let prefs: Preferences
     @ObservationIgnored private var pending: [Video] = []
+    /// The videos of unfinished downloads (for their titles, and to retry).
+    @ObservationIgnored private var started: [String: Video] = [:]
     @ObservationIgnored private var running: (id: String, task: Task<Void, Never>)?
     private let log = Logger(subsystem: "com.subhash.Velvet", category: "Downloads")
 
@@ -86,14 +88,26 @@ final class Downloads {
         guard !isDownloaded(video.id), active[video.id] == nil || active[video.id] != .waiting else { return }
         if case .downloading = active[video.id] { return }
         active[video.id] = .waiting
+        started[video.id] = video
         pending.append(video)
         startNext()
     }
+
+    /// Tries a failed download again.
+    func retry(_ id: String) {
+        guard case .failed = active[id], let video = started[id] else { return }
+        active[id] = nil
+        download(video)
+    }
+
+    /// An unfinished download's title.
+    func title(for id: String) -> String { started[id]?.title ?? id }
 
     func cancel(_ id: String) {
         pending.removeAll { $0.id == id }
         if running?.id == id { running?.task.cancel() }
         active[id] = nil
+        started[id] = nil
     }
 
     func remove(_ id: String) {
@@ -116,6 +130,7 @@ final class Downloads {
                 let item = try await self.perform(video)
                 self.items.insert(item, at: 0)
                 self.active[video.id] = nil
+                self.started[video.id] = nil
                 self.log.info("Downloaded \(video.id, privacy: .public): \(item.resolution, privacy: .public), \(item.bytes) bytes")
             } catch is CancellationError {
                 self.active[video.id] = nil

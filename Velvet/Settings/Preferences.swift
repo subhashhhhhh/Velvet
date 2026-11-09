@@ -170,6 +170,8 @@ final class Preferences {
     var autoUpdateTools: Bool { didSet { save(autoUpdateTools, .autoUpdateTools) } }
     /// Look for a newer Velvet on GitHub once a day.
     var checkAppUpdates: Bool { didSet { save(checkAppUpdates, .checkAppUpdates) } }
+    /// The Download button, menu item and Downloads page.
+    var downloadsEnabled: Bool { didSet { save(downloadsEnabled, .downloadsEnabled) } }
 
     // First run
     /// The welcome flow has been finished (or skipped as an older install).
@@ -238,6 +240,7 @@ final class Preferences {
         jsRuntime = JSRuntime(rawValue: get(.jsRuntime, "")) ?? .deno
         autoUpdateTools = get(.autoUpdateTools, true)
         checkAppUpdates = get(.checkAppUpdates, true)
+        downloadsEnabled = get(.downloadsEnabled, true)
 
         // Installs from before the welcome flow have run Velvet already: the tools' daily check
         // was recorded. They skip the flow.
@@ -274,7 +277,7 @@ final class Preferences {
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
         deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
         deArrowOriginalOnHover = fresh.deArrowOriginalOnHover
-        jsRuntime = fresh.jsRuntime; autoUpdateTools = fresh.autoUpdateTools; checkAppUpdates = fresh.checkAppUpdates
+        jsRuntime = fresh.jsRuntime; autoUpdateTools = fresh.autoUpdateTools; checkAppUpdates = fresh.checkAppUpdates; downloadsEnabled = fresh.downloadsEnabled
     }
 
     // MARK: Persistence
@@ -286,7 +289,7 @@ final class Preferences {
         case audioDelayMs, showDislikes, hdr, splitStreams, hideAIChannels, hideAILikely, seriesTracking
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
-        case jsRuntime, autoUpdateTools, checkAppUpdates, hasSeenWelcome
+        case jsRuntime, autoUpdateTools, checkAppUpdates, hasSeenWelcome, downloadsEnabled
 
         var name: String { "settings.\(self)" }
     }

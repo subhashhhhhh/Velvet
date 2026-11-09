@@ -143,14 +143,22 @@ You can disable each service in the settings, except YouTube, Google and GitHub.
 - Related videos with chips: All, From the series, topics, and more.
 - Like, dislike, subscribe, Watch Later and Save to playlist.
 
-### 4.3 Queue and playlists
+### 4.3 Downloads
+
+- Click **Download** on a video's page, or right-click a video and select **Download**. Velvet downloads it at your preferred quality.
+- The **Downloads** page in the sidebar shows your downloads. You can play them without an internet connection.
+- Downloads play only in Velvet. Velvet keeps the video and the audio as two files, as YouTube sends them.
+- Downloads are in `~/Library/Application Support/com.subhash.Velvet/Downloads`. To remove them, use the Downloads page or **Settings › Playback**.
+- YouTube's terms of service do not permit downloads outside YouTube's own apps. You are responsible for how you use this feature. You can turn it off in **Settings › Playback**.
+
+### 4.4 Queue and playlists
 
 - Add videos to the queue. Velvet plays them one after the other.
 - Drag a video in the queue to change the order.
 - When you play a video from a playlist, the remaining videos go into the queue.
 - Velvet finds videos in a series (Part 2, Episode 3). It can put the next episode in the queue.
 
-### 4.4 Filters
+### 4.5 Filters
 
 You can hide these videos:
 
@@ -159,7 +167,7 @@ You can hide these videos:
 - Promotions.
 - Videos from channels that post AI-generated videos.
 
-### 4.5 Picture in Picture
+### 4.6 Picture in Picture
 
 The video can move to a Picture in Picture (PiP) window when one of these occurs:
 
@@ -169,13 +177,13 @@ The video can move to a Picture in Picture (PiP) window when one of these occurs
 
 Each of these has a setting.
 
-### 4.6 Slow connections
+### 4.7 Slow connections
 
 YouTube sets a speed limit for each video link. For high-quality video (1440p HDR and 4K), Velvet downloads from two links at the same time. This makes the download faster.
 
 If the video stops frequently to load, Velvet decreases the quality by one step. A quality that you select yourself does not change.
 
-### 4.7 System integration
+### 4.8 System integration
 
 - Now Playing in Control Center.
 - Media keys and headphone buttons.
@@ -220,7 +228,7 @@ To open the settings, push Command-, (comma). The settings are in these categori
 |---|---|
 | General | Appearance, start page, sidebar, search suggestions and search history. |
 | Feed | Videos in each row, Shorts shelf, filters. |
-| Playback | Quality, codec, HDR, autoplay, speed, captions, dislike counts, series, audio delay, Picture in Picture, queue, theater mode, hardware decoding, buffer, downloads from two links. |
+| Playback | Downloads, quality, codec, HDR, autoplay, speed, captions, dislike counts, series, audio delay, Picture in Picture, queue, theater mode, hardware decoding, buffer, downloads from two links. |
 | Notifications | macOS notifications for new uploads. |
 | SponsorBlock | On or off, skip notice, action for each segment category, server. |
 | DeArrow | Titles, thumbnails, originals on hover. |

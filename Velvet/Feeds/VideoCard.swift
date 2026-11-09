@@ -160,6 +160,15 @@ struct VideoContextMenu: View {
         if video.kind == .video || video.kind == .live {
             Button("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward") { app.playNextQueued(video) }
             Button("Add to Queue", systemImage: "text.badge.plus") { app.addToQueue(video) }
+            if app.settings.downloadsEnabled, video.kind == .video {
+                if app.downloads.isDownloaded(video.id) {
+                    Button("Remove Download", systemImage: "trash") { app.downloads.remove(video.id) }
+                } else if app.downloads.active[video.id] != nil {
+                    Button("Cancel Download", systemImage: "stop.circle") { app.downloads.cancel(video.id) }
+                } else {
+                    Button("Download", systemImage: "arrow.down.circle") { app.downloads.download(video) }
+                }
+            }
             Divider()
         }
         if app.authState == .signedIn {

@@ -340,10 +340,32 @@ private struct AIFilterSection: View {
 
 private struct PlaybackPane: View {
     @Environment(AppModel.self) private var app
+    @State private var confirmingRemoveDownloads = false
 
     var body: some View {
         @Bindable var settings = app.settings
         Form {
+            Section {
+                Toggle("Downloads", isOn: $settings.downloadsEnabled)
+                if settings.downloadsEnabled {
+                    LabeledContent("Downloaded") {
+                        HStack {
+                            Text("\(app.downloads.items.count) videos · \(ByteCountFormatter.string(fromByteCount: app.downloads.totalBytes, countStyle: .file))")
+                                .foregroundStyle(.secondary)
+                            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([Downloads.root]) }
+                            Button("Remove All…") { confirmingRemoveDownloads = true }
+                                .disabled(app.downloads.items.isEmpty)
+                        }
+                    }
+                }
+            } header: {
+                Text("Offline")
+            } footer: {
+                Text("Download videos from their page or their menu to watch them offline, at your preferred quality. They play in Velvet only. YouTube's terms of service don't permit downloading videos outside YouTube's own apps; you're responsible for how you use this.")
+            }
+            .confirmationDialog("Remove all downloads?", isPresented: $confirmingRemoveDownloads) {
+                Button("Remove All", role: .destructive) { app.downloads.removeAll() }
+            }
             Section("Quality") {
                 Picker("Preferred quality", selection: $settings.quality) {
                     ForEach(VideoQuality.allCases) { Text($0.label).tag($0) }

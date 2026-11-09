@@ -3,7 +3,7 @@ import OSLog
 
 /// Sidebar destinations.
 enum Destination: String, Hashable, CaseIterable, Identifiable {
-    case home, subscriptions, shorts, live, history, watchLater, playlists, queue
+    case home, subscriptions, shorts, live, history, watchLater, playlists, queue, downloads
 
     var id: String { rawValue }
 
@@ -17,6 +17,7 @@ enum Destination: String, Hashable, CaseIterable, Identifiable {
         case .watchLater: "Watch Later"
         case .playlists: "Playlists"
         case .queue: "Queue"
+        case .downloads: "Downloads"
         }
     }
 
@@ -30,6 +31,7 @@ enum Destination: String, Hashable, CaseIterable, Identifiable {
         case .watchLater: "clock"
         case .playlists: "list.bullet.rectangle"
         case .queue: "list.number"
+        case .downloads: "arrow.down.circle"
         }
     }
 }
@@ -1492,7 +1494,9 @@ final class AppModel {
             Task {
                 try? await Task.sleep(for: .seconds(6))
                 let video = Video(id: id, title: "Download test")
-                downloads.download(video)
+                open(video)
+                try? await Task.sleep(for: .seconds(4))
+                downloads.download(watching?.video ?? video)
                 var last = ""
                 for _ in 0..<300 {
                     try? await Task.sleep(for: .seconds(1))
@@ -1502,9 +1506,14 @@ final class AppModel {
                 }
                 guard let item = downloads.items.first(where: { $0.id == id }) else { return }
                 log.info("Test: saved \(item.resolution, privacy: .public), \(item.bytes) bytes, audio \(item.audio != nil), \(item.chapters.count) chapters")
+                // Open it again: this time from the files.
+                try? await Task.sleep(for: .seconds(3))
+                navigate(to: .downloads)
+                try? await Task.sleep(for: .seconds(4))
                 open(video)
                 try? await Task.sleep(for: .seconds(8))
                 log.info("Test: playing \(!(self.watching?.player.isPaused ?? true)) at \(Int(self.watching?.player.position ?? 0)) s")
+                navigate(to: .downloads)
             }
         }
         // `-VelvetScrollPerfTest YES`: scroll like a trackpad at 12 s and log frame timing.

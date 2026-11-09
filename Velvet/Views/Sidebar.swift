@@ -90,6 +90,7 @@ private struct SidebarList: View {
                     header("Library")
                     ForEach([Destination.history, .watchLater, .playlists]) { row($0) }
                     row(.queue, badge: app.queue.items.count)
+                    if app.settings.downloadsEnabled { row(.downloads, badge: app.downloads.active.count) }
                     // Watch Later is already above.
                     if let playlists = app.playlistsModel?.playlists.filter({ $0.id != "WL" }), !playlists.isEmpty {
                         header("Playlists")
@@ -197,6 +198,7 @@ private struct SidebarRail: View {
             Divider().frame(width: 32).padding(.vertical, 6)
             ForEach([Destination.history, .watchLater, .playlists]) { item($0) }
             item(.queue, badge: app.queue.items.count)
+            if app.settings.downloadsEnabled { item(.downloads, badge: app.downloads.active.count) }
             Spacer(minLength: 0)
             if let session = app.pipSession {
                 NowPlayingThumbnail(session: session)
