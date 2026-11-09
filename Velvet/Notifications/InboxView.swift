@@ -146,7 +146,7 @@ private struct InboxRow: View {
         Button(action: onOpen) {
             HStack(alignment: .top, spacing: 10) {
                 Circle()
-                    .fill(notification.isRead ? .clear : Color.accentColor)
+                    .fill(notification.isRead ? AnyShapeStyle(.clear) : AnyShapeStyle(.primary))
                     .frame(width: 6, height: 6)
                     .padding(.top, 17)
                 RemoteImage(url: notification.channelAvatar)

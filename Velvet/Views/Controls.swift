@@ -87,3 +87,48 @@ enum ControlsPreview {
     }
 }
 #endif
+
+/// The main button of a view (Retry, Sign In, Install…), in place of the system's blue
+/// `.borderedProminent`: filled with the text colour, like a selected `Chip`. Over video,
+/// which is always dark, it's white whatever the appearance.
+struct ProminentButtonStyle: ButtonStyle {
+    var overMedia = false
+    @Environment(\.isEnabled) private var isEnabled
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.body.weight(.medium))
+            .padding(.horizontal, 14)
+            .padding(.vertical, 6)
+            .foregroundStyle(overMedia ? AnyShapeStyle(Color.black) : AnyShapeStyle(Color(nsColor: .windowBackgroundColor)))
+            .background(overMedia ? AnyShapeStyle(Color.white) : AnyShapeStyle(.primary),
+                        in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .opacity(!isEnabled ? 0.4 : configuration.isPressed ? 0.75 : 1)
+            .contentShape(Rectangle())
+    }
+}
+
+extension ButtonStyle where Self == ProminentButtonStyle {
+    static var prominent: ProminentButtonStyle { ProminentButtonStyle() }
+    static var prominentOverMedia: ProminentButtonStyle { ProminentButtonStyle(overMedia: true) }
+}
+
+extension Color {
+    /// Velvet's accent, neutral instead of blue: near-white in dark mode (#F5F5F7), near-black in light (#1D1D1F)
+    /// (the AccentColor asset). Applied with `.tint` at each window's root, because macOS
+    /// uses an app's own accent only when the system accent is set to Multicolor.
+    static let velvetAccent = Color("AccentColor")
+}
+
+extension Color {
+    /// The crimson of Velvet's icon, for switches only; the rest of the UI is neutral.
+    static let velvetCrimson = Color(red: 0xE0 / 255, green: 0x10 / 255, blue: 0x3A / 255)
+}
+
+/// Every switch in Velvet is crimson (set at each window's root). Toggles that ask for
+/// another style, such as the playlist checkboxes, keep it and the neutral tint.
+struct VelvetSwitchStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        Toggle(configuration).toggleStyle(.switch).tint(.velvetCrimson)
+    }
+}

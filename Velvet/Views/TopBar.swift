@@ -255,7 +255,7 @@ private struct SearchField: View {
             Capsule().fill(.primary.opacity(editing ? 0.04 : hovering ? 0.09 : 0.065))
         )
         .overlay(
-            Capsule().strokeBorder(editing ? AnyShapeStyle(Color.accentColor.opacity(0.7)) : AnyShapeStyle(.primary.opacity(0.06)),
+            Capsule().strokeBorder(editing ? AnyShapeStyle(.primary.opacity(0.4)) : AnyShapeStyle(.primary.opacity(0.06)),
                                    lineWidth: editing ? 1.5 : 1)
         )
         .contentShape(Capsule())

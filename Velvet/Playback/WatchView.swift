@@ -547,7 +547,9 @@ struct CommentsSection: View {
                         .foregroundStyle(.secondary)
                     if page.canLoadMoreComments && !page.isLoadingComments {
                         Button("Load More to Search") { Task { await page.loadMoreComments() } }
-                            .buttonStyle(.link)
+                            .buttonStyle(.plain)
+                            .fontWeight(.semibold)
+                            .pointerStyle(.link)
                     }
                 }
                 .font(.callout)
@@ -636,7 +638,7 @@ private struct CommentComposer: View {
                     .buttonStyle(.plain)
                     .padding(.horizontal, 10)
                     Button(submitTitle) { submit() }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.prominent)
                         .disabled(trimmed.isEmpty || trimmed == initialText || sending)
                         .help("⌘↩")
                 }

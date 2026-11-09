@@ -80,7 +80,7 @@ private struct ChatRow: View {
     private var roleColor: Color {
         switch message.role {
         case .owner: .yellow
-        case .moderator: .blue
+        case .moderator: .purple
         case .member: .green
         case .viewer: .secondary
         }

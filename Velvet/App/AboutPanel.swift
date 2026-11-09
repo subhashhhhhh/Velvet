@@ -18,9 +18,14 @@ enum AboutPanel {
             .paragraphStyle: center,
         ]
         let text = NSMutableAttributedString()
-        func add(_ s: String, link: String? = nil, color: NSColor? = nil) {
+        // Names are bold rather than links: the About panel always draws links in the
+        // system's blue. Settings › About has the links.
+        func add(_ s: String, bold: Bool = false, color: NSColor? = nil) {
             var attrs = base
-            if let link { attrs[.link] = URL(string: link) }
+            if bold {
+                attrs[.font] = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize, weight: .semibold)
+                attrs[.foregroundColor] = NSColor.labelColor
+            }
             if let color { attrs[.foregroundColor] = color }
             text.append(NSAttributedString(string: s, attributes: attrs))
         }
@@ -36,15 +41,15 @@ enum AboutPanel {
         if !installed.isEmpty { add(installed.joined(separator: " · ") + "\n") }
 
         add("Built with ")
-        add("mpv", link: "https://mpv.io")
+        add("mpv", bold: true)
         add(", ")
-        add("yt-dlp", link: "https://github.com/yt-dlp/yt-dlp")
+        add("yt-dlp", bold: true)
         add(" and ")
-        add("MPVKit", link: "https://github.com/mpvkit/MPVKit")
+        add("MPVKit", bold: true)
         add(".\nSegments from ")
-        add("SponsorBlock", link: "https://sponsor.ajay.app")
+        add("SponsorBlock", bold: true)
         add(", titles and thumbnails from ")
-        add("DeArrow", link: "https://dearrow.ajay.app")
+        add("DeArrow", bold: true)
         add(".\nNot affiliated with YouTube or Google.")
         return text
     }

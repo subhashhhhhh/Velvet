@@ -165,12 +165,12 @@ struct PlayerView: View {
                 Image(systemName: session.restriction?.symbol ?? "exclamationmark.triangle").font(.largeTitle)
                 Text(message).multilineTextAlignment(.center).frame(maxWidth: 420)
                 if session.restriction == nil {
-                    Button("Try Again") { session.retry() }.buttonStyle(.borderedProminent)
+                    Button("Try Again") { session.retry() }.buttonStyle(.prominentOverMedia)
                 } else if session.restriction == .membersOnly {
                     Button("Open on YouTube") {
                         NSWorkspace.shared.open(URL(string: "https://www.youtube.com/watch?v=\(session.video.id)")!)
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.prominentOverMedia)
                 }
             }
             .foregroundStyle(.white)

@@ -17,7 +17,7 @@ struct AccountButton: View {
                 ChromeButton("Settings", symbol: "gearshape") { app.showingAccount.toggle() }
                     .popover(isPresented: $app.showingAccount, arrowEdge: .bottom) { AccountPanel { app.showingAccount = false } }
                 Button("Sign In") { app.showingSignIn = true }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.prominent)
                     .buttonBorderShape(.capsule)
             }
         case .signedIn:
@@ -182,7 +182,7 @@ private struct QuickToggle: View {
     var body: some View {
         QuickRow(title, detail: detail, symbol: symbol) {
             Toggle(title, isOn: $isOn)
-                .toggleStyle(.switch)
+                .toggleStyle(VelvetSwitchStyle())
                 .controlSize(.mini)
         }
         // The whole row flips the switch, not just the switch.

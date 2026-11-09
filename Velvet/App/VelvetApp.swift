@@ -9,6 +9,8 @@ struct VelvetApp: App {
         WindowGroup {
             RootView()
                 .environment(app)
+                .tint(.velvetAccent)
+                .toggleStyle(VelvetSwitchStyle())
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in
                     // Quitting doesn't change scenePhase; persist the final position here.
                     app.watching?.close()
@@ -42,6 +44,8 @@ struct VelvetApp: App {
         Settings {
             SettingsView()
                 .environment(app)
+                .tint(.velvetAccent)
+                .toggleStyle(VelvetSwitchStyle())
         }
     }
 }

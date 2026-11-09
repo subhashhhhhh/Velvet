@@ -184,7 +184,7 @@ private struct SuggestionRow: View {
         HStack(spacing: 10) {
             Image(systemName: row.isHistory ? "clock.arrow.circlepath" : "magnifyingglass")
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(row.isHistory ? Color.accentColor : .secondary)
+                .foregroundStyle(.secondary)
                 .frame(width: 16)
             highlightedText
                 .lineLimit(1)

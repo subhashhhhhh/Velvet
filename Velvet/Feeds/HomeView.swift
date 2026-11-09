@@ -15,7 +15,7 @@ struct HomeView: View {
                     Text("YouTube only shows a home feed to signed-in accounts.")
                 } actions: {
                     Button("Sign In with Google") { app.showingSignIn = true }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.prominent)
                 }
             case .signedIn:
                 if let feed = app.homeFeed {

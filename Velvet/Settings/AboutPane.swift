@@ -25,7 +25,7 @@ struct AboutPane: View {
                             .foregroundStyle(.secondary)
                         HStack(spacing: 4) {
                             Text("Made by")
-                            Link("Subhash", destination: Self.developerURL)
+                            TextLink("Subhash", url: Self.developerURL)
                         }
                         .padding(.top, 4)
                     }
@@ -80,14 +80,40 @@ private struct LinkRow: View {
 
     var body: some View {
         LabeledContent(title) {
-            Link(destination: url) {
-                HStack(spacing: 3) {
-                    Text(detail)
+            TextLink(detail, url: url, arrow: true)
+        }
+    }
+}
+
+/// A link in the text colour, underlined on hover. SwiftUI's `Link` is always the system's
+/// blue link colour, whatever the tint.
+private struct TextLink: View {
+    let title: String
+    let url: URL
+    var arrow = false
+    @State private var hovering = false
+
+    init(_ title: String, url: URL, arrow: Bool = false) {
+        self.title = title
+        self.url = url
+        self.arrow = arrow
+    }
+
+    var body: some View {
+        Button { NSWorkspace.shared.open(url) } label: {
+            HStack(spacing: 3) {
+                Text(title).underline(hovering)
+                if arrow {
                     Image(systemName: "arrow.up.right")
                         .font(.system(size: 9, weight: .semibold))
                 }
             }
+            .foregroundStyle(.primary)
         }
+        .buttonStyle(.plain)
+        .pointerStyle(.link)
+        .onHover { hovering = $0 }
+        .help(url.absoluteString)
     }
 }
 
@@ -127,11 +153,11 @@ private struct UpdateStatusRow: View {
                     Spacer()
                     if updates.canInstall {
                         Button("Install and Relaunch") { updates.install() }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.prominent)
                     } else {
                         // A local build can't verify a download; send it to the release page.
                         Button("Download") { NSWorkspace.shared.open(release.pageURL) }
-                            .buttonStyle(.borderedProminent)
+                            .buttonStyle(.prominent)
                     }
                 }
             }

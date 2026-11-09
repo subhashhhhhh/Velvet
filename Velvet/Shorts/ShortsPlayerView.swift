@@ -159,7 +159,7 @@ private struct ShortCardPlayer: View {
             if case .failed(let message) = session.phase {
                 VStack(spacing: 10) {
                     Text(message).multilineTextAlignment(.center)
-                    Button("Try Again") { session.retry() }.buttonStyle(.borderedProminent)
+                    Button("Try Again") { session.retry() }.buttonStyle(.prominentOverMedia)
                 }
                 .foregroundStyle(.white).padding()
             }

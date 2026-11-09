@@ -91,7 +91,7 @@ struct SignInRequiredView: View {
         } description: {
             Text(message)
         } actions: {
-            Button("Sign In with Google") { app.showingSignIn = true }.buttonStyle(.borderedProminent)
+            Button("Sign In with Google") { app.showingSignIn = true }.buttonStyle(.prominent)
         }
     }
 }
