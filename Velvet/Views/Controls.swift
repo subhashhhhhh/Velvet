@@ -65,7 +65,16 @@ struct SegmentedTabs<Value: Hashable>: View {
 enum ControlsPreview {
     static func renderIfAsked() {
         guard let path = UserDefaults.standard.string(forKey: "VelvetRenderControls") else { return }
+        let sample = "More info: https://studio.blender.org/projects/big-buck-bunny/ and the best part is at 10:32."
+        let links = HStack(spacing: 0) {
+            ForEach([ColorScheme.dark, .light], id: \.self) { scheme in
+                LinkedText(text: sample).frame(width: 300, alignment: .leading).padding(12)
+                    .background(scheme == .dark ? Color(white: 0.12) : .white)
+                    .environment(\.colorScheme, scheme)
+            }
+        }
         let view = VStack(alignment: .leading, spacing: 18) {
+            links
             SegmentedTabs(tabs: [(0, "Videos (3)"), (1, "Comments")], selection: .constant(0)).frame(width: 408)
             SegmentedTabs(tabs: [(0, "Chat"), (1, "Up Next")], selection: .constant(1)).frame(width: 360)
             HStack(spacing: 8) {
@@ -131,4 +140,14 @@ struct VelvetSwitchStyle: ToggleStyle {
     func makeBody(configuration: Configuration) -> some View {
         Toggle(configuration).toggleStyle(.switch).tint(.velvetCrimson)
     }
+}
+
+extension Color {
+    /// Links in descriptions and comments: Velvet's crimson, lighter on dark backgrounds so
+    /// it stays readable. (The neutral tint made them look like the text around them.)
+    static let velvetLink = Color(nsColor: NSColor(name: "VelvetLink") { appearance in
+        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
+            ? NSColor(srgbRed: 1.0, green: 0.42, blue: 0.5, alpha: 1)
+            : NSColor(srgbRed: 0.78, green: 0.05, blue: 0.2, alpha: 1)
+    })
 }

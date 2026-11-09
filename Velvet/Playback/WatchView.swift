@@ -305,7 +305,7 @@ private struct WatchInfoView: View {
                 .compactMap { $0 }.joined(separator: " · "))
                 .font(.subheadline.weight(.semibold))
             if let text = page.details?.description, !text.isEmpty {
-                Text(RichText.attributed(text))
+                LinkedText(text: text)
                     .font(.body)
                     .lineLimit(descriptionExpanded ? nil : 3)
                     .textSelection(.enabled)
@@ -780,7 +780,7 @@ private struct CommentRow: View {
                     }
                 } else {
                     if !comment.text.isEmpty {
-                        Text(RichText.attributed(comment.text))
+                        LinkedText(text: comment.text)
                             .font(.body)
                             .textSelection(.enabled)
                     }
@@ -900,6 +900,68 @@ enum RichText {
             out[range].link = URL(string: "velvet-seek://\(seconds)")
         }
         return out
+    }
+}
+
+/// Text whose URLs and timestamps are links, in Velvet's link colour, with a pointing hand
+/// over them. SwiftUI shows no hand over links inside a Text, and doesn't say where they are:
+/// a text renderer notes each link's frame as it draws, and hovering compares against those.
+/// Text without links is a plain Text.
+struct LinkedText: View {
+    let text: String
+    @State private var frames = LinkFrames()
+    @State private var overLink = false
+
+    var body: some View {
+        let attributed = RichText.attributed(text)
+        if attributed.runs.contains(where: { $0.link != nil }) {
+            Self.marked(attributed)
+                .tint(.velvetLink)
+                .textRenderer(LinkFrameRenderer(frames: frames))
+                .onContinuousHover { phase in
+                    var over = false
+                    if case .active(let point) = phase {
+                        over = frames.rects.contains { $0.insetBy(dx: -1, dy: -2).contains(point) }
+                    }
+                    if over != overLink { overLink = over }
+                }
+                .pointerStyle(overLink ? .link : nil)
+        } else {
+            Text(attributed)
+        }
+    }
+
+    /// The text with each link run marked, so the renderer can find it.
+    private static func marked(_ attributed: AttributedString) -> Text {
+        var result = Text(verbatim: "")
+        for run in attributed.runs {
+            let piece = Text(AttributedString(attributed[run.range]))
+            result = run.link == nil ? Text("\(result)\(piece)") : Text("\(result)\(piece.customAttribute(LinkRun()))")
+        }
+        return result
+    }
+}
+
+private nonisolated struct LinkRun: TextAttribute {}
+
+/// Where the links were last drawn, in the text's own coordinates. A reference, so the
+/// renderer can update it without making the view draw again.
+private nonisolated final class LinkFrames: @unchecked Sendable {
+    var rects: [CGRect] = []
+}
+
+private nonisolated struct LinkFrameRenderer: TextRenderer {
+    let frames: LinkFrames
+
+    func draw(layout: Text.Layout, in context: inout GraphicsContext) {
+        var rects: [CGRect] = []
+        for line in layout {
+            for run in line where run[LinkRun.self] != nil {
+                rects.append(run.typographicBounds.rect)
+            }
+            context.draw(line)
+        }
+        frames.rects = rects
     }
 }
 

@@ -349,7 +349,7 @@ private struct ShortSidePanel: View {
                 stat(page.details?.publishedDate, page.details?.publishedRelative ?? "")
             }
             if let text = page.details?.description, !text.isEmpty {
-                Text(RichText.attributed(text)).textSelection(.enabled)
+                LinkedText(text: text).textSelection(.enabled)
             } else if page.details == nil {
                 ProgressView().controlSize(.small)
             }
