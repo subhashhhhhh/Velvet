@@ -557,11 +557,19 @@ final class AppModel {
     /// Scrolling the watch page: move the video into PiP once the player is mostly out of view,
     /// and back once it's mostly visible again (hysteresis avoids flicker at the edge).
     private func playerVisibilityChanged() {
-        guard settings.pipOnScroll, isShowingWatchPage, !playerFullscreen,
-              mainWindow?.occlusionState.contains(.visible) ?? true else { return }
+        guard settings.pipOnScroll, isShowingWatchPage, !playerFullscreen else { return }
         let fraction = playerVisibleFraction
         if !pip.isActive {
-            guard fraction < 0.33, let player = activePlayer, !player.isPaused, player.position > 0 else { return }
+            guard fraction < 0.33 else { return }
+            guard mainWindow?.occlusionState.contains(.visible) ?? true else {
+                log.debug("Scrolled past the player, but the window reports itself hidden: no PiP")
+                return
+            }
+            guard let player = activePlayer, !player.isPaused, player.position > 0 else {
+                log.debug("Scrolled past the player, but it isn't playing: no PiP")
+                return
+            }
+            log.info("Scrolled past the player (\(Int(fraction * 100))% visible): PiP")
             enterPictureInPicture(automatic: true, reason: .scrolledPast)
         } else if pipReason == .scrolledPast, fraction > 0.5 {
             exitPictureInPicture()
