@@ -112,8 +112,12 @@ struct SearchSuggestionsDropdown: View {
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(.primary.opacity(0.1)))
                 .shadow(color: .black.opacity(0.3), radius: 18, y: 8)
+                // Measured before the offset moves it under the field (a frame doesn't follow
+                // an offset), so the real place is the field's corner plus this size.
+                .onGeometryChange(for: CGSize.self) { $0.size } action: { size in
+                    assist.dropdownFrame = CGRect(origin: CGPoint(x: field.minX, y: field.maxY + 6), size: size)
+                }
                 .offset(x: field.minX - origin.x, y: field.maxY - origin.y + 6)
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { assist.dropdownFrame = $0 }
             }
         }
         .ignoresSafeArea()
