@@ -83,9 +83,28 @@ actor StreamResolver {
     /// - `account`: yt-dlp's default clients with your cookies, for videos that need an
     ///   account (age-restricted, members-only, private). Slower, and its links are
     ///   embargoed ~4s (PlayerSession waits that out).
-    private enum Strategy: String { case fast, account }
+    private enum Strategy: String { case fast, account, embedded }
+
+    /// The same video's links from a second client (YouTube's embedded player). YouTube paces
+    /// each client's links separately, so downloading from both at once is faster
+    /// (SplitStreamServer). Nil if that client can't play it (e.g. embedding disabled).
+    func mirror(_ videoId: String) async -> StreamInfo? {
+        if let running = mirrors[videoId] { return await running.value }
+        let task = Task<StreamInfo?, Never> { try? await self.run(videoId, isLive: false, strategy: .embedded) }
+        mirrors[videoId] = task
+        if mirrors.count > 6, let old = mirrors.keys.first(where: { $0 != videoId }) { mirrors[old] = nil }
+        return await task.value
+    }
+
+    private var mirrors: [String: Task<StreamInfo?, Never>] = [:]
 
     private func run(_ videoId: String, isLive: Bool) async throws -> StreamInfo {
+        #if DEBUG
+        // `-VelvetResolveAccount YES`: always use the signed-in path (to compare stream speeds).
+        if UserDefaults.standard.bool(forKey: "VelvetResolveAccount") {
+            return try await run(videoId, isLive: isLive, strategy: .account)
+        }
+        #endif
         do {
             let info = try await run(videoId, isLive: isLive, strategy: .fast)
             // Opened from somewhere that didn't know it was live (related video, link): the
@@ -122,6 +141,7 @@ actor StreamResolver {
         // HLS manifests cost ~0.5–2s extra and are only needed for live streams.
         if !isLive { extractorArgs.append("skip=hls") }
         if strategy == .fast { extractorArgs.append("player_client=visionos") }
+        if strategy == .embedded { extractorArgs.append("player_client=web_embedded") }
         if !extractorArgs.isEmpty { args += ["--extractor-args", "youtube:" + extractorArgs.joined(separator: ";")] }
 
         // Account strategy only: hand yt-dlp the session via a private temp file, removed right after.

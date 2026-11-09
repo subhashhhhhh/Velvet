@@ -113,6 +113,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetSubscriptionsTest YES` | Opens Subscriptions and logs its sections, video and Shorts counts. |
 | `-VelvetSuggestTest YES` | Prints YouTube's signed-in search suggestions (raw) for an empty box and "s" to stderr. Your own past searches are the items without subtype 512. The key test also logs the dropdown's rows (`-VelvetKeyTest "cmd+k,s"`). |
 | `-VelvetSearchClickTest YES` | Clicks the search field three times, then the page, and logs whether the suggestions show after each (expected: show, hide, show, hide). The test window must be frontmost: a background window uses the first click to activate. |
+| `-VelvetResolveAccount YES` | Always resolves streams through the signed-in path (to compare stream speeds with the default visionos path). |
 | `-VelvetHistoryTest YES` | Goes History → a video → a channel, then Back, Back, Forward, and logs the page and whether Back/Forward are available after each step. Trackpad swipes can't be sent from a script; the user must test them. |
 | `-VelvetPlaylistTest YES` | Opens your first playlist (after Watch Later) when the sidebar has loaded them. Add `-VelvetPlaylistPlay YES` to then play its second video and log the queue it fills. |
 | `-VelvetFullscreenAtLaunch YES` | Puts the window in macOS fullscreen as soon as it exists. Check with the window list that the toolbar window sits off screen (y = -52). It takes over the user's screen. |
@@ -145,3 +146,4 @@ CAUTION: Do not do account actions (like, subscribe, Watch Later, playlists) in 
 - The system PiP window on macOS does not let you drag its timeline. The ±10 s buttons operate. IINA has the same limit.
 - Command-line tools cannot send media keys or MediaRemote commands. The user must test media keys.
 - The `visionos` yt-dlp client does not need cookies and has no stream delay. The account path uses cookies and has a delay of approximately 4 s.
+- YouTube paces each client's stream links to its estimate of the viewer's bandwidth (the `initcwndbps` link parameter, signed, so it can't be raised). Different clients are paced separately, so `SplitStreamServer` downloads high-bitrate video (over 10 Mbit/s) from the `visionos` and `web_embedded` links at once through a local server on 127.0.0.1. Measured on a 29 Mbit/s line: about 15 Mbit/s from one link, about 20 from two. The player logs every stall with the buffered time and mpv's download rate.

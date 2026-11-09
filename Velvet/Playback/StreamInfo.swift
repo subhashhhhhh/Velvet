@@ -4,7 +4,7 @@ import VideoToolbox
 /// One downloadable stream as reported by yt-dlp.
 nonisolated struct StreamFormat: Hashable, Sendable {
     let id: String
-    let url: URL
+    var url: URL
     let ext: String?
     let protocolName: String
     let width: Int?
@@ -25,7 +25,13 @@ nonisolated struct StreamFormat: Hashable, Sendable {
     /// "DRC" = YouTube's dynamic-range-compressed (stable volume) variant of an audio track.
     let isDRC: Bool
     /// Headers yt-dlp says the URL must be fetched with (notably User-Agent).
-    let httpHeaders: [String: String]
+    var httpHeaders: [String: String]
+
+    /// The file's size in bytes, from the link's `clen` parameter.
+    var contentLength: Int64? {
+        URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?
+            .first(where: { $0.name == "clen" })?.value.flatMap(Int64.init)
+    }
     /// YouTube embargoes fresh links for a few seconds (403 until then).
     let availableAt: Date?
 

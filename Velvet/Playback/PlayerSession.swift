@@ -194,6 +194,34 @@ final class PlayerSession: Identifiable {
 
     func noteLivePause() { if isLive { isBehindLive = true } }
 
+    /// The selection with its video served by SplitStreamServer from this client's link and
+    /// the embedded player's (waits up to 6 s for that one; nil to play as usual).
+    private func splitSelection(_ s: StreamInfo.Selection) async -> StreamInfo.Selection? {
+        guard let length = s.video.contentLength else { return nil }
+        let resolver = resolver
+        let videoId = video.id
+        let mirror = await withTaskGroup(of: StreamInfo?.self) { group -> StreamInfo? in
+            group.addTask { await resolver.mirror(videoId) }
+            group.addTask { try? await Task.sleep(for: .seconds(6)); return nil }
+            let first = await group.next() ?? nil
+            group.cancelAll()
+            return first
+        }
+        guard let twin = mirror?.formats.first(where: { $0.id == s.video.id }) else {
+            log.info("No second link for format \(s.video.id, privacy: .public); playing from one")
+            return nil
+        }
+        let sources = [SplitStreamServer.Source(url: s.video.url, headers: s.video.httpHeaders),
+                       SplitStreamServer.Source(url: twin.url, headers: twin.httpHeaders)]
+        guard let local = SplitStreamServer.shared.url(for: sources, length: length,
+                                                       contentType: s.video.ext == "mp4" ? "video/mp4" : "video/webm") else { return nil }
+        var v = s.video
+        v.url = local
+        v.httpHeaders = [:]
+        log.info("Downloading format \(s.video.id, privacy: .public) from two links")
+        return StreamInfo.Selection(video: v, audio: s.audio)
+    }
+
     /// Qualities this video actually offers.
     var availableQualities: [VideoQuality] {
         let heights = Set(info?.formats.filter(\.hasVideo).compactMap(\.tier) ?? [])
@@ -308,10 +336,16 @@ final class PlayerSession: Identifiable {
     }
 
     private func play(_ info: StreamInfo, at time: Double, autoplay: Bool) async throws {
-        guard let selection = info.select(quality: quality, codec: prefs.codec, displayLimit: Self.displayHeightLimit()) else {
+        guard var selection = info.select(quality: quality, codec: prefs.codec, displayLimit: Self.displayHeightLimit()) else {
             phase = .failed("No playable stream was found for this video.")
             return
         }
+        // High-bitrate video (1440p HDR, 4K): download it from two clients' links at once.
+        if prefs.splitStreams, !info.isLive, (selection.video.bitrate ?? 0) > 10_000,
+           let split = await splitSelection(selection) {
+            selection = split
+        }
+        try Task.checkCancellation()
         self.selection = selection
         // Fresh links 403 until YouTube's embargo passes (usually ~4s after extraction).
         // Hover prefetch and the cache normally put us past it already.

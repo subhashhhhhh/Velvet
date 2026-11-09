@@ -378,10 +378,11 @@ private struct PlaybackPane: View {
                     ForEach([50, 100, 150, 300, 500], id: \.self) { Text("\($0) MB").tag($0) }
                 }
                 Toggle("Prepare videos when hovering", isOn: $settings.prefetchOnHover)
+                Toggle("Download high-quality video from two links at once", isOn: $settings.splitStreams)
             } header: {
                 Text("Performance")
             } footer: {
-                Text("Velvet buffers about 30 seconds ahead, up to this limit. Hover preparation looks up stream links in advance so playback starts faster.")
+                Text("Velvet buffers about 30 seconds ahead, up to this limit. Hover preparation looks up stream links in advance so playback starts faster. YouTube limits how fast each of its apps can download; for 1440p HDR and 4K, Velvet also gets the embedded player's link and downloads from both, which takes a second or two longer to start.")
             }
         }
         .formStyle(.grouped)
