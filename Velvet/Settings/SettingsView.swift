@@ -1,18 +1,146 @@
 import SwiftUI
 
-struct SettingsView: View {
-    var body: some View {
-        TabView {
-            Tab("General", systemImage: "gearshape") { GeneralPane() }
-            Tab("Feed", systemImage: "square.grid.2x2") { FeedPane() }
-            Tab("Playback", systemImage: "play.rectangle") { PlaybackPane() }
-            Tab("SponsorBlock", systemImage: "forward.end") { SponsorBlockPane() }
-            Tab("DeArrow", systemImage: "arrow.uturn.down.circle") { DeArrowPane() }
-            Tab("Account", systemImage: "person.crop.circle") { AccountPane() }
-            Tab("Advanced", systemImage: "wrench.and.screwdriver") { AdvancedPane() }
+enum SettingsPane: String, CaseIterable, Identifiable {
+    case general, feed, playback, notifications, sponsorBlock, deArrow, account, advanced
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .general: "General"
+        case .feed: "Feed"
+        case .playback: "Playback"
+        case .notifications: "Notifications"
+        case .sponsorBlock: "SponsorBlock"
+        case .deArrow: "DeArrow"
+        case .account: "Account"
+        case .advanced: "Advanced"
         }
-        .frame(width: 560)
-        .scenePadding(.minimum)
+    }
+
+    var symbol: String {
+        switch self {
+        case .general: "gearshape"
+        case .feed: "square.grid.2x2"
+        case .playback: "play.rectangle"
+        case .notifications: "bell"
+        case .sponsorBlock: "forward.end"
+        case .deArrow: "textformat"
+        case .account: "person.crop.circle"
+        case .advanced: "wrench.and.screwdriver"
+        }
+    }
+}
+
+/// The Settings window, laid out like the main window: a floating sidebar of categories
+/// (window buttons inside it) and the selected category's settings, its title in the bar.
+struct SettingsView: View {
+    @State private var pane: SettingsPane = {
+        #if DEBUG
+        // `-VelvetSettingsPane playback` opens on that pane.
+        if let raw = UserDefaults.standard.string(forKey: "VelvetSettingsPane"), let pane = SettingsPane(rawValue: raw) { return pane }
+        #endif
+        return .general
+    }()
+
+    var body: some View {
+        HStack(spacing: 0) {
+            SettingsSidebar(selection: $pane)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(pane.title)
+                    .font(.system(size: 17, weight: .semibold))
+                    .frame(height: TopBar.height)
+                    .padding(.horizontal, 28)
+                content
+                    .scrollContentBackground(.hidden)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .frame(width: 800, height: 580)
+        // As in the main window: an empty toolbar keeps the window buttons centred in the
+        // 52pt bar, and Velvet draws everything under it.
+        .ignoresSafeArea(.container, edges: .top)
+        .background(Color(nsColor: .windowBackgroundColor).ignoresSafeArea())
+        .toolbar {
+            if #available(macOS 26.0, *) {
+                ToolbarItem(placement: .navigation) { Color.clear.frame(width: 1, height: 1) }
+                    .sharedBackgroundVisibility(.hidden)
+            } else {
+                ToolbarItem(placement: .navigation) { Color.clear.frame(width: 1, height: 1) }
+            }
+        }
+        .toolbar(removing: .title)
+        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
+        .navigationTitle(pane.title)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch pane {
+        case .general: GeneralPane()
+        case .feed: FeedPane()
+        case .playback: PlaybackPane()
+        case .notifications: NotificationsPane()
+        case .sponsorBlock: SponsorBlockPane()
+        case .deArrow: DeArrowPane()
+        case .account: AccountPane()
+        case .advanced: AdvancedPane()
+        }
+    }
+}
+
+private struct SettingsSidebar: View {
+    @Binding var selection: SettingsPane
+    @Environment(AppModel.self) private var app
+    @Namespace private var highlight
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Color.clear.frame(height: SidebarMetrics.windowButtons(fullscreen: false))
+            if app.authState == .signedIn {
+                Button { selection = .account } label: {
+                    HStack(spacing: 10) {
+                        AccountPhoto(size: 32)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(app.account?.name ?? "Signed In")
+                                .font(.system(size: 13, weight: .semibold))
+                                .lineLimit(1)
+                            Text("Google Account")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 12)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+            ForEach(SettingsPane.allCases) { pane in
+                let selected = pane == selection
+                SidebarRow(title: pane.title, isSelected: selected, selection: highlight, action: { selection = pane }) {
+                    Image(systemName: pane.symbol)
+                        .symbolVariant(selected ? .fill : .none)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(selected ? .primary : .secondary)
+                        .frame(width: 22)
+                }
+            }
+            Spacer(minLength: 0)
+            if let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String {
+                Text("Velvet \(version)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.tertiary)
+                    .padding(.horizontal, 10)
+                    .padding(.bottom, 12)
+            }
+        }
+        .padding(.horizontal, 10)
+        .animation(.smooth(duration: 0.28), value: selection)
+        .frame(width: 220)
+        .frame(maxHeight: .infinity)
+        .background(SidebarPanel())
+        .padding([.leading, .vertical], SidebarMetrics.inset)
     }
 }
 
@@ -27,6 +155,10 @@ private struct GeneralPane: View {
             Picker("Open at launch", selection: $settings.startPage) {
                 ForEach(Destination.allCases.filter { $0 != .queue }) { Label($0.title, systemImage: $0.symbol).tag($0) }
             }
+            Toggle("Show the sidebar as icons only", isOn: Binding(
+                get: { app.isSidebarCollapsed },
+                set: { if $0 != app.isSidebarCollapsed { app.toggleSidebar() } }
+            ))
         }
         .formStyle(.grouped)
     }
@@ -219,7 +351,6 @@ private struct AccountPane: View {
                 } footer: {
                     Text("Your session is stored only on this Mac, readable by your user account alone.")
                 }
-                NotificationsSection()
             case .signedOut, .unknown:
                 Section {
                     LabeledContent("Google Account") {
@@ -227,6 +358,25 @@ private struct AccountPane: View {
                     }
                 } footer: {
                     Text("Signing in enables your recommendations, history, Watch Later and playlists.")
+                }
+            }
+        }
+        .formStyle(.grouped)
+    }
+}
+
+private struct NotificationsPane: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        Form {
+            if app.authState == .signedIn {
+                NotificationsSection()
+            } else {
+                Section {
+                    LabeledContent("Notifications come from your YouTube account.") {
+                        Button("Sign In…") { app.showingSignIn = true }
+                    }
                 }
             }
         }
@@ -253,8 +403,6 @@ private struct NotificationsSection: View {
                     }
                 }
             }
-        } header: {
-            Text("Notifications")
         } footer: {
             Text("Alerts come from your YouTube notifications: uploads from channels whose bell is on (All or Personalized), replies and mentions. Velvet checks while it's running, even with its window closed. Reading them marks them seen on YouTube, as opening the bell there does.")
         }

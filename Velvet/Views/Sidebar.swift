@@ -42,7 +42,7 @@ struct Sidebar: View {
     }
 }
 
-private struct SidebarPanel: View {
+struct SidebarPanel: View {
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: SidebarMetrics.cornerRadius, style: .continuous)
         shape
@@ -140,7 +140,7 @@ private struct SidebarList: View {
     }
 }
 
-private struct SidebarRow<Icon: View>: View {
+struct SidebarRow<Icon: View>: View {
     let title: String
     var badge = 0
     let isSelected: Bool

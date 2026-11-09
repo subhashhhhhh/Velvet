@@ -61,6 +61,7 @@ final class AppModel {
     let alerts = SystemNotifications()
     @ObservationIgnored private(set) lazy var inbox = InboxModel(client: client, preferences: settings, alerts: alerts)
     var showingInbox = false
+    var showingAccount = false
 
     init() {
         destination = settings.startPage
@@ -959,6 +960,10 @@ final class AppModel {
                     log.info("Test: after \(token, privacy: .public): search=\(self.searchText, privacy: .public), watch page shown=\(self.isShowingWatchPage), hidden=\(self.watchPageHidden), PiP=\(self.pip.isActive), theater=\(self.settings.theaterMode), playing=\(!(self.watching?.player.isPaused ?? true))")
                 }
             }
+        }
+        // `-VelvetAccountTest YES`: open the account panel at 6 s.
+        if UserDefaults.standard.bool(forKey: "VelvetAccountTest") {
+            Task { try? await Task.sleep(for: .seconds(6)); showingAccount = true }
         }
         // `-VelvetPlaylistTest YES`: open your first playlist (after Watch Later) once they've loaded.
         if UserDefaults.standard.bool(forKey: "VelvetPlaylistTest") {

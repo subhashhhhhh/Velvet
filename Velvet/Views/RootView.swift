@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppModel.self) private var app
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         @Bindable var app = app
@@ -60,6 +61,14 @@ struct RootView: View {
         }
         .animation(.easeOut(duration: 0.2), value: app.toast)
         .task { await app.start() }
+        #if DEBUG
+        // `-VelvetSettingsTest YES` (with `-VelvetSettingsPane <pane>`): open Settings at launch.
+        .task {
+            guard UserDefaults.standard.bool(forKey: "VelvetSettingsTest") else { return }
+            try? await Task.sleep(for: .seconds(3))
+            openSettings()
+        }
+        #endif
         .background(WindowReader { app.mainWindow = $0 })
     }
 
