@@ -84,7 +84,7 @@ nonisolated enum ChannelParser {
                 switch m["payload"]["subscriptionNotificationStateEntity"]["state"].string {
                 case "SUBSCRIPTION_NOTIFICATION_STATE_ALL": bell.setting = .all
                 case "SUBSCRIPTION_NOTIFICATION_STATE_OCCASIONAL": bell.setting = .personalized
-                case "SUBSCRIPTION_NOTIFICATION_STATE_OFF": bell.setting = .none
+                case "SUBSCRIPTION_NOTIFICATION_STATE_OFF": bell.setting = BellSetting.none
                 default: break
                 }
             }
