@@ -4,16 +4,10 @@
 
 import AppKit
 import CoreGraphics
-import SwiftUI
 
 let size: CGFloat = 1024
-let body = CGRect(x: 100, y: 100, width: 824, height: 824)   // Apple's macOS icon grid
-let radius: CGFloat = 185
+let body = CGRect(x: 100, y: 100, width: 824, height: 824)   // the design's coordinate space
 
-/// Apple's icon shape: the continuous-corner rounded rectangle macOS itself draws.
-func squircle(_ r: CGRect, _ rad: CGFloat) -> CGPath {
-    RoundedRectangle(cornerRadius: rad, style: .continuous).path(in: r).cgPath
-}
 
 func color(_ hex: UInt32, _ a: CGFloat = 1) -> CGColor {
     CGColor(srgbRed: CGFloat((hex >> 16) & 0xff) / 255, green: CGFloat((hex >> 8) & 0xff) / 255, blue: CGFloat(hex & 0xff) / 255, alpha: a)
@@ -50,18 +44,12 @@ func render(_ name: String, draw: (CGContext) -> Void) {
     let cs = CGColorSpace(name: CGColorSpace.sRGB)!
     let ctx = CGContext(data: nil, width: Int(size), height: Int(size), bitsPerComponent: 8, bytesPerRow: 0, space: cs,
                         bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
-    // Drop shadow under the body, as macOS icons have.
-    ctx.saveGState()
-    ctx.setShadow(offset: CGSize(width: 0, height: -12), blur: 28, color: CGColor(gray: 0, alpha: 0.45))
-    ctx.addPath(squircle(body, radius)); ctx.setFillColor(color(0x000000)); ctx.fillPath()
-    ctx.restoreGState()
-    ctx.saveGState()
-    ctx.addPath(squircle(body, radius)); ctx.clip()
+    // Full-bleed and opaque: the design's 824 pt body is scaled to fill the canvas, and macOS
+    // applies its own rounded mask and shadow. An icon with transparent, pre-rounded corners
+    // shows as the blank placeholder in the Dock and About panel on macOS 27.
+    ctx.scaleBy(x: size / body.width, y: size / body.height)
+    ctx.translateBy(x: -body.minX, y: -body.minY)
     draw(ctx)
-    ctx.restoreGState()
-    // Thin inner edge highlight.
-    ctx.addPath(squircle(body.insetBy(dx: 1.5, dy: 1.5), radius - 1.5))
-    ctx.setStrokeColor(CGColor(gray: 1, alpha: 0.12)); ctx.setLineWidth(3); ctx.strokePath()
     let img = ctx.makeImage()!
     let rep = NSBitmapImageRep(cgImage: img)
     try! rep.representation(using: .png, properties: [:])!.write(to: URL(fileURLWithPath: CommandLine.arguments[1] + "/\(name).png"))
@@ -126,7 +114,7 @@ render("Velvet-1024") { ctx in
 let master = NSImage(contentsOfFile: CommandLine.arguments[1] + "/Velvet-1024.png")!.cgImage(forProposedRect: nil, context: nil, hints: nil)!
 for px in [16, 32, 64, 128, 256, 512, 1024] {
     let ctx = CGContext(data: nil, width: px, height: px, bitsPerComponent: 8, bytesPerRow: 0, space: cs,
-                        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+                        bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
     ctx.interpolationQuality = .high
     ctx.draw(master, in: CGRect(x: 0, y: 0, width: px, height: px))
     try! NSBitmapImageRep(cgImage: ctx.makeImage()!).representation(using: .png, properties: [:])!
