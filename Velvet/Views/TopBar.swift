@@ -166,9 +166,13 @@ struct ChromeButtonStyle: ButtonStyle {
 
 // MARK: - Search
 
+/// The search field. The text field exists only while you're typing in it: AppKit puts the
+/// cursor in a window's first text field when the window opens, which would swallow the
+/// player's single-key shortcuts (space, I, T…).
 private struct SearchField: View {
     @Environment(AppModel.self) private var app
     @FocusState private var focused: Bool
+    @State private var editing = false
     @State private var hovering = false
 
     var body: some View {
@@ -177,22 +181,32 @@ private struct SearchField: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.secondary)
-            TextField("Search YouTube", text: $app.searchText)
-                .textFieldStyle(.plain)
-                .font(.system(size: 14))
-                .focused($focused)
-                .onSubmit {
-                    app.submitSearch()
-                    focused = false
+            Group {
+                if editing {
+                    TextField("Search YouTube", text: $app.searchText)
+                        .textFieldStyle(.plain)
+                        .focused($focused)
+                        .onSubmit {
+                            app.submitSearch()
+                            focused = false
+                        }
+                        .onExitCommand { focused = false }
+                        .onAppear { focused = true }
+                } else {
+                    Text(app.searchText.isEmpty ? "Search YouTube" : app.searchText)
+                        .foregroundStyle(app.searchText.isEmpty ? .secondary : .primary)
+                        .lineLimit(1)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .onExitCommand { focused = false }
+            }
+            .font(.system(size: 14))
             if !app.searchText.isEmpty {
-                Button { app.searchText = "" } label: {
+                Button { app.searchText = ""; startEditing() } label: {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.tertiary)
                 }
                 .buttonStyle(.plain)
                 .help("Clear")
-            } else if !focused {
+            } else if !editing {
                 Text("⌘K")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.tertiary)
@@ -204,23 +218,31 @@ private struct SearchField: View {
         .padding(.horizontal, 12)
         .frame(height: 34)
         .background(
-            Capsule().fill(.primary.opacity(focused ? 0.04 : hovering ? 0.09 : 0.065))
+            Capsule().fill(.primary.opacity(editing ? 0.04 : hovering ? 0.09 : 0.065))
         )
         .overlay(
-            Capsule().strokeBorder(focused ? AnyShapeStyle(Color.accentColor.opacity(0.7)) : AnyShapeStyle(.primary.opacity(0.06)),
-                                   lineWidth: focused ? 1.5 : 1)
+            Capsule().strokeBorder(editing ? AnyShapeStyle(Color.accentColor.opacity(0.7)) : AnyShapeStyle(.primary.opacity(0.06)),
+                                   lineWidth: editing ? 1.5 : 1)
         )
         .contentShape(Capsule())
-        .onTapGesture { focused = true }
+        .onTapGesture { startEditing() }
         .onHover { hovering = $0 }
-        .animation(.easeOut(duration: 0.15), value: focused)
-        .onChange(of: app.searchFocusRequest) { focused = true }
+        .onChange(of: focused) { _, now in if !now { editing = false } }
+        .animation(.easeOut(duration: 0.15), value: editing)
+        .onChange(of: app.searchFocusRequest) { startEditing() }
         // ⌘K focuses search too (⌘F is in the View menu).
         .background {
-            Button("Search") { focused = true }
+            // Invisible rather than .hidden(): a hidden button's shortcut doesn't fire.
+            Button("Search") { startEditing() }
                 .keyboardShortcut("k")
-                .hidden()
+                .opacity(0)
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
         }
+    }
+
+    private func startEditing() {
+        if editing { focused = true } else { editing = true }
     }
 }
 

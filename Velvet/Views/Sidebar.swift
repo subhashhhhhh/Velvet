@@ -285,7 +285,7 @@ private struct NowPlayingCard: View {
                     Text(session.page.details?.title ?? session.video.title)
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(2)
-                    if let channel = session.video.channelName {
+                    if let channel = session.page.details?.channel?.name ?? session.video.channelName {
                         Text(channel)
                             .font(.system(size: 11))
                             .foregroundStyle(.secondary)
