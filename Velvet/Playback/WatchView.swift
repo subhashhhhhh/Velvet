@@ -153,8 +153,9 @@ struct WatchView: View {
 
 private struct WatchInfoView: View {
     let session: PlayerSession
-    /// The related column is beside the video: Subscribe goes to the far right, and the
-    /// actions share out the full width.
+    /// The related column is beside the video. In a window, Subscribe then goes to the far
+    /// right and the actions share out the full width; in macOS fullscreen the column is
+    /// wide enough for the compact row beside the channel, as in the narrow layout.
     let wide: Bool
     @Environment(AppModel.self) private var app
     @State private var descriptionExpanded = false
@@ -174,7 +175,7 @@ private struct WatchInfoView: View {
                 .task(id: DeArrowKey(videoId: video.id, prefs: app.settings)) { branding = await app.branding(for: video) }
 
             Group {
-                if wide {
+                if wide && !app.windowFullscreen {
                     // The channel on the left, Subscribe on the right; under them the actions,
                     // which share the full width. Labels when they fit, else icons.
                     VStack(alignment: .leading, spacing: 12) {
