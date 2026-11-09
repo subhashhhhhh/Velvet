@@ -81,11 +81,22 @@ final class PlaybackQueue {
         return all[i]
     }
 
-    /// Dragging in the list: moves a queued video to where another one is.
+    /// Dragging in the list: moves a video to where another one is, anywhere in the list.
+    /// The current video (the last one started) stays the dividing line: whatever ends up
+    /// above it counts as played, whatever is below it is still to play.
     func move(_ id: String, to targetId: String) {
-        guard let from = items.firstIndex(where: { $0.id == id }),
-              let to = items.firstIndex(where: { $0.id == targetId }), from != to else { return }
-        items.move(fromOffsets: [from], toOffset: to > from ? to + 1 : to)
+        let current = played.last?.id
+        guard id != current else { return }
+        var all = played + items
+        guard let from = all.firstIndex(where: { $0.id == id }),
+              let to = all.firstIndex(where: { $0.id == targetId }), from != to else { return }
+        all.move(fromOffsets: [from], toOffset: to > from ? to + 1 : to)
+        if let current, let split = all.firstIndex(where: { $0.id == current }) {
+            played = Array(all[...split])
+            items = Array(all[(split + 1)...])
+        } else {
+            items = all
+        }
     }
 
     /// Shuffles what's still to play.

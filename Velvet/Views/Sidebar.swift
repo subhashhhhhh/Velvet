@@ -86,7 +86,7 @@ private struct SidebarList: View {
             Color.clear.frame(height: SidebarMetrics.windowButtons(fullscreen: app.windowFullscreen))
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
-                    ForEach([Destination.home, .shorts, .live]) { row($0) }
+                    ForEach([Destination.home, .subscriptions, .shorts, .live]) { row($0) }
                     header("Library")
                     ForEach([Destination.history, .watchLater, .playlists]) { row($0) }
                     row(.queue, badge: app.queue.items.count)
@@ -193,7 +193,7 @@ private struct SidebarRail: View {
     var body: some View {
         VStack(spacing: 2) {
             Color.clear.frame(height: SidebarMetrics.windowButtons(fullscreen: app.windowFullscreen))
-            ForEach([Destination.home, .shorts, .live]) { item($0) }
+            ForEach([Destination.home, .subscriptions, .shorts, .live]) { item($0) }
             Divider().frame(width: 32).padding(.vertical, 6)
             ForEach([Destination.history, .watchLater, .playlists]) { item($0) }
             item(.queue, badge: app.queue.items.count)

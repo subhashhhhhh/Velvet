@@ -148,18 +148,18 @@ struct QueuePreview: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.element.id) { i, video in
-                        let upcoming = i >= queue.played.count
+                        // Everything moves except the video the list is at (the last one started).
+                        let movable = video.id != queue.played.last?.id
                         QueuePanelRow(video: video, number: i + 1, isCurrent: i == currentIndex,
                                       isPlayed: currentIndex.map { i < $0 } ?? (i < queue.played.count),
-                                      canMove: upcoming, isDragging: dragging == video.id)
+                                      canMove: movable, isDragging: dragging == video.id)
                             .id(video.id)
                             .onDrag {
-                                // Only videos still to play move; the drag still needs an item.
-                                if upcoming { dragging = video.id }
+                                // The current video doesn't move; the drag still needs an item.
+                                if movable { dragging = video.id }
                                 return NSItemProvider(object: video.id as NSString)
                             }
-                            .onDrop(of: [.text], delegate: QueueReorder(target: video.id, targetIsUpcoming: upcoming,
-                                                                        dragging: $dragging, queue: queue))
+                            .onDrop(of: [.text], delegate: QueueReorder(target: video.id, dragging: $dragging, queue: queue))
                     }
                 }
                 .padding(.vertical, 4)
@@ -256,12 +256,11 @@ private struct QueuePanelRow: View {
 /// you go, as on YouTube); the drop itself only ends the drag.
 private struct QueueReorder: DropDelegate {
     let target: String
-    let targetIsUpcoming: Bool
     @Binding var dragging: String?
     let queue: PlaybackQueue
 
     func dropEntered(info: DropInfo) {
-        guard let dragging, dragging != target, targetIsUpcoming else { return }
+        guard let dragging, dragging != target else { return }
         withAnimation(.smooth(duration: 0.2)) { queue.move(dragging, to: target) }
     }
 

@@ -3,13 +3,14 @@ import OSLog
 
 /// Sidebar destinations.
 enum Destination: String, Hashable, CaseIterable, Identifiable {
-    case home, shorts, live, history, watchLater, playlists, queue
+    case home, subscriptions, shorts, live, history, watchLater, playlists, queue
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .home: "Home"
+        case .subscriptions: "Subscriptions"
         case .shorts: "Shorts"
         case .live: "Live"
         case .history: "History"
@@ -22,6 +23,7 @@ enum Destination: String, Hashable, CaseIterable, Identifiable {
     var symbol: String {
         switch self {
         case .home: "house"
+        case .subscriptions: "play.square.stack"
         case .shorts: "play.rectangle.on.rectangle"
         case .live: "dot.radiowaves.left.and.right"
         case .history: "clock.arrow.circlepath"
@@ -1022,6 +1024,8 @@ final class AppModel {
     @ObservationIgnored private(set) lazy var liveFeed = SectionedFeedModel(browseId: "UC4R8DWoMoI7CAwX8_LjQHig", client: client)
     private(set) var historyFeed: SectionedFeedModel?
     private(set) var watchLaterFeed: SectionedFeedModel?
+    /// Latest uploads from your subscriptions (YouTube's FEsubscriptions: a grid like Home's).
+    private(set) var subscriptionsFeed: FeedModel?
     private(set) var playlistsModel: PlaylistsModel?
     /// The playlist open on the Playlists page (nil: the grid of all of them).
     var openPlaylist: PlaylistSummary?
@@ -1041,6 +1045,8 @@ final class AppModel {
         homeFeed?.hidesPromotions = { [settings] in settings.hidePromotions }
         historyFeed = signedIn ? SectionedFeedModel(browseId: "FEhistory", client: client) : nil
         watchLaterFeed = signedIn ? SectionedFeedModel(browseId: "VLWL", client: client) : nil
+        subscriptionsFeed = signedIn ? FeedModel(source: .browse("FEsubscriptions"), client: client) : nil
+        subscriptionsFeed?.hidesPromotions = { [settings] in settings.hidePromotions }
         playlistsModel = signedIn ? PlaylistsModel(client: client) : nil
         openPlaylist = nil
     }
@@ -1090,6 +1096,11 @@ final class AppModel {
                     }
                     let home = try await client.browse("FEwhat_to_watch")
                     save(home, "home.json")
+                    let subs = try await client.browse("FEsubscriptions")
+                    save(subs, "subscriptions.json")
+                    if let token = VideoParser.continuations(in: subs).last {
+                        save(try await client.browse(continuation: token), "subscriptions-2.json")
+                    }
                     let videos = VideoParser.videos(in: home)
                     let promoted = Set(videos.map(\.id)).subtracting(VideoParser.videos(in: home, skipping: VideoParser.promotionKeys).map(\.id))
                     log.info("Dump: home promotions hidden: \(promoted.count)")
@@ -1215,6 +1226,19 @@ final class AppModel {
                 log.info("Test: \(page.relatedChips[1].title, privacy: .public): \(page.related.count) related, first \(page.related.first?.title ?? "-", privacy: .public)")
                 await page.selectRelatedChip(page.relatedChips[0])
                 log.info("Test: back to All: \(page.related.count) related, first unchanged \(page.related.first?.title == all)")
+            }
+        }
+        // `-VelvetSubscriptionsTest YES`: open Subscriptions and log what loaded.
+        if UserDefaults.standard.bool(forKey: "VelvetSubscriptionsTest") {
+            Task {
+                try? await Task.sleep(for: .seconds(4))
+                navigate(to: .subscriptions)
+                try? await Task.sleep(for: .seconds(5))
+                let feed = subscriptionsFeed
+                let first = feed?.videos.count ?? -1
+                await feed?.loadMore()
+                let videos = feed?.videos ?? []
+                log.info("Test: subscriptions: \(first) videos, \(videos.count) after a second page, \(feed?.shorts.count ?? 0) Shorts, first \(videos.first.map { "\($0.channelName ?? "?"): \($0.title) (\($0.published ?? ""))" } ?? "-", privacy: .public)")
             }
         }
         // `-VelvetHistoryTest YES`: History → a video → a channel, then Back, Back, Forward,

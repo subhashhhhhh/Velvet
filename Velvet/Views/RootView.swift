@@ -104,6 +104,8 @@ struct RootView: View {
             switch app.destination ?? .home {
             case .home:
                 HomeView()
+            case .subscriptions:
+                SubscriptionsView()
             case .history, .watchLater:
                 LibraryFeedPage(destination: app.destination ?? .home).id(app.destination)
             case .playlists:

@@ -22,7 +22,7 @@ struct VelvetApp: App {
         .commands {
             CommandGroup(replacing: .sidebar) {
                 Button(app.isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar") { app.toggleSidebar() }
-                    .keyboardShortcut("s", modifiers: [.control, .command])
+                    .keyboardShortcut("s", modifiers: .command)
                 Button("Search YouTube") { app.searchFocusRequest += 1 }
                     .keyboardShortcut("f")
                 Divider()
