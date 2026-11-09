@@ -404,7 +404,9 @@ struct PillButtonStyle: ButtonStyle {
             configuration.label
                 .lineLimit(1)
                 .fixedSize()
-                .frame(maxWidth: fill ? .infinity : nil)
+                // One height for every pill, whatever its icon: Share's is taller than the
+                // text and made its pill stand out of the row.
+                .frame(maxWidth: fill ? .infinity : nil, minHeight: 18, maxHeight: 18)
                 .font(.callout.weight(.medium))
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
