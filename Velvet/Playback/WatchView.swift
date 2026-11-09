@@ -25,7 +25,10 @@ struct WatchView: View {
                         if !wide, let chat = page.liveChat {
                             LiveChatPanel(chat: chat).frame(height: 420)
                         }
-                        if !wide { RelatedList(page: page, columns: true) }
+                        if !wide {
+                            QueuePreview()
+                            RelatedList(page: page, columns: true)
+                        }
                         CommentsSection(page: page, player: session.player)
                     }
                     .frame(maxWidth: .infinity)
@@ -312,6 +315,14 @@ private struct SideColumn: View {
     @State private var showChat = true
 
     var body: some View {
+        VStack(spacing: 12) {
+            QueuePreview()
+            column
+        }
+    }
+
+    @ViewBuilder
+    private var column: some View {
         if let chat = page.liveChat {
             VStack(spacing: 12) {
                 Picker("", selection: $showChat) {

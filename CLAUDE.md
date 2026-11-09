@@ -96,6 +96,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetNavigateTest YES` | Goes to History (video moves to PiP), then opens the video again. |
 | `-VelvetMinimizeTest YES` | Does what the I key does at 8 s: back to the previous page, video in PiP. |
 | `-VelvetDumpJSON <videoId> -VelvetDumpDir <path>` | Saves raw signed-in responses (watch page, comments, replies, home) for parser work. Read-only. |
+| `-VelvetQueue <id1,id2>` | Starts with these videos in the queue. Use a short `-VelvetPlay` video near its end to test auto-advance. |
 | `-VelvetWindowWidth <points>` | Sets the window width. Use it for layout checks. |
 | `-VelvetPiPTest YES`, `-VelvetPiPSkipTest YES` | Tests PiP and the PiP skip buttons. |
 | `-VelvetScrollPiPTest YES` | Scrolls the watch page to start and stop PiP. `-VelvetScrollY <points>` sets the depth. |

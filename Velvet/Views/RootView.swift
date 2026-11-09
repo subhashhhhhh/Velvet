@@ -62,6 +62,8 @@ struct RootView: View {
                 LibraryFeedPage(destination: app.destination ?? .home).id(app.destination)
             case .playlists:
                 PlaylistsPage()
+            case .queue:
+                QueueView()
             case .live:
                 SectionedFeedView(feed: app.liveFeed, emptyMessage: "Nothing is live right now.")
                     .navigationTitle("Live")
@@ -113,6 +115,7 @@ struct SidebarView: View {
             }
             Section("Library") {
                 ForEach([Destination.history, .watchLater, .playlists]) { row($0) }
+                row(.queue).badge(app.queue.items.count)
             }
         }
         .listStyle(.sidebar)

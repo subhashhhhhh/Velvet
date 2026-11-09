@@ -215,6 +215,9 @@ struct PlayerView: View {
             case "i":
                 guard app.watching === session else { return .ignored }
                 app.leaveWatchPage(forcePictureInPicture: true)
+            case "n" where press.modifiers.contains(.shift):
+                guard !app.queue.isEmpty, app.watching === session else { return .ignored }
+                app.playNextInQueue()
             case "c": session.toggleCaptions()
             case ",": player.setSpeed(player.speed - 0.25)
             case ".": player.setSpeed(player.speed + 0.25)
@@ -256,6 +259,10 @@ struct PlayerControls: View {
                     }
                     Button { player.seek(by: -10) } label: { Image(systemName: "gobackward.10") }
                     Button { player.seek(by: 10) } label: { Image(systemName: "goforward.10") }
+                    if !app.queue.isEmpty && app.watching === session {
+                        Button { app.playNextInQueue() } label: { Image(systemName: "forward.end.fill") }
+                            .help("Next in queue: \(app.queue.items.first?.title ?? "") (⇧N)")
+                    }
                     VolumeControl(player: player)
                     if session.isLive {
                         LiveBadge(behind: session.isBehindLive) { session.goLive() }

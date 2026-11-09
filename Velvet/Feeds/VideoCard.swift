@@ -155,9 +155,15 @@ struct VideoContextMenu: View {
     }
 
     var body: some View {
+        // Shorts open in their own player and upcoming streams can't play yet.
+        if video.kind == .video || video.kind == .live {
+            Button("Play Next", systemImage: "text.line.first.and.arrowtriangle.forward") { app.playNextQueued(video) }
+            Button("Add to Queue", systemImage: "text.badge.plus") { app.addToQueue(video) }
+            Divider()
+        }
         if app.authState == .signedIn {
             Button("Save to Watch Later", systemImage: "clock") { app.saveToWatchLater(video) }
-            Button("Save to Playlist…", systemImage: "text.badge.plus") { app.playlistPickerVideo = video }
+            Button("Save to Playlist…", systemImage: "music.note.list") { app.playlistPickerVideo = video }
             if video.notInterestedToken != nil || video.dontRecommendChannelToken != nil {
                 Divider()
                 if video.notInterestedToken != nil {
