@@ -15,7 +15,12 @@ if [ "$XCODE_MAJOR" -lt 27 ]; then
   xcodegen generate --quiet
   PROJECT=Velvet-Xcode26.xcodeproj
 fi
-xcodebuild -project "$PROJECT" -scheme Velvet -configuration Release -derivedDataPath "$DD" build 2>&1 \
+# Each install gets its own build number (the commit count), so macOS notices the update and
+# refreshes cached data such as the Dock's icon.
+BUILD_NUMBER=$(git -C "$(dirname "$0")" rev-list --count HEAD 2>/dev/null || date +%s)
+
+xcodebuild -project "$PROJECT" -scheme Velvet -configuration Release -derivedDataPath "$DD" \
+  CURRENT_PROJECT_VERSION="$BUILD_NUMBER" build 2>&1 \
   | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
 APP="$DD/Build/Products/Release/Velvet.app"
 [ -d "$APP" ] || { echo "build failed"; exit 1; }
@@ -30,5 +35,7 @@ if [ -d /Applications/Velvet.app ]; then
 fi
 mv "$STAGE" /Applications/Velvet.app
 rm -rf /Applications/.Velvet-old.app
+# Re-register with LaunchServices so the Dock and launchers pick up the new icon and version.
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -f /Applications/Velvet.app >/dev/null 2>&1 || true
 echo "Installed $(git rev-parse --short HEAD) to /Applications/Velvet.app"
 pgrep -x Velvet >/dev/null && echo "Velvet is running: relaunch it to use the new version." || true
