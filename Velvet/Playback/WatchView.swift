@@ -264,7 +264,7 @@ private struct WatchInfoView: View {
                     .labelStyle(CompactableLabelStyle(compact: true))
             }
             .help(page.isInWatchLater ? "Remove from Watch Later" : "Save to Watch Later")
-            .buttonStyle(PillButtonStyle())
+            .buttonStyle(PillButtonStyle(iconOnly: true))
             .background(.quaternary, in: Capsule())
 
             Menu {
@@ -283,7 +283,7 @@ private struct WatchInfoView: View {
             }
             .help("Save to playlist")
             .menuStyle(.button)
-            .buttonStyle(PillButtonStyle())
+            .buttonStyle(PillButtonStyle(iconOnly: compact))
             .background(.quaternary, in: Capsule())
             .fixedSize()
 
@@ -301,7 +301,7 @@ private struct WatchInfoView: View {
             }
             .menuStyle(.button)
             .menuIndicator(.hidden)
-            .buttonStyle(PillButtonStyle())
+            .buttonStyle(PillButtonStyle(iconOnly: true))
             .background(.quaternary, in: Capsule())
             .fixedSize()
         }
@@ -356,15 +356,28 @@ private struct WatchInfoView: View {
 }
 
 struct PillButtonStyle: ButtonStyle {
+    /// An icon without a title: a circle as tall as the pills with text, so a row of both
+    /// lines up.
+    var iconOnly = false
+
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .lineLimit(1)
-            .fixedSize()
-            .font(.callout.weight(.medium))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 7)
-            .contentShape(Capsule())
-            .opacity(configuration.isPressed ? 0.6 : 1)
+        if iconOnly {
+            configuration.label
+                .font(.system(size: 14, weight: .medium))
+                .frame(width: 18, height: 18)
+                .padding(7)
+                .contentShape(Circle())
+                .opacity(configuration.isPressed ? 0.6 : 1)
+        } else {
+            configuration.label
+                .lineLimit(1)
+                .fixedSize()
+                .font(.callout.weight(.medium))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .contentShape(Capsule())
+                .opacity(configuration.isPressed ? 0.6 : 1)
+        }
     }
 }
 
@@ -531,6 +544,9 @@ private struct RelatedRow: View {
         }
         .padding(4)
         .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(hovering ? AnyShapeStyle(.quinary) : AnyShapeStyle(.clear)))
+        // The hover highlight reaches past the column; the thumbnail lines up with the chips
+        // and the Shorts shelf above it.
+        .padding(.horizontal, -4)
         .contentShape(Rectangle())
         .onHover { h in
             hovering = h

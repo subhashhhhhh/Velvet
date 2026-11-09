@@ -139,7 +139,7 @@ struct DownloadPill: View {
                                 .stroke(Color.velvetLink, style: StrokeStyle(lineWidth: 2, lineCap: .round))
                                 .rotationEffect(.degrees(-90))
                         }
-                        .frame(width: 15, height: 15)
+                        .frame(width: 16, height: 16)
                         .animation(.linear(duration: 0.2), value: fraction)
                     }
                     .help("Downloading: \(Int(fraction * 100))%. Click to cancel.")
@@ -163,7 +163,7 @@ struct DownloadPill: View {
                 }
             }
         }
-        .buttonStyle(PillButtonStyle())
+        .buttonStyle(PillButtonStyle(iconOnly: compact))
         .background(.quaternary, in: Capsule())
     }
 }
