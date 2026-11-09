@@ -19,8 +19,16 @@ fi
 # refreshes cached data such as the Dock's icon.
 BUILD_NUMBER=$(git -C "$(dirname "$0")" rev-list --count HEAD 2>/dev/null || date +%s)
 
+# Sign with the release certificate when it's in the keychain (docs/signing.md): macOS then
+# sees every build as the same app (permissions stay granted), and the in-app updater can
+# install releases over it. Without it the build is signed ad hoc.
+SIGNING=()
+if security find-identity -p codesigning | grep -q '"Velvet Self-Signed"'; then
+  SIGNING=(CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Velvet Self-Signed" DEVELOPMENT_TEAM="" OTHER_CODE_SIGN_FLAGS="--timestamp=none")
+fi
+
 xcodebuild -project "$PROJECT" -scheme Velvet -configuration Release -derivedDataPath "$DD" \
-  CURRENT_PROJECT_VERSION="$BUILD_NUMBER" build 2>&1 \
+  CURRENT_PROJECT_VERSION="$BUILD_NUMBER" "${SIGNING[@]}" build 2>&1 \
   | grep -E "error:|BUILD (SUCCEEDED|FAILED)" || true
 APP="$DD/Build/Products/Release/Velvet.app"
 [ -d "$APP" ] || { echo "build failed"; exit 1; }
