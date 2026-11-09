@@ -24,6 +24,9 @@ final class WatchPageModel {
     private(set) var commentsLoaded = false
     private(set) var replies: [String: [Comment]] = [:]
     private(set) var loadingReplies: Set<String> = []
+    /// Parameters for posting a top-level comment; nil when signed out or comments are off.
+    private(set) var createCommentParams: String?
+    var canComment: Bool { signedIn && createCommentParams != nil }
 
     var isInWatchLater: Bool { playlists.first(where: \.isWatchLater)?.containsVideo ?? false }
 
@@ -190,6 +193,7 @@ final class WatchPageModel {
             let known = Set(comments.map(\.id))
             comments += page.comments.filter { !known.contains($0.id) }
             commentsToken = page.continuation
+            if let p = page.createParams { createCommentParams = p }
         } catch {
             log.error("Comments failed: \(error.localizedDescription, privacy: .public)")
         }
@@ -202,7 +206,9 @@ final class WatchPageModel {
         defer { loadingReplies.remove(comment.id) }
         do {
             let page = WatchParser.comments(from: try await client.next(continuation: token))
-            replies[comment.id, default: []] += page.comments
+            // A reply you just posted can come back in a later page; show it once.
+            let known = Set(replies[comment.id]?.map(\.id) ?? [])
+            replies[comment.id, default: []] += page.comments.filter { !known.contains($0.id) }
             replyTokens[comment.id] = page.continuation
         } catch {
             log.error("Replies failed: \(error.localizedDescription, privacy: .public)")
@@ -217,4 +223,110 @@ final class WatchPageModel {
         replies[comment.id] = nil
         replyTokens[comment.id] = nil
     }
+
+    // MARK: - Writing comments
+
+    /// Posts a top-level comment and shows it first. Returns false (with `actionError` set) on failure.
+    func postComment(_ text: String) async -> Bool {
+        guard let params = createCommentParams else { return false }
+        do {
+            let json = try await client.createComment(text, params: params)
+            comments.insert(WatchParser.postedComment(from: json) ?? localComment(text), at: 0)
+            return true
+        } catch {
+            actionError = "Couldn't post your comment: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    /// Replies to `comment`; replies to a reply land in the same thread (`threadId`).
+    func reply(to comment: Comment, inThread threadId: String, text: String) async -> Bool {
+        guard let params = comment.actions.reply else { return false }
+        do {
+            let json = try await client.createReply(text, params: params)
+            let posted = WatchParser.postedComment(from: json) ?? localComment(text)
+            if replies[threadId] == nil, let thread = comments.first(where: { $0.id == threadId }) {
+                // Keep the thread's other replies reachable through "Show more replies".
+                replyTokens[threadId] = thread.repliesToken
+            }
+            replies[threadId, default: []].append(posted)
+            if let i = comments.firstIndex(where: { $0.id == threadId }) { comments[i].replyCount += 1 }
+            return true
+        } catch {
+            actionError = "Couldn't post your reply: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    func edit(_ comment: Comment, text: String) async -> Bool {
+        guard let params = comment.actions.edit else { return false }
+        do {
+            try await client.updateComment(text, params: params, isReply: comment.actions.editIsReply)
+            updateComment(comment.id) { $0.text = text }
+            return true
+        } catch {
+            actionError = "Couldn't edit your comment: \(error.localizedDescription)"
+            return false
+        }
+    }
+
+    func delete(_ comment: Comment, inThread threadId: String?) {
+        guard let action = comment.actions.delete else { return }
+        // Optimistic: put it back where it was if YouTube refuses.
+        let topIndex = comments.firstIndex { $0.id == comment.id }
+        let replyIndex = threadId.flatMap { t in replies[t]?.firstIndex { $0.id == comment.id } }
+        if let topIndex { comments.remove(at: topIndex) }
+        if let threadId, let replyIndex {
+            replies[threadId]?.remove(at: replyIndex)
+            if let i = comments.firstIndex(where: { $0.id == threadId }) { comments[i].replyCount -= 1 }
+        }
+        Task {
+            do {
+                try await client.performCommentAction(action)
+            } catch {
+                if let topIndex { comments.insert(comment, at: min(topIndex, comments.count)) }
+                if let threadId, let replyIndex {
+                    replies[threadId]?.insert(comment, at: min(replyIndex, replies[threadId]?.count ?? 0))
+                    if let i = comments.firstIndex(where: { $0.id == threadId }) { comments[i].replyCount += 1 }
+                }
+                actionError = "Couldn't delete your comment: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    func toggleLike(_ comment: Comment) {
+        guard signedIn else { actionError = "Sign in to like comments."; return }
+        let liked = !comment.isLiked
+        guard let action = liked ? comment.actions.like : comment.actions.unlike else { return }
+        updateComment(comment.id) { $0.isLiked = liked }
+        Task {
+            do {
+                try await client.performCommentAction(action)
+            } catch {
+                updateComment(comment.id) { $0.isLiked = !liked }
+                actionError = "Couldn't update your like: \(error.localizedDescription)"
+            }
+        }
+    }
+
+    /// Applies `change` to the comment wherever it is shown (top level or a reply).
+    private func updateComment(_ id: String, _ change: (inout Comment) -> Void) {
+        if let i = comments.firstIndex(where: { $0.id == id }) { change(&comments[i]) }
+        for (thread, list) in replies {
+            if let i = list.firstIndex(where: { $0.id == id }) { change(&replies[thread]![i]) }
+        }
+    }
+
+    /// Shown when a post succeeded but its response couldn't be read. It has no edit or
+    /// delete actions until the comments reload.
+    private func localComment(_ text: String) -> Comment {
+        log.warning("Couldn't read the posted comment from the response")
+        return Comment(id: UUID().uuidString, author: accountName?() ?? "You", avatar: accountPhoto?(),
+                       text: text, published: "just now", replyCount: 0, isCreator: false, isVerified: false)
+    }
+
+    /// The signed-in account, for comments shown before YouTube returns them.
+    @ObservationIgnored var accountName: (() -> String?)?
+    @ObservationIgnored var accountPhoto: (() -> URL?)?
 }
+

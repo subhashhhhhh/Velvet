@@ -51,6 +51,24 @@ nonisolated struct Comment: Identifiable, Hashable, Sendable {
     var repliesToken: String?
     /// An attached GIF (YouTube serves them as animated WebP).
     var gif: CommentGIF?
+    /// The signed-in user liked it.
+    var isLiked = false
+    /// The count YouTube shows once you've liked it (preformatted, like video likes).
+    var likeCountLiked: String?
+    /// What the signed-in user may do with it; empty when signed out.
+    var actions = CommentActions()
+}
+
+/// Opaque InnerTube parameters for the actions YouTube offers on a comment.
+nonisolated struct CommentActions: Hashable, Sendable {
+    var reply: String?
+    var like: String?
+    var unlike: String?
+    /// Only on your own comments.
+    var edit: String?
+    /// Replies are edited through a separate endpoint.
+    var editIsReply = false
+    var delete: String?
 }
 
 nonisolated struct CommentGIF: Hashable, Sendable {
@@ -62,6 +80,8 @@ nonisolated struct CommentGIF: Hashable, Sendable {
 nonisolated struct CommentsPage: Sendable {
     var comments: [Comment]
     var continuation: String?
+    /// Parameters for posting a new top-level comment (first page, signed in).
+    var createParams: String?
 }
 
 nonisolated struct PlaylistOption: Identifiable, Hashable, Sendable {

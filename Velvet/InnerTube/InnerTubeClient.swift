@@ -11,11 +11,13 @@ nonisolated protocol InnerTubeAuthProvider: Sendable {
 nonisolated enum InnerTubeError: LocalizedError {
     case http(Int, String)
     case bootstrap
+    case refused(String)
 
     var errorDescription: String? {
         switch self {
         case .http(let code, let endpoint): "YouTube returned HTTP \(code) for \(endpoint)."
         case .bootstrap: "Couldn't read YouTube's client configuration."
+        case .refused(let message): message
         }
     }
 }
@@ -144,6 +146,33 @@ actor InnerTubeClient {
             ? ["action": "ACTION_ADD_VIDEO", "addedVideoId": .string(videoId)]
             : ["action": "ACTION_REMOVE_VIDEO_BY_VIDEO_ID", "removedVideoId": .string(videoId)]
         _ = try await post("browse/edit_playlist", ["playlistId": .string(playlistId), "actions": [action]])
+    }
+
+    // MARK: Comments
+
+    func createComment(_ text: String, params: String) async throws -> JSON {
+        try await checked(post("comment/create_comment", ["commentText": .string(text), "createCommentParams": .string(params)]))
+    }
+
+    func createReply(_ text: String, params: String) async throws -> JSON {
+        try await checked(post("comment/create_comment_reply", ["commentText": .string(text), "createReplyParams": .string(params)]))
+    }
+
+    func updateComment(_ text: String, params: String, isReply: Bool) async throws {
+        _ = try await checked(isReply
+            ? post("comment/update_comment_reply", ["replyText": .string(text), "updateReplyParams": .string(params)])
+            : post("comment/update_comment", ["commentText": .string(text), "updateCommentParams": .string(params)]))
+    }
+
+    /// Like, unlike or delete, with the action token from the comment's own commands.
+    func performCommentAction(_ action: String) async throws {
+        _ = try await checked(post("comment/perform_comment_action", ["actions": [.string(action)]]))
+    }
+
+    /// Comment endpoints answer HTTP 200 even when they refuse; the result says so.
+    private func checked(_ json: JSON) throws -> JSON {
+        if let message = WatchParser.actionFailure(in: json) { throw InnerTubeError.refused(message) }
+        return json
     }
 
     /// The signed-in account's name, handle and photo.
