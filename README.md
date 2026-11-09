@@ -54,6 +54,10 @@ The Homebrew install does not need this step.
 - macOS 15 (Sequoia) or later.
 - An internet connection. On the first start, Velvet downloads yt-dlp and a JavaScript runtime (Deno). Velvet needs these tools to play videos.
 
+### 1.4 First start
+
+On the first start, Velvet shows a short welcome. It has three steps: what Velvet is, sign in (you can skip it), and a few choices (SponsorBlock, DeArrow and upload notifications). During these steps, Velvet downloads yt-dlp and the JavaScript runtime. The progress shows at the bottom of the window. If you open a video before the downloads are complete, the player shows their progress and starts the video when they are complete.
+
 ## 2. Updates
 
 Velvet updates itself. It checks GitHub one time each day. When a new version is available, **Settings › About** shows the release notes and an **Install and Relaunch** button. You can also select **Velvet › Check for Updates…**.

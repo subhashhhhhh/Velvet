@@ -23,6 +23,17 @@ struct RootView: View {
         .overlay { SwipeIndicator() }
         // Above the player layer, which floats over the page.
         .overlay(alignment: .topLeading) { SearchSuggestionsDropdown() }
+        // The first run, over everything; and, once it's done, the tools still downloading.
+        .overlay {
+            if !app.settings.hasSeenWelcome {
+                WelcomeView().transition(.opacity)
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if app.settings.hasSeenWelcome, !app.tools.isReady(runtime: app.settings.jsRuntime) {
+                SetupPill().padding(16).transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
         .toolbar {
             if #available(macOS 26.0, *) {
                 ToolbarItem(placement: .navigation) { Color.clear.frame(width: 1, height: 1) }

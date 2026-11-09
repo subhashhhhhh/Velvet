@@ -171,6 +171,12 @@ final class Preferences {
     /// Look for a newer Velvet on GitHub once a day.
     var checkAppUpdates: Bool { didSet { save(checkAppUpdates, .checkAppUpdates) } }
 
+    // First run
+    /// The welcome flow has been finished (or skipped as an older install).
+    var hasSeenWelcome: Bool { didSet { save(hasSeenWelcome, .hasSeenWelcome) } }
+    /// Velvet has never run on this Mac before (worked out at launch).
+    let isFreshInstall: Bool
+
     static let defaultSponsorServer = "https://sponsor.ajay.app"
 
     private let defaults: UserDefaults
@@ -232,6 +238,20 @@ final class Preferences {
         jsRuntime = JSRuntime(rawValue: get(.jsRuntime, "")) ?? .deno
         autoUpdateTools = get(.autoUpdateTools, true)
         checkAppUpdates = get(.checkAppUpdates, true)
+
+        // Installs from before the welcome flow have run Velvet already: the tools' daily check
+        // was recorded. They skip the flow.
+        let ranBefore = defaults.object(forKey: "tools.lastUpdateCheck") != nil
+        let welcomeKnown = defaults.object(forKey: Key.hasSeenWelcome.name) != nil
+        isFreshInstall = !ranBefore && !welcomeKnown
+        hasSeenWelcome = welcomeKnown ? get(.hasSeenWelcome, false) : ranBefore
+        if isFreshInstall {
+            // Remember the flow is unfinished, so quitting halfway brings it back. New users
+            // turn upload alerts on themselves in the flow: asking macOS right at sign-in is pushy.
+            save(false, .hasSeenWelcome)
+            uploadAlerts = false
+            save(false, .uploadAlerts)
+        }
     }
 
     func sponsorAction(for category: SponsorCategory) -> SponsorAction {
@@ -266,7 +286,7 @@ final class Preferences {
         case audioDelayMs, showDislikes, hdr, splitStreams, hideAIChannels, hideAILikely, seriesTracking
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
-        case jsRuntime, autoUpdateTools, checkAppUpdates
+        case jsRuntime, autoUpdateTools, checkAppUpdates, hasSeenWelcome
 
         var name: String { "settings.\(self)" }
     }

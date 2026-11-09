@@ -8,26 +8,52 @@ struct SignInView: View {
     var onComplete: ([StoredCookie]) -> Void
     var onCancel: () -> Void
 
-    @State private var status = "Sign in with your Google account"
     @State private var isLoading = true
+    @State private var hasLoaded = false
+    @State private var signedIn = false
 
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(status).font(.callout).foregroundStyle(.secondary)
+            HStack(spacing: 12) {
+                Image(nsImage: NSApp.applicationIconImage)
+                    .resizable()
+                    .frame(width: 36, height: 36)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(signedIn ? "Signed in" : "Sign in to YouTube")
+                        .font(.headline)
+                    Text("On Google's own page. Velvet keeps the session only on this Mac.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
-                if isLoading { ProgressView().controlSize(.small) }
+                if isLoading && hasLoaded { ProgressView().controlSize(.small) }
                 Button("Cancel", action: onCancel).keyboardShortcut(.cancelAction)
             }
-            .padding(12)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
             Divider()
             SignInWebView(
-                onLoading: { isLoading = $0 },
+                onLoading: { loading in
+                    isLoading = loading
+                    if !loading { hasLoaded = true }
+                },
                 onCaptured: { cookies in
-                    status = "Signed in"
+                    signedIn = true
                     onComplete(cookies)
                 }
             )
+            // Until Google's page first appears, a blank white page looks broken.
+            .overlay {
+                if !hasLoaded || signedIn {
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text(signedIn ? "Signing in…" : "Opening Google sign-in…")
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color(nsColor: .windowBackgroundColor))
+                }
+            }
         }
         .frame(width: 520, height: 700)
     }
