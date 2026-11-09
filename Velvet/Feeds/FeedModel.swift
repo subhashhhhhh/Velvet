@@ -20,6 +20,9 @@ final class FeedModel {
     private(set) var chips: [FeedChip] = []
     private(set) var selectedChip: FeedChip?
 
+    /// Read at each load, so a settings change applies on the next refresh.
+    @ObservationIgnored var hidesPromotions: () -> Bool = { false }
+
     private var continuation: String?
     private var seen = Set<String>()
     private let client: InnerTubeClient
@@ -109,7 +112,7 @@ final class FeedModel {
         error = nil
         defer { isLoading = false }
         do {
-            let page = try await Self.fetch(source, continuation: token, client: client)
+            let page = try await Self.fetch(source, continuation: token, client: client, hidingPromotions: hidesPromotions())
             if token == nil, !page.chips.isEmpty { chips = page.chips }
             for v in page.videos where seen.insert(v.id).inserted {
                 if v.kind == .short { shorts.append(v) } else { videos.append(v) }
@@ -130,7 +133,8 @@ final class FeedModel {
 
     /// Network + parsing, off the main actor.
     @concurrent
-    private static func fetch(_ source: Source, continuation token: String?, client: InnerTubeClient) async throws -> Page {
+    private static func fetch(_ source: Source, continuation token: String?, client: InnerTubeClient,
+                              hidingPromotions: Bool) async throws -> Page {
         let json: JSON
         switch (source, token) {
         case (.browse(let id, let params), nil): json = try await client.browse(id, params: params)
@@ -139,7 +143,7 @@ final class FeedModel {
         case (.search, let token?): json = try await client.search(continuation: token)
         }
         // The feed's own "load more" token sits after its items, so take the last one.
-        return Page(videos: VideoParser.videos(in: json), continuation: VideoParser.continuations(in: json).last,
+        return Page(videos: VideoParser.videos(in: json, skipping: hidingPromotions ? VideoParser.promotionKeys : []), continuation: VideoParser.continuations(in: json).last,
                     chips: token == nil ? FeedChip.chips(in: json) : [])
     }
 }

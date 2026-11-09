@@ -16,11 +16,17 @@ nonisolated enum VideoParser {
         "shortsLockupViewModel", "reelItemRenderer",
     ]
 
-    /// All videos in `json`, in document order, de-duplicated by id.
-    static func videos(in json: JSON) -> [Video] {
+    /// Containers that hold promotions rather than recommendations: YouTube's own "featured"
+    /// campaign shelves (e.g. a film launch) and paid ad slots. Their cards would otherwise
+    /// be flattened into the grid like ordinary videos.
+    static let promotionKeys: Set<String> = ["brandVideoShelfRenderer", "adSlotRenderer"]
+
+    /// All videos in `json`, in document order, de-duplicated by id. Containers named in
+    /// `skipping` are not searched.
+    static func videos(in json: JSON, skipping: Set<String> = []) -> [Video] {
         var out: [Video] = []
         var seen = Set<String>()
-        walk(json) { key, value in
+        walk(json, skipping: skipping) { key, value in
             guard let video = parse(key: key, value) else { return }
             if seen.insert(video.id).inserted { out.append(video) }
         }
@@ -54,19 +60,19 @@ nonisolated enum VideoParser {
 
     /// Visits recognised renderers depth-first, without descending into them
     /// (so a video's own menus/endpoints are never mistaken for other videos).
-    private static func walk(_ json: JSON, _ visit: (String, JSON) -> Void) {
+    private static func walk(_ json: JSON, skipping: Set<String>, _ visit: (String, JSON) -> Void) {
         switch json {
         case .object(let o):
-            for key in o.keys.sorted() {
+            for key in o.keys.sorted() where !skipping.contains(key) {
                 let value = o[key]!
                 if rendererKeys.contains(key) {
                     visit(key, value)
                 } else {
-                    walk(value, visit)
+                    walk(value, skipping: skipping, visit)
                 }
             }
         case .array(let a):
-            for v in a { walk(v, visit) }
+            for v in a { walk(v, skipping: skipping, visit) }
         default:
             break
         }

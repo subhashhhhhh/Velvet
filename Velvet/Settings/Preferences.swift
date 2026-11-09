@@ -119,6 +119,7 @@ final class Preferences {
 
     var hideWatched: Bool { didSet { save(hideWatched, .hideWatched) } }
     var hideMembersOnly: Bool { didSet { save(hideMembersOnly, .hideMembersOnly) } }
+    var hidePromotions: Bool { didSet { save(hidePromotions, .hidePromotions) } }
 
     // Playback
     var quality: VideoQuality { didSet { save(quality.rawValue, .quality) } }
@@ -165,6 +166,7 @@ final class Preferences {
         cardSize = CardSize(rawValue: get(.cardSize, "")) ?? .regular
         hideWatched = get(.hideWatched, false)
         hideMembersOnly = get(.hideMembersOnly, false)
+        hidePromotions = get(.hidePromotions, true)
 
         quality = VideoQuality(rawValue: get(.quality, 1080)) ?? .p1080
         codec = VideoCodec(rawValue: get(.codec, "")) ?? .auto
@@ -208,7 +210,7 @@ final class Preferences {
         let fresh = Preferences(defaults: defaults)
         startPage = fresh.startPage
         showShortsShelf = fresh.showShortsShelf; shortsAfterRows = fresh.shortsAfterRows
-        cardSize = fresh.cardSize; hideWatched = fresh.hideWatched; hideMembersOnly = fresh.hideMembersOnly
+        cardSize = fresh.cardSize; hideWatched = fresh.hideWatched; hideMembersOnly = fresh.hideMembersOnly; hidePromotions = fresh.hidePromotions
         quality = fresh.quality; codec = fresh.codec; defaultSpeed = fresh.defaultSpeed
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
@@ -224,7 +226,7 @@ final class Preferences {
     // MARK: Persistence
 
     private enum Key: CaseIterable {
-        case startPage, showShortsShelf, shortsAfterRows, cardSize, hideWatched, hideMembersOnly
+        case startPage, showShortsShelf, shortsAfterRows, cardSize, hideWatched, hideMembersOnly, hidePromotions
         case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions, pipOnNavigate, pipStyle, queueAutoAdvance
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover

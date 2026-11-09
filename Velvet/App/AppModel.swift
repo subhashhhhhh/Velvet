@@ -656,6 +656,7 @@ final class AppModel {
             : ShortsController(sequence: ShortsSequence(seed: nil, client: client), app: self)
         let signedIn = authState == .signedIn
         homeFeed = signedIn ? FeedModel(source: .browse("FEwhat_to_watch"), client: client) : nil
+        homeFeed?.hidesPromotions = { [settings] in settings.hidePromotions }
         historyFeed = signedIn ? SectionedFeedModel(browseId: "FEhistory", client: client) : nil
         watchLaterFeed = signedIn ? SectionedFeedModel(browseId: "VLWL", client: client) : nil
         playlistsModel = signedIn ? PlaylistsModel(client: client) : nil
@@ -704,6 +705,8 @@ final class AppModel {
                     let home = try await client.browse("FEwhat_to_watch")
                     save(home, "home.json")
                     let videos = VideoParser.videos(in: home)
+                    let promoted = Set(videos.map(\.id)).subtracting(VideoParser.videos(in: home, skipping: VideoParser.promotionKeys).map(\.id))
+                    log.info("Dump: home promotions hidden: \(promoted.count)")
                     log.info("Dump: home \(videos.count) videos, notInterested=\(videos.filter { $0.notInterestedToken != nil }.count), dontRecommend=\(videos.filter { $0.dontRecommendChannelToken != nil }.count)")
                     log.info("Dump finished")
                 } catch {

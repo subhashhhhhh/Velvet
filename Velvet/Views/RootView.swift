@@ -95,7 +95,11 @@ struct SearchResultsView: View {
             }
         }
         .navigationTitle(query)
-        .task(id: query) { feed = FeedModel(source: .search(query), client: app.client) }
+        .task(id: query) {
+            let f = FeedModel(source: .search(query), client: app.client)
+            f.hidesPromotions = { [settings = app.settings] in settings.hidePromotions }
+            feed = f
+        }
     }
 }
 

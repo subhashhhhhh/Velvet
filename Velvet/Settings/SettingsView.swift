@@ -57,8 +57,10 @@ private struct FeedPane: View {
             Section {
                 Toggle("Hide videos I've already watched", isOn: $settings.hideWatched)
                 Toggle("Hide members-only videos", isOn: $settings.hideMembersOnly)
+                Toggle("Hide YouTube featured promotions and ads", isOn: $settings.hidePromotions)
+                    .onChange(of: settings.hidePromotions) { Task { await app.homeFeed?.reload() } }
             } footer: {
-                Text("Hides videos YouTube reports as mostly watched (90% or more).")
+                Text("Watched: videos YouTube reports as mostly watched (90% or more). Promotions: shelves YouTube features for campaigns such as film launches, which aren't based on what you watch.")
             }
         }
         .formStyle(.grouped)
