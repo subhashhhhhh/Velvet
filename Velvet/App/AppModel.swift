@@ -1000,6 +1000,7 @@ final class AppModel {
                 }
             }
         }
+        ControlsPreview.renderIfAsked()
         // `-VelvetAccountTest YES`: open the account panel at 6 s.
         if UserDefaults.standard.bool(forKey: "VelvetAccountTest") {
             Task { try? await Task.sleep(for: .seconds(6)); showingAccount = true }

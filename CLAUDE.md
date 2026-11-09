@@ -38,7 +38,7 @@ All source files are in `Velvet/`.
 | `Settings/` | `Preferences` and the settings window. |
 | `Tools/` | yt-dlp and runtime download, process runner. |
 | `Images/` | Image pipeline (downsampling, memory cache), animated images. |
-| `Views/` | Root view, the custom sidebar (`Sidebar.swift`) and top bar (`TopBar.swift`), window-level player layer. Pages put their Back button, title and actions in the top bar with `.topBarBack`, `.topBarTitle`, `.topBarActions` and `.topBarRefresh`, not with `.toolbar`. |
+| `Views/` | Root view, shared controls (`Controls.swift`: `Chip`, `SegmentedTabs`; use these, not the system segmented picker), the custom sidebar (`Sidebar.swift`) and top bar (`TopBar.swift`), window-level player layer. Pages put their Back button, title and actions in the top bar with `.topBarBack`, `.topBarTitle`, `.topBarActions` and `.topBarRefresh`, not with `.toolbar`. |
 
 ## 3. Rules for code
 
@@ -111,6 +111,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetSettingsTest YES` | Opens the Settings window at 3 s. `-VelvetSettingsPane <pane>` (general, feed, playback, notifications, sponsorBlock, deArrow, account, advanced) picks the pane. Logs the window size and how far down the window buttons sit (26 pt, as in the main window). |
 | `-VelvetPlaylistTest YES` | Opens your first playlist (after Watch Later) when the sidebar has loaded them. Add `-VelvetPlaylistPlay YES` to then play its second video and log the queue it fills. |
 | `-VelvetFullscreenAtLaunch YES` | Puts the window in macOS fullscreen as soon as it exists. Check with the window list that the toolbar window sits off screen (y = -52). It takes over the user's screen. |
+| `-VelvetRenderControls <file.png>` | Draws the shared controls (`Views/Controls.swift`: tabs, chips) to an image. Use it when no window can be captured (for example while the user's Velvet is in fullscreen). |
 | `-VelvetWindowFullscreenTest YES` | Puts the window in macOS fullscreen from 6 s to 12 s (the top bar and sidebar must fill the screen) and logs which view a click on the top bar reaches (it must be the SwiftUI hosting view). It takes over the user's screen for 6 s. |
 | `-VelvetLeakTest YES`, `-VelvetNoRelief YES` | Memory tests. |
 | `-settings.<key> <value>` | Overrides a preference. Use `'<true/>'` or `'<false/>'` for Bool values and `'<integer>3</integer>'` for numbers. |

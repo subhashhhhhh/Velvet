@@ -327,12 +327,7 @@ private struct SideColumn: View {
     private var column: some View {
         if let chat = page.liveChat {
             VStack(spacing: 12) {
-                Picker("", selection: $showChat) {
-                    Text("Chat").tag(true)
-                    Text("Up Next").tag(false)
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
+                SegmentedTabs(tabs: [(true, "Chat"), (false, "Up Next")], selection: $showChat)
                 if showChat {
                     LiveChatPanel(chat: chat).frame(height: chatHeight)
                 } else {

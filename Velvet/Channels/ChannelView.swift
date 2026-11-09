@@ -53,14 +53,13 @@ struct ChannelView: View {
     }
 
     private func tabBar(_ tabs: [ChannelTab]) -> some View {
-        @Bindable var model = model
-        return HStack {
-            Picker("Section", selection: $model.selectedTab) {
-                ForEach(tabs) { Text($0.title).tag($0.kind) }
+        HStack {
+            // The home feed's chips, for the same look.
+            HStack(spacing: 8) {
+                ForEach(tabs) { tab in
+                    Chip(title: tab.title, isOn: model.selectedTab == tab.kind) { model.selectedTab = tab.kind }
+                }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
             Spacer()
             if let tab = model.currentTab, !tab.chips.isEmpty {
                 Menu {
@@ -70,9 +69,20 @@ struct ChannelView: View {
                         }
                     }
                 } label: {
-                    Label(tab.selectedChip?.title ?? "Sort", systemImage: "arrow.up.arrow.down")
+                    HStack(spacing: 6) {
+                        Image(systemName: "arrow.up.arrow.down").font(.system(size: 11, weight: .semibold))
+                        Text(tab.selectedChip?.title ?? "Sort")
+                        Image(systemName: "chevron.down").font(.system(size: 9, weight: .bold)).foregroundStyle(.secondary)
+                    }
+                    .font(.callout.weight(.medium))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(.primary.opacity(0.1), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .contentShape(Rectangle())
                 }
                 .menuStyle(.button)
+                .buttonStyle(.plain)
+                .menuIndicator(.hidden)
                 .fixedSize()
             }
         }

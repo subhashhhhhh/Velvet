@@ -124,18 +124,7 @@ struct ChipBar: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 ForEach(chips) { chip in
-                    let isOn = chip.token == nil ? selected == nil : chip == selected
-                    Button { onSelect(chip) } label: {
-                        Text(chip.title)
-                            .font(.callout.weight(.medium))
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 6)
-                            .foregroundStyle(isOn ? Color(nsColor: .windowBackgroundColor) : .primary)
-                            .background(isOn ? AnyShapeStyle(.primary) : AnyShapeStyle(.quaternary),
-                                        in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
+                    Chip(title: chip.title, isOn: chip.token == nil ? selected == nil : chip == selected) { onSelect(chip) }
                 }
             }
             // Chips line up with the thumbnails below, not with the cards' hover highlight.

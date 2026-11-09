@@ -67,12 +67,9 @@ private struct InboxPopover: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
-            Picker("", selection: $tab) {
-                Text(label("Videos", unread(.videos))).tag(Tab.videos)
-                Text(label("Comments", unread(.comments))).tag(Tab.comments)
-            }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            SegmentedTabs(tabs: [(Tab.videos, label("Videos", unread(.videos))),
+                                 (Tab.comments, label("Comments", unread(.comments)))],
+                          selection: $tab)
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
             Divider()
