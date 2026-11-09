@@ -116,7 +116,10 @@ final class AppModel {
     }
     @ObservationIgnored private(set) lazy var inbox = InboxModel(client: client, preferences: settings, alerts: alerts)
     var showingInbox = false
-    var showingAccount = false
+    var showingAccount = false {
+        // A failed account fetch gets another try when you look for it.
+        didSet { if showingAccount, account == nil, authState == .signedIn { Task { await refreshAccount() } } }
+    }
 
     init() {
         destination = settings.startPage
@@ -1578,7 +1581,8 @@ final class AppModel {
         authRevision += 1
         // Read the search history now, so the search box has it the first time it's opened.
         searchAssist.prefetchHistory()
-        await refreshAccount()
+        // Not awaited: its retries mustn't hold up the rest of sign-in.
+        Task { await refreshAccount() }
         inbox.startPolling()
         if settings.uploadAlerts { await alerts.requestPermission() }
     }
@@ -1592,18 +1596,30 @@ final class AppModel {
         }
     }
 
+    /// The name and picture in the top bar. YouTube sometimes answers this one request with
+    /// HTTP 500 while everything else works, which left the bar blank until the next launch,
+    /// so a failure is retried a few times.
     func refreshAccount() async {
-        do {
-            let json = try await client.accountMenu()
-            account = Account(accountMenu: json)
-            if account == nil {
-                // No account header means the cookies no longer authenticate.
-                log.warning("Account menu had no active account; session may have expired")
+        guard !refreshingAccount else { return }
+        refreshingAccount = true
+        defer { refreshingAccount = false }
+        for (attempt, delay) in [0, 2, 5, 15].enumerated() {
+            if delay > 0 { try? await Task.sleep(for: .seconds(delay)) }
+            guard authState == .signedIn else { return }
+            do {
+                let json = try await client.accountMenu()
+                account = Account(accountMenu: json)
+                if account == nil {
+                    // No account header means the cookies no longer authenticate.
+                    log.warning("Account menu had no active account; session may have expired")
+                }
+                return
+            } catch {
+                log.error("Account fetch failed (try \(attempt + 1)): \(error.localizedDescription, privacy: .public)")
             }
-        } catch {
-            log.error("Account fetch failed: \(error.localizedDescription, privacy: .public)")
         }
     }
+    @ObservationIgnored private var refreshingAccount = false
 
     // MARK: - Tools
 
