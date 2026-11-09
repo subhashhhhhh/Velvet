@@ -518,10 +518,15 @@ struct CommentsSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            HStack {
-                if showsHeader { Text("Comments").font(.title3.weight(.semibold)) }
-                Spacer()
-                if !page.comments.isEmpty { searchField }
+            if showsHeader {
+                HStack {
+                    Text("Comments").font(.title3.weight(.semibold))
+                    Spacer()
+                    if !page.comments.isEmpty { searchField.frame(width: 220) }
+                }
+            } else if !page.comments.isEmpty {
+                // In a panel with its own title (Shorts), the field gets the whole row.
+                searchField.frame(maxWidth: .infinity)
             }
             if !page.hasComments && page.details != nil {
                 Text("Comments are turned off or unavailable.").foregroundStyle(.secondary)
@@ -579,7 +584,7 @@ struct CommentsSection: View {
             }
         }
         .padding(.horizontal, 10)
-        .frame(width: 220, height: 28)
+        .frame(height: 28)
         .background(Capsule().fill(.primary.opacity(0.065)))
         .overlay(Capsule().strokeBorder(.primary.opacity(0.06)))
     }
