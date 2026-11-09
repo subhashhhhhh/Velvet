@@ -205,8 +205,40 @@ private struct FeedPane: View {
             } footer: {
                 Text("Watched: videos YouTube reports as mostly watched (90% or more). Promotions: shelves YouTube features for campaigns such as film launches, which aren't based on what you watch.")
             }
+            AIFilterSection()
         }
         .formStyle(.grouped)
+    }
+}
+
+private struct AIFilterSection: View {
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        @Bindable var settings = app.settings
+        let filter = app.aiFilter
+        Section {
+            Toggle("Hide channels that post AI-generated videos", isOn: $settings.hideAIChannels)
+                .onChange(of: settings.hideAIChannels) { _, on in
+                    if on { Task { await filter.refreshIfNeeded() } } else { filter.unload() }
+                }
+            Toggle("Also hide channels that are likely AI", isOn: $settings.hideAILikely)
+                .disabled(!settings.hideAIChannels)
+            if settings.hideAIChannels {
+                LabeledContent("List") {
+                    if filter.blocked.isEmpty {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("\(filter.blocked.count.formatted()) channels, \(filter.likely.count.formatted()) likely")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+        } header: {
+            Text("AI-Generated Channels")
+        } footer: {
+            Text("From AiSList (aisloplist.com), a community list licensed CC BY-NC 4.0. Velvet downloads it from GitHub at most once a day while this is on; the channels you see aren't sent anywhere.")
+        }
     }
 }
 

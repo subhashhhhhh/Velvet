@@ -109,6 +109,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetFullscreenTest YES`, `-VelvetResizeTest YES` | Tests fullscreen and window resize. |
 | `-VelvetAccountTest YES` | Opens the account panel (top bar picture) at 6 s. |
 | `-VelvetSettingsTest YES` | Opens the Settings window at 3 s. `-VelvetSettingsPane <pane>` (general, feed, playback, notifications, sponsorBlock, deArrow, account, advanced) picks the pane. Logs the window size and how far down the window buttons sit (26 pt, as in the main window). |
+| `-VelvetAIFilterTest YES` | With `-settings.hideAIChannels '<true/>'`: logs the AiSList list sizes, how many home videos have a channel handle, and how many are hidden. |
 | `-VelvetHistoryTest YES` | Goes History → a video → a channel, then Back, Back, Forward, and logs the page and whether Back/Forward are available after each step. Trackpad swipes can't be sent from a script; the user must test them. |
 | `-VelvetPlaylistTest YES` | Opens your first playlist (after Watch Later) when the sidebar has loaded them. Add `-VelvetPlaylistPlay YES` to then play its second video and log the queue it fills. |
 | `-VelvetFullscreenAtLaunch YES` | Puts the window in macOS fullscreen as soon as it exists. Check with the window list that the toolbar window sits off screen (y = -52). It takes over the user's screen. |

@@ -17,6 +17,8 @@ nonisolated struct Video: Identifiable, Hashable, Sendable {
     var kind: Kind = .video
     var channelName: String?
     var channelId: String?
+    /// "@handle", lowercased (the AI channel filter matches on it).
+    var channelHandle: String?
     var channelAvatar: URL?
     /// Formatted length, e.g. "12:04". Nil for live streams and most Shorts.
     var duration: String?

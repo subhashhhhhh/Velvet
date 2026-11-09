@@ -132,6 +132,8 @@ final class Preferences {
     var showDislikes: Bool { didSet { save(showDislikes, .showDislikes) } }
     /// Hide videos from channels on the AiSList community list of AI-generated channels.
     var hideAIChannels: Bool { didSet { save(hideAIChannels, .hideAIChannels) } }
+    /// Also hide channels on AiSList's warnlist (likely, not confirmed).
+    var hideAILikely: Bool { didSet { save(hideAILikely, .hideAILikely) } }
 
     // Notifications
     /// macOS notifications for new items in your YouTube inbox (uploads from belled channels).
@@ -188,6 +190,7 @@ final class Preferences {
         audioDelayMs = get(.audioDelayMs, 0)
         showDislikes = get(.showDislikes, true)
         hideAIChannels = get(.hideAIChannels, false)
+        hideAILikely = get(.hideAILikely, false)
         uploadAlerts = get(.uploadAlerts, true)
         notificationCheckMinutes = get(.notificationCheckMinutes, 5)
 
@@ -224,7 +227,7 @@ final class Preferences {
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
         autoPictureInPicture = fresh.autoPictureInPicture; pipOnScroll = fresh.pipOnScroll
-        autoCaptions = fresh.autoCaptions; queueAutoAdvance = fresh.queueAutoAdvance; theaterMode = fresh.theaterMode; audioDelayMs = fresh.audioDelayMs; showDislikes = fresh.showDislikes; hideAIChannels = fresh.hideAIChannels; uploadAlerts = fresh.uploadAlerts; notificationCheckMinutes = fresh.notificationCheckMinutes; pipOnNavigate = fresh.pipOnNavigate; pipStyle = fresh.pipStyle
+        autoCaptions = fresh.autoCaptions; queueAutoAdvance = fresh.queueAutoAdvance; theaterMode = fresh.theaterMode; audioDelayMs = fresh.audioDelayMs; showDislikes = fresh.showDislikes; hideAIChannels = fresh.hideAIChannels; hideAILikely = fresh.hideAILikely; uploadAlerts = fresh.uploadAlerts; notificationCheckMinutes = fresh.notificationCheckMinutes; pipOnNavigate = fresh.pipOnNavigate; pipStyle = fresh.pipStyle
         sponsorBlockEnabled = fresh.sponsorBlockEnabled; sponsorActions = fresh.sponsorActions
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
         deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
@@ -238,7 +241,7 @@ final class Preferences {
         case startPage, showShortsShelf, shortsAfterRows, videosPerRow, videosPerRowSidebarHidden, hideWatched, hideMembersOnly, hidePromotions
         case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions, pipOnNavigate, pipStyle, queueAutoAdvance
         case uploadAlerts, notificationCheckMinutes, theaterMode
-        case audioDelayMs, showDislikes, hideAIChannels
+        case audioDelayMs, showDislikes, hideAIChannels, hideAILikely
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
         case jsRuntime, autoUpdateTools

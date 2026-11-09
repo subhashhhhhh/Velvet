@@ -120,8 +120,17 @@ nonisolated enum VideoParser {
             watchedFraction: resume.map { $0 / 100 }
         )
         video.isMembersOnly = badges.contains("BADGE_STYLE_TYPE_MEMBERS_ONLY")
+        video.channelHandle = handle(in: owner)
         applyFeedback(r["menu"].all("menuServiceItemRenderer"), to: &video)
         return video
+    }
+
+    /// The channel's "@handle" from its link ("/@name", percent-encoded for non-ASCII names).
+    static func handle(in json: JSON) -> String? {
+        guard let path = json.first("canonicalBaseUrl")?.string ?? json.first("url")?.string,
+              path.hasPrefix("/@") else { return nil }
+        let raw = String(path.dropFirst())
+        return (raw.removingPercentEncoding ?? raw).lowercased()
     }
 
     // MARK: - lockupViewModel
@@ -195,6 +204,7 @@ nonisolated enum VideoParser {
             watchedFraction: progress.map { $0 / 100 }
         )
         video.isMembersOnly = rowBadges.contains("BADGE_MEMBERS_ONLY")
+        video.channelHandle = handle(in: avatar) ?? handle(in: meta["metadata"])
         applyFeedback(r["metadata"].all("listItemViewModel"), to: &video)
         return video
     }

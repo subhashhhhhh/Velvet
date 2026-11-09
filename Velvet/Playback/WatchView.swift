@@ -358,7 +358,7 @@ private struct RelatedList: View {
     /// Related videos minus members-only ones when those are hidden (watched ones stay: rewatching is common here).
     private var related: [Video] {
         page.related.filter { v in
-            !app.dismissedVideos.contains(v.id) && !(app.settings.hideMembersOnly && v.isMembersOnly)
+            !app.dismissedVideos.contains(v.id) && !(app.settings.hideMembersOnly && v.isMembersOnly) && !app.aiFilter.hides(v)
                 && (v.kind != .short || app.settings.showShortsShelf)
         }
     }

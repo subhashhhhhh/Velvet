@@ -58,6 +58,7 @@ final class AppModel {
     let tools = ToolManager()
     let progress = WatchProgressStore()
     let deArrow = DeArrowService()
+    @ObservationIgnored private(set) lazy var aiFilter = AIChannelFilter(preferences: settings)
 
     /// DeArrow branding for `video` per current settings (nil when off or nothing better exists).
     func branding(for video: Video) async -> DeArrowBranding? {
@@ -1042,6 +1043,7 @@ final class AppModel {
 
     /// Restores a saved session at launch.
     func start() async {
+        Task { await aiFilter.refreshIfNeeded() }
         guard authState == .unknown else { return }
         nowPlaying.start()
         prepareTools()
@@ -1177,6 +1179,17 @@ final class AppModel {
             }
         }
         ControlsPreview.renderIfAsked()
+        // `-VelvetAIFilterTest YES` (with `-settings.hideAIChannels '<true/>'`): log how many home
+        // videos have a channel handle and how many the filter hides.
+        if UserDefaults.standard.bool(forKey: "VelvetAIFilterTest") {
+            Task {
+                try? await Task.sleep(for: .seconds(12))
+                let videos = homeFeed?.videos ?? []
+                let known = videos.filter { $0.channelHandle != nil }
+                let hidden = videos.filter { aiFilter.hides($0) }
+                log.info("Test: AI filter: \(self.aiFilter.blocked.count) blocked, \(self.aiFilter.likely.count) likely; home \(videos.count) videos, \(known.count) with handles (e.g. \(known.first?.channelHandle ?? "-", privacy: .public)), \(hidden.count) hidden")
+            }
+        }
         // `-VelvetHistoryTest YES`: History → a video → a channel, then Back, Back, Forward,
         // logging the page after each step.
         if UserDefaults.standard.bool(forKey: "VelvetHistoryTest") {
