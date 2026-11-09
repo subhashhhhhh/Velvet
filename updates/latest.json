@@ -1,17 +1,17 @@
 {
-  "version": "1.0",
-  "tag": "v1.0",
-  "notes": "# Velvet 1.0\n\nVelvet is a native YouTube client for macOS. It uses much less memory than YouTube in a browser. This is the first public release.\n\n**Browse**\n\n- Home, Subscriptions, Search, History, Watch Later, Playlists, Liked videos and channels.\n- Shorts, live streams and live chat.\n- Account notifications and optional macOS notifications for new uploads.\n\n**Watch**\n\n- mpv playback with hardware decoding. Quality up to 4K and HDR.\n- Resume, captions, chapters, theater mode and loop.\n- SponsorBlock, DeArrow and Return YouTube Dislike.\n- Queue, playlists, series detection and Picture in Picture.\n- Downloads for offline viewing (they play in Velvet).\n- Comments, likes, subscriptions and Save to playlist.\n\n**YouTube links**\n\n- Copy a YouTube link and switch to Velvet: it offers to open it.\n- Drag a link onto the window, use Open With, or add the bookmarklet from Settings › General to open the page that your browser shows.\n\n**Light on memory**\n\n- Approximately 360 MB for a 1440p video. Safari uses approximately 1.4 GB for the same video.\n- No analytics and no telemetry. Your cookies stay on your Mac.\n\n**Requirements**\n\n- macOS 15 or later.\n- Apple silicon or Intel. The Intel build is untested: it is built and checked, but nobody has run it on an Intel Mac yet. If you try it, please report what happens.\n\nVelvet updates itself. It also updates yt-dlp and the JavaScript runtime.",
+  "version": "1.0.1",
+  "tag": "v1.0.1",
+  "notes": "# Velvet 1.0.1\n\n**Watch page**\n\n- In a window with the related videos beside the video, Subscribe is at the right of the channel row. The Like, Watch Later, Save, Download and Share buttons fill the row under it, with their names.\n- In full screen and in narrow windows, the buttons stay in a compact row next to the channel.\n- All the buttons have the same height. Before, the Share and Subscribed buttons were a little taller or shorter than the others.",
   "archives": {
     "AppleSilicon": {
-      "name": "Velvet-1.0-AppleSilicon.zip",
-      "size": 20356310,
-      "sha256": "f473040b0f5eda6a3bd7a7db6fa13b39e4229bff259e40e538beaf477a857c39"
+      "name": "Velvet-1.0.1-AppleSilicon.zip",
+      "size": 20356247,
+      "sha256": "bd9dabe97519e235c4920e52d6964be9896409b16036cb2ff0d03713bd9ea291"
     },
     "Intel": {
-      "name": "Velvet-1.0-Intel.zip",
-      "size": 22037831,
-      "sha256": "b2612e62baf5659dc9bc6072b4d5bdc3a86d7a52f3fdf501a48ffe5c6f452ccd"
+      "name": "Velvet-1.0.1-Intel.zip",
+      "size": 22037801,
+      "sha256": "664466e6d265decc36e0e90d6d133e3cee7d25dd3e48ddb30f158cfac2474ff0"
     }
   }
 }
