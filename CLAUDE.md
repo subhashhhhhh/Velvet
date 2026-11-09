@@ -145,6 +145,7 @@ Start the Debug build with these arguments to test a feature:
 | `-VelvetDownloadTest <videoId>` | Downloads the video at the quality setting (add `-settings.quality '<integer>360</integer>'` for a small file), logs progress, then opens it: the log must say "Playing the downloaded copy". Downloads go to the user's real folder; delete the test video's folder in `~/Library/Application Support/com.subhash.Velvet/Downloads` afterwards. |
 | `-VelvetToolsDir <path>` | Uses this folder for yt-dlp and the runtime instead of the installed app's. Give an empty folder to test a first install (progress in the player, the welcome flow) without touching the user's tools. |
 | `-VelvetUpdateTest YES` | With the `VELVET_UPDATE_FEED` environment variable: opens Settings › About, checks for an update at 3 s and installs it at 6 s, logging each state (category `Test`). Use a scratch copy of a Debug build signed with "Velvet Self-Signed" (docs/signing.md): the install replaces the running copy and relaunches it. |
+| `open -a <Debug app> '<link>'` | Sends a YouTube or `velvet://` link to the test instance (category `Links` logs it). A link at launch: `open -n -a <app> '<link>' --args …`. The `velvet` scheme is in `Config/Info.plist`, merged with the generated plist. |
 | `-settings.<key> <value>` | Overrides a preference. Use `'<true/>'` or `'<false/>'` for Bool values and `'<integer>3</integer>'` for numbers. |
 
 ### 8.2 Procedure

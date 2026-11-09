@@ -1029,6 +1029,15 @@ final class AppModel {
 
     // MARK: - Video actions (context menus)
 
+    /// Links handed to Velvet before it can open them (session restoring, or the welcome showing).
+    @ObservationIgnored var pendingLinks: [YouTubeLink] = []
+    @ObservationIgnored var linksReady = false
+    /// A YouTube link on the clipboard that Velvet offers to open (see `LinkOpening.swift`).
+    var clipboardOffer: ClipboardOffer?
+    @ObservationIgnored var clipboardOfferTask: Task<Void, Never>?
+    /// The clipboard's change count when it was last checked, so each copy is offered once.
+    @ObservationIgnored var checkedPasteboardChange = NSPasteboard.general.changeCount
+
     /// A short confirmation shown at the bottom of the window ("Saved to Watch Later").
     private(set) var toast: String?
     @ObservationIgnored private var toastTask: Task<Void, Never>?
@@ -1152,6 +1161,9 @@ final class AppModel {
             authState = .signedOut
             authRevision += 1
         }
+        // Links that arrived while the session was restoring.
+        linksReady = true
+        openPendingLinks()
         #if DEBUG
         // `-VelvetDumpJSON <videoId> -VelvetDumpDir <path>`: save raw (read-only) responses for
         // parser work: the watch page, its first comments and replies pages, and the home feed.

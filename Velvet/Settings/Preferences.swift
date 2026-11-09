@@ -172,6 +172,8 @@ final class Preferences {
     var checkAppUpdates: Bool { didSet { save(checkAppUpdates, .checkAppUpdates) } }
     /// The Download button, menu item and Downloads page.
     var downloadsEnabled: Bool { didSet { save(downloadsEnabled, .downloadsEnabled) } }
+    /// When Velvet becomes active with a YouTube link copied, offer to open it.
+    var offerCopiedLinks: Bool { didSet { save(offerCopiedLinks, .offerCopiedLinks) } }
 
     // First run
     /// The welcome flow has been finished (or skipped as an older install).
@@ -241,6 +243,7 @@ final class Preferences {
         autoUpdateTools = get(.autoUpdateTools, true)
         checkAppUpdates = get(.checkAppUpdates, true)
         downloadsEnabled = get(.downloadsEnabled, true)
+        offerCopiedLinks = get(.offerCopiedLinks, true)
 
         // Installs from before the welcome flow have run Velvet already: the tools' daily check
         // was recorded. They skip the flow.
@@ -277,7 +280,7 @@ final class Preferences {
         showSkipNotice = fresh.showSkipNotice; sponsorBlockServer = fresh.sponsorBlockServer
         deArrowTitles = fresh.deArrowTitles; deArrowThumbnails = fresh.deArrowThumbnails
         deArrowOriginalOnHover = fresh.deArrowOriginalOnHover
-        jsRuntime = fresh.jsRuntime; autoUpdateTools = fresh.autoUpdateTools; checkAppUpdates = fresh.checkAppUpdates; downloadsEnabled = fresh.downloadsEnabled
+        jsRuntime = fresh.jsRuntime; autoUpdateTools = fresh.autoUpdateTools; checkAppUpdates = fresh.checkAppUpdates; downloadsEnabled = fresh.downloadsEnabled; offerCopiedLinks = fresh.offerCopiedLinks
     }
 
     // MARK: Persistence
@@ -289,7 +292,7 @@ final class Preferences {
         case audioDelayMs, showDislikes, hdr, splitStreams, hideAIChannels, hideAILikely, seriesTracking
         case sponsorBlockEnabled, sponsorActions, showSkipNotice, sponsorBlockServer
         case deArrowTitles, deArrowThumbnails, deArrowOriginalOnHover
-        case jsRuntime, autoUpdateTools, checkAppUpdates, hasSeenWelcome, downloadsEnabled
+        case jsRuntime, autoUpdateTools, checkAppUpdates, hasSeenWelcome, downloadsEnabled, offerCopiedLinks
 
         var name: String { "settings.\(self)" }
     }

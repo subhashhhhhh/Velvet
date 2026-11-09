@@ -17,6 +17,13 @@ struct VelvetApp: App {
                     app.progress.saveNow()
                 }
                 .frame(minWidth: 820, minHeight: 520)
+                // Links handed to Velvet (Open With, `open -a Velvet <url>`, `velvet://`) go to
+                // this window; without this, SwiftUI opens a new window for each one.
+                .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
+                .onOpenURL { app.handleOpenedURLs([$0]) }
+                .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+                    app.checkClipboardForLink()
+                }
         }
         .windowToolbarStyle(.unified)
         // Before the window has a saved size of its own (the minimum is too small for a grid).
@@ -49,3 +56,4 @@ struct VelvetApp: App {
         }
     }
 }
+

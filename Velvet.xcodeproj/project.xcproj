@@ -56,6 +56,7 @@
         "ENABLE_APP_SANDBOX": "NO",
         "ENABLE_PREVIEWS": "YES",
         "GENERATE_INFOPLIST_FILE": "YES",
+        "INFOPLIST_FILE": "Config/Info.plist",
         "INFOPLIST_KEY_NSHumanReadableCopyright": "© 2026 Subhash",
         "LD_RUNPATH_SEARCH_PATHS": [
           "$(inherited)",

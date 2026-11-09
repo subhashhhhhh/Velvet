@@ -75,6 +75,20 @@ struct RootView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: app.toast)
+        .overlay(alignment: .top) {
+            if let offer = app.clipboardOffer {
+                ClipboardOfferBanner(offer: offer)
+                    .padding(.top, 60)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .animation(.smooth(duration: 0.25), value: app.clipboardOffer)
+        // A YouTube link dragged from a browser onto the window.
+        .dropDestination(for: URL.self) { urls, _ in
+            guard let link = urls.lazy.compactMap(YouTubeLink.init).first else { return false }
+            app.open(link)
+            return true
+        }
         .task { await app.start() }
         .onChange(of: app.settingsOpenRequest) { openSettings() }
         #if DEBUG
@@ -285,5 +299,33 @@ private struct SwipeIndicator: View {
             .offset(x: (back ? 1 : -1) * (progress * 90 - 50))
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: back ? .leading : .trailing)
             .allowsHitTesting(false)
+    }
+}
+
+/// "Open the copied video?" with Open and a close button; shown for a few seconds.
+private struct ClipboardOfferBanner: View {
+    let offer: ClipboardOffer
+    @Environment(AppModel.self) private var app
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "link").foregroundStyle(.secondary)
+            Text(offer.message).font(.callout.weight(.medium))
+            Button("Open") { app.acceptClipboardOffer() }
+                .buttonStyle(.prominent)
+                .controlSize(.small)
+                .keyboardShortcut(.defaultAction)
+            Button { app.dismissClipboardOffer() } label: {
+                Image(systemName: "xmark").font(.caption.weight(.semibold))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .help("Dismiss")
+        }
+        .padding(.leading, 14)
+        .padding(.trailing, 12)
+        .padding(.vertical, 8)
+        .background(.regularMaterial, in: Capsule())
+        .shadow(color: .black.opacity(0.2), radius: 8, y: 2)
     }
 }

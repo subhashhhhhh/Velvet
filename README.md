@@ -189,6 +189,21 @@ If the video stops frequently to load, Velvet decreases the quality by one step.
 - Media keys and headphone buttons.
 - Two-finger swipes on the trackpad to go back and forward.
 
+### 4.9 Open YouTube links in Velvet
+
+- Copy a YouTube link, then switch to Velvet. Velvet asks if you want to open it. Click **Open**. To stop this, go to **Settings › General**.
+- Drag a YouTube link onto the Velvet window.
+- Right-click a `.webloc` file or a link in another app and select **Open With › Velvet**. In Terminal, do `open -a Velvet <link>`.
+- Use the bookmarklet to open the page that your browser shows:
+  1. Open **Settings › General**.
+  2. Click **Copy Bookmarklet**.
+  3. In your browser, add a bookmark. Paste the bookmarklet as its address.
+  4. On a YouTube page, click the bookmark. The browser pauses the video, and Velvet opens the page.
+
+Velvet opens links to videos, Shorts, live streams, playlists and channels. A `t=` time in the link sets the start position.
+
+Velvet reads the clipboard only when it becomes the active app, and only when the clipboard contains a web address. On macOS 15.4 or later, macOS can tell you each time that Velvet reads the clipboard.
+
 ## 5. Keyboard shortcuts
 
 ### 5.1 Player
@@ -226,7 +241,7 @@ To open the settings, push Command-, (comma). The settings are in these categori
 
 | Category | Settings |
 |---|---|
-| General | Appearance, start page, sidebar, search suggestions and search history. |
+| General | Appearance, start page, sidebar, search suggestions and search history, YouTube links. |
 | Feed | Videos in each row, Shorts shelf, filters. |
 | Playback | Downloads, quality, codec, HDR, autoplay, speed, captions, dislike counts, series, audio delay, Picture in Picture, queue, theater mode, hardware decoding, buffer, downloads from two links. |
 | Notifications | macOS notifications for new uploads. |

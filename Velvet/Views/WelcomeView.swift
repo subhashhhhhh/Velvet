@@ -50,6 +50,7 @@ struct WelcomeView: View {
     private func finish() {
         withAnimation(.smooth(duration: 0.3)) { app.settings.hasSeenWelcome = true }
         if app.settings.uploadAlerts { app.uploadAlertsChanged() }
+        app.openPendingLinks()
     }
 }
 

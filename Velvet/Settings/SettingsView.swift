@@ -190,6 +190,7 @@ private struct GeneralPane: View {
             } footer: {
                 Text("Suggestions come from YouTube as you type (what you type is sent to it, as on youtube.com). Signed in, your account's past searches, from any device, are listed first with a clock. YouTube's suggestions include only a few of them; My Activity has them all, as the YouTube apps show them.")
             }
+            LinksSection()
             Section("Keyboard Shortcuts") {
                 ShortcutGrid(rows: [
                     ("Play / Pause", "Space or K"), ("Back / ahead 10 s", "J  L"), ("Back / ahead 5 s", "←  →"),
@@ -215,6 +216,36 @@ private struct GeneralPane: View {
             }
         }
         .formStyle(.grouped)
+    }
+}
+
+/// Opening YouTube links in Velvet: the clipboard offer and the browser bookmarklet.
+private struct LinksSection: View {
+    @Environment(AppModel.self) private var app
+    @State private var copied = false
+
+    /// Pauses the browser's video, then hands the page's address to Velvet.
+    static let bookmarklet = "javascript:(()=>{document.querySelector('video')?.pause();location.href='velvet://open?url='+encodeURIComponent(location.href)})()"
+
+    var body: some View {
+        @Bindable var settings = app.settings
+        Section {
+            Toggle("Offer to open copied YouTube links", isOn: $settings.offerCopiedLinks)
+            LabeledContent("Browser bookmark") {
+                Button(copied ? "Copied" : "Copy Bookmarklet") {
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(Self.bookmarklet, forType: .string)
+                    // Not offered back to you when you return to Velvet.
+                    app.checkedPasteboardChange = NSPasteboard.general.changeCount
+                    copied = true
+                    Task { try? await Task.sleep(for: .seconds(2)); copied = false }
+                }
+            }
+        } header: {
+            Text("YouTube Links")
+        } footer: {
+            Text("When you switch to Velvet with a YouTube link copied, Velvet offers to open it. To open the page that your browser shows, add a bookmark and paste the bookmarklet as its address. You can also drag a link onto the window, or use Open With.")
+        }
     }
 }
 
