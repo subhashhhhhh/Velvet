@@ -964,7 +964,13 @@ final class AppModel {
         if UserDefaults.standard.bool(forKey: "VelvetWindowFullscreenTest") {
             Task {
                 try? await Task.sleep(for: .seconds(6)); mainWindow?.toggleFullScreen(nil)
-                try? await Task.sleep(for: .seconds(6)); mainWindow?.toggleFullScreen(nil)
+                try? await Task.sleep(for: .seconds(3))
+                // What a click on the top bar's search field would reach.
+                if let frame = mainWindow?.contentView?.superview {
+                    let point = NSPoint(x: frame.bounds.midX, y: frame.bounds.maxY - 26)
+                    log.info("Test: top bar click reaches \(String(describing: frame.hitTest(point).map { type(of: $0) }), privacy: .public)")
+                }
+                try? await Task.sleep(for: .seconds(3)); mainWindow?.toggleFullScreen(nil)
             }
         }
         // `-VelvetShort <id>`: open that Short in the Shorts player.
