@@ -62,6 +62,9 @@ struct WatchView: View {
                     if wide {
                         SideColumn(page: page, chatHeight: max(360, size.height + 120))
                             .frame(width: Self.relatedWidth)
+                            // Its natural height: an overlay offers only the page's height, and
+                            // squeezed into that the related titles dropped to one line.
+                            .fixedSize(horizontal: false, vertical: true)
                             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { sideHeight = $0 }
                             .padding(.top, bandHeight + Self.padding)
                             .padding(.trailing, Self.padding)
