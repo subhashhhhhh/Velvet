@@ -16,7 +16,7 @@ const thanks = [
   <div class="wrap">
     <div class="top">
       <a class="brand" href="#top">
-        <img src="/favicon.svg" width="26" height="26" alt="" />
+        <img src="/favicon.svg" width="24" height="24" alt="" />
         <span>Velvet</span>
       </a>
       <nav aria-label="Project links">
@@ -44,7 +44,8 @@ const thanks = [
   .footer {
     border-top: 1px solid var(--line);
     padding-block: 48px 64px;
-    font-size: 14.5px;
+    font-size: 14px;
+    line-height: 22px;
     color: var(--ink-3);
   }
 
@@ -53,18 +54,16 @@ const thanks = [
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
-    margin-bottom: 28px;
+    gap: 16px 24px;
+    margin-bottom: 32px;
   }
 
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    font-family: var(--display);
-    font-weight: 750;
-    letter-spacing: -0.03em;
-    font-size: 24px;
+    gap: 8px;
+    font-size: 17px;
+    font-weight: 600;
     color: var(--ink);
   }
 
@@ -72,10 +71,11 @@ const thanks = [
     display: flex;
     flex-wrap: wrap;
     gap: 8px 24px;
+    color: var(--ink-2);
   }
 
   a {
-    transition: color 0.2s;
+    transition: color 160ms var(--ease);
   }
 
   nav a:hover,
@@ -86,13 +86,14 @@ const thanks = [
   .thanks a {
     color: var(--ink-2);
     text-decoration: underline;
-    text-decoration-color: var(--line-strong);
-    text-underline-offset: 3px;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 4px;
   }
 
   .legal {
-    margin-top: 14px;
-    max-width: 90ch;
+    margin-top: 12px;
+    max-width: 44rem;
     font-size: 13px;
+    line-height: 20px;
   }
 </style>

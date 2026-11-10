@@ -21,7 +21,7 @@ const ogImage = new URL('/og.png', Astro.site);
     <link rel="canonical" href={canonical} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="theme-color" content="#0a090a" />
+    <meta name="theme-color" content="#161513" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -30,6 +30,10 @@ const ogImage = new URL('/og.png', Astro.site);
     <meta name="twitter:card" content="summary_large_image" />
     <script is:inline>
       document.documentElement.classList.add('js');
+      // The hero's wide layout is set before the first paint, so that nothing jumps.
+      if (matchMedia('(min-width: 1000px) and (prefers-reduced-motion: no-preference)').matches) {
+        document.documentElement.classList.add('pin-hero');
+      }
       // If the animation script fails to load, show everything.
       setTimeout(function () {
         if (!window.velvetMotion) document.documentElement.classList.add('loaded', 'no-motion-js');

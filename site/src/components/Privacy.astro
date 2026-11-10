@@ -1,22 +1,22 @@
 ---
 const services = [
-  { name: 'YouTube and Google', sends: 'Your session cookies and your searches.', why: 'Feeds, search, videos, comments, notifications and account actions.', optional: false },
-  { name: 'GitHub', sends: 'No personal data.', why: 'Downloads of yt-dlp and its JavaScript runtime, the daily update check, and the list of AI channels (only with the AI filter).', optional: false },
-  { name: 'SponsorBlock', sends: 'Four characters of a hash of the video ID. The service cannot find which video you watch.', why: 'Segments to skip.', optional: true },
-  { name: 'DeArrow titles', sends: 'Four characters of a hash of the video ID.', why: 'Better titles.', optional: true },
-  { name: 'DeArrow thumbnails', sends: 'The video ID. This service can see which videos you look at.', why: 'Better thumbnails.', optional: true },
-  { name: 'Return YouTube Dislike', sends: 'The video ID.', why: 'Dislike counts.', optional: true },
+  { name: 'YouTube and Google', sends: 'Your session cookies and your searches', why: 'Feeds, search, videos, comments, notifications and account actions', optional: false },
+  { name: 'GitHub', sends: 'No personal data', why: 'Downloads of yt-dlp and its JavaScript runtime, the daily update check, and the list of AI channels (only with the AI filter)', optional: false },
+  { name: 'SponsorBlock', sends: 'Four characters of a hash of the video ID. The service cannot find which video you watch', why: 'Segments to skip', optional: true },
+  { name: 'DeArrow titles', sends: 'Four characters of a hash of the video ID', why: 'Better titles', optional: true },
+  { name: 'DeArrow thumbnails', sends: 'The video ID. This service can see which videos you look at', why: 'Better thumbnails', optional: true },
+  { name: 'Return YouTube Dislike', sends: 'The video ID', why: 'Dislike counts', optional: true },
 ];
 ---
 
 <section class="section" id="privacy">
   <div class="wrap">
-    <div class="section-head">
-      <p class="eyebrow" data-reveal>Privacy</p>
-      <h2 class="display stack" data-reveal>No analytics. No telemetry. <em>Here is the full list.</em></h2>
+    <div class="head">
+      <p class="label" data-reveal>Privacy</p>
+      <h2 class="title" data-reveal>Every service Velvet talks to</h2>
       <p class="lede" data-reveal>
-        Velvet does not collect data about you. These are all the services that the app connects to, and what each one
-        gets. You can turn off each optional service in the settings.
+        Velvet has no analytics and no telemetry, and it does not collect data about you. This is the full list of what
+        the app connects to and what each service gets. You can turn off each optional one in the settings.
       </p>
     </div>
 
@@ -31,7 +31,7 @@ const services = [
           <div class="tr" role="row" data-row>
             <span role="cell" class="name">
               {s.name}
-              {s.optional && <em>Optional</em>}
+              {s.optional && <em>optional</em>}
             </span>
             <span role="cell">{s.sends}</span>
             <span role="cell">{s.why}</span>
@@ -42,67 +42,53 @@ const services = [
 
     <p class="note" data-reveal>
       Your sign-in stays on your Mac, in a file that only your macOS user account can read. Velvet sends it only to
-      YouTube and Google. Velvet is open source: you can read the code that does each of these things.
+      YouTube and Google. Velvet is open source, so you can read the code that does each of these things.
     </p>
   </div>
 </section>
 
 <style>
   .table {
-    border-radius: var(--radius);
-    border: 1px solid var(--line);
-    overflow: hidden;
+    border-top: 1px solid var(--line);
   }
 
   .tr {
     display: grid;
-    grid-template-columns: minmax(180px, 0.8fr) 1.3fr 1.3fr;
-    gap: 24px;
-    padding: 20px clamp(18px, 3vw, 32px);
-    border-top: 1px solid var(--line);
-    font-size: 15.5px;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) minmax(0, 5fr);
+    gap: 32px;
+    padding-block: 16px;
+    border-bottom: 1px solid var(--line);
+    font-size: 15px;
+    line-height: 22px;
     color: var(--ink-2);
-    background: rgba(255, 255, 255, 0.012);
-  }
-
-  .tr:first-child {
-    border-top: 0;
   }
 
   .th {
-    font-size: 12.5px;
-    font-weight: 550;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
+    padding-block: 12px;
+    font-size: 13px;
+    line-height: 20px;
     color: var(--ink-3);
-    background: var(--bg-raised);
-    padding-block: 14px;
   }
 
   .name {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    align-content: start;
-    gap: 6px 10px;
     color: var(--ink);
-    font-weight: 600;
+    font-weight: 500;
   }
 
   .name em {
+    display: block;
     font-style: normal;
-    font-size: 11.5px;
-    font-weight: 550;
-    padding: 1px 8px;
-    border-radius: 999px;
-    border: 1px solid var(--line-strong);
+    font-weight: 400;
+    font-size: 13px;
+    line-height: 20px;
     color: var(--ink-3);
   }
 
   .note {
-    margin-top: 28px;
-    max-width: 72ch;
-    font-size: 15px;
+    margin-top: 24px;
+    max-width: 40rem;
+    font-size: 14px;
+    line-height: 22px;
     color: var(--ink-3);
   }
 
@@ -112,8 +98,13 @@ const services = [
     }
 
     .tr {
-      grid-template-columns: 1fr;
-      gap: 6px;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 4px;
+    }
+
+    .name em {
+      display: inline;
+      margin-left: 8px;
     }
   }
 </style>

@@ -3,9 +3,9 @@ import { repo } from '../data';
 ---
 
 <header class="nav" data-nav>
-  <div class="wrap nav-inner">
+  <div class="wrap inner">
     <a class="brand" href="#top" aria-label="Velvet, top of page">
-      <img src="/favicon.svg" width="28" height="28" alt="" />
+      <img src="/favicon.svg" width="24" height="24" alt="" />
       <span>Velvet</span>
     </a>
     <nav class="links" aria-label="Sections">
@@ -17,6 +17,11 @@ import { repo } from '../data';
     </nav>
     <a class="btn btn-primary get" href="#install">Download</a>
   </div>
+  <!-- The page's own seek bar: sections are its chapters, the scroll position is the playhead. -->
+  <div class="seek" data-page-seek aria-hidden="true">
+    <span class="played" data-page-played></span>
+    <span class="gaps" data-page-gaps></span>
+  </div>
 </header>
 
 <style>
@@ -24,48 +29,35 @@ import { repo } from '../data';
     position: fixed;
     inset: 0 0 auto 0;
     z-index: 50;
-    transition:
-      background 0.3s,
-      border-color 0.3s,
-      backdrop-filter 0.3s;
-    border-bottom: 1px solid transparent;
+    background: var(--bg);
   }
 
-  .nav:global(.scrolled) {
-    background: rgba(10, 9, 10, 0.72);
-    backdrop-filter: blur(18px) saturate(1.4);
-    -webkit-backdrop-filter: blur(18px) saturate(1.4);
-    border-bottom-color: var(--line);
-  }
-
-  .nav-inner {
+  .inner {
     display: flex;
     align-items: center;
-    gap: 28px;
-    height: 68px;
+    gap: 32px;
+    height: var(--nav);
   }
 
   .brand {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    font-family: var(--display);
-    font-weight: 750;
-    letter-spacing: -0.03em;
-    font-size: 25px;
-    letter-spacing: -0.01em;
+    gap: 8px;
+    font-size: 17px;
+    font-weight: 600;
     margin-right: auto;
   }
 
   .links {
     display: flex;
     gap: 28px;
-    font-size: 14.5px;
+    font-size: 14px;
+    line-height: 20px;
     color: var(--ink-2);
   }
 
   .links a {
-    transition: color 0.2s;
+    transition: color 160ms var(--ease);
   }
 
   .links a:hover {
@@ -73,9 +65,33 @@ import { repo } from '../data';
   }
 
   .get {
-    height: 38px;
-    padding: 0 18px;
+    height: 36px;
+    padding: 0 16px;
+    border-radius: 8px;
     font-size: 14px;
+  }
+
+  .seek {
+    position: relative;
+    height: 2px;
+    background: var(--line-2);
+    overflow: hidden;
+  }
+
+  .played {
+    position: absolute;
+    inset: 0;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+
+  .gaps :global(i) {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--bg);
   }
 
   @media (max-width: 760px) {

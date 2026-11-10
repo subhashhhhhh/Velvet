@@ -6,15 +6,14 @@ const { command } = Astro.props;
 ---
 
 <button class="cmd" type="button" data-copy={command} aria-label={`Copy the command: ${command}`}>
-  <span class="prompt" aria-hidden="true">$</span>
   <code>{command}</code>
   <span class="state" aria-hidden="true">
-    <svg class="i-copy" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6">
-      <rect x="7" y="7" width="9.5" height="9.5" rx="2.2"></rect>
-      <path d="M4.500 12.500h-.5a1.500 1.500 0 0 1-1.500-1.500v-6.500a1.500 1.500 0 0 1 1.500-1.500h6.500a1.500 1.500 0 0 1 1.500 1.500v.5"></path>
+    <svg class="i-copy" viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.500" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="6.500" y="6.500" width="8.500" height="8.500" rx="2"></rect>
+      <path d="M4 11.500A1.500 1.500 0 0 1 3 10V4.500A1.500 1.500 0 0 1 4.500 3H10a1.500 1.500 0 0 1 1.500 1"></path>
     </svg>
-    <svg class="i-done" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M4.500 10.500l3.500 3.500 7.500-8"></path>
+    <svg class="i-done" viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.500" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M4 9.500l3.500 3.500L14 5.500"></path>
     </svg>
   </span>
   <span class="sr-only" role="status" data-copy-status></span>
@@ -26,26 +25,25 @@ const { command } = Astro.props;
     align-items: center;
     gap: 12px;
     max-width: 100%;
-    height: 48px;
-    padding: 0 16px 0 18px;
-    border-radius: 999px;
-    border: 1px solid var(--line-strong);
-    background: rgba(255, 255, 255, 0.03);
+    height: 44px;
+    padding: 0 12px 0 16px;
+    border-radius: 10px;
+    background: var(--raised);
+    box-shadow: inset 0 0 0 1px var(--line);
     font-family: var(--mono);
-    font-size: 13.5px;
+    font-size: 13px;
     color: var(--ink);
     transition:
-      border-color 0.2s,
-      background 0.2s;
+      background-color 160ms var(--ease),
+      transform 160ms var(--ease);
   }
 
   .cmd:hover {
-    border-color: rgba(255, 255, 255, 0.32);
-    background: rgba(255, 255, 255, 0.06);
+    background: #2e2b28;
   }
 
-  .prompt {
-    color: var(--crimson-soft);
+  .cmd:active {
+    transform: scale(0.98);
   }
 
   code {
@@ -57,29 +55,25 @@ const { command } = Astro.props;
 
   .state {
     display: grid;
+    flex: none;
     color: var(--ink-3);
   }
 
   .state svg {
     grid-area: 1 / 1;
-    transition:
-      opacity 0.2s,
-      transform 0.3s var(--ease);
+    transition: opacity 160ms var(--ease);
   }
 
   .i-done {
     opacity: 0;
-    transform: scale(0.5);
-    color: #4ade80;
+    color: var(--positive);
   }
 
   .cmd:global(.copied) .i-copy {
     opacity: 0;
-    transform: scale(0.5);
   }
 
   .cmd:global(.copied) .i-done {
     opacity: 1;
-    transform: none;
   }
 </style>

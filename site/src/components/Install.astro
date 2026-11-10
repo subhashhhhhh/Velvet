@@ -3,46 +3,53 @@ import CopyCommand from './CopyCommand.astro';
 import { brew, downloads, repo, version } from '../data';
 ---
 
-<section class="section install" id="install">
-  <div class="halo" aria-hidden="true"></div>
-  <div class="wrap inner">
-    <img class="icon" src="/icon.png" width="112" height="112" alt="" data-reveal />
-    <h2 class="display" data-reveal>Get Velvet.</h2>
-    <p class="lede" data-reveal>Free and open source. Version {version}, for macOS 15 (Sequoia) or later.</p>
-
-    <div class="ways">
-      <div class="way" data-reveal>
-        <p class="step">With Homebrew <span>Recommended</span></p>
-        <CopyCommand command={brew} />
-        <p class="fine">Homebrew installs Velvet ready to open.</p>
-      </div>
-
-      <div class="way" data-reveal>
-        <p class="step">With a download</p>
-        <div class="buttons">
-          <a class="btn btn-primary" href={downloads.appleSilicon} data-dl="arm">Apple silicon</a>
-          <a class="btn btn-ghost" href={downloads.intel} data-dl="intel">Intel</a>
-        </div>
-        <p class="fine" data-dl-hint>
-          Not sure? Open the Apple menu › About This Mac. “Chip” means Apple silicon; “Processor” means Intel.
-        </p>
-      </div>
+<section class="section" id="install">
+  <div class="wrap grid">
+    <div class="head">
+      <img class="icon" src="/icon.png" width="64" height="64" alt="" data-reveal />
+      <h2 class="title" data-reveal>Get Velvet</h2>
+      <p class="lede" data-reveal>
+        Free and open source. Version {version} runs on macOS 15 or later, on Apple silicon and Intel.
+      </p>
     </div>
 
-    <details data-reveal>
-      <summary>macOS stops the downloaded app the first time. What do I do?</summary>
-      <div class="answer">
-        <p>
-          Apple does not notarize Velvet, because notarization needs a paid developer account. So macOS stops a
-          downloaded copy the first time that you open it. Do one of these:
-        </p>
-        <ul>
-          <li>Open System Settings › Privacy &amp; Security. Go to Security and click <strong>Open Anyway</strong>.</li>
-          <li>Or do this command in Terminal: <code>xattr -cr /Applications/Velvet.app</code></li>
-        </ul>
-        <p>The Homebrew install does not need this. You can also <a href={`${repo}#9-build-from-source`}>build Velvet from source</a>.</p>
+    <div class="panel" data-reveal>
+      <div class="way">
+        <div>
+          <h3>Homebrew</h3>
+          <p>Installs Velvet ready to open. This is the easier way</p>
+        </div>
+        <CopyCommand command={brew} />
       </div>
-    </details>
+
+      <div class="way">
+        <div>
+          <h3>Download</h3>
+          <p data-dl-hint>In the Apple menu, About This Mac shows “Chip” for Apple silicon and “Processor” for Intel</p>
+        </div>
+        <div class="buttons">
+          <a class="btn btn-primary" href={downloads.appleSilicon} data-dl="arm">Apple silicon</a>
+          <a class="btn btn-secondary" href={downloads.intel} data-dl="intel">Intel</a>
+        </div>
+      </div>
+
+      <details>
+        <summary>macOS stops the downloaded app the first time</summary>
+        <div class="answer">
+          <p>
+            Apple does not notarize Velvet, because notarization needs a paid developer account. So macOS stops a
+            downloaded copy the first time that you open it. Do one of these:
+          </p>
+          <ul>
+            <li>Open System Settings › Privacy &amp; Security, go to Security and click Open Anyway.</li>
+            <li>Or do this command in Terminal: <code>xattr -cr /Applications/Velvet.app</code></li>
+          </ul>
+          <p>
+            The Homebrew install does not need this. You can also <a href={`${repo}#9-build-from-source`}>build Velvet from source</a>.
+          </p>
+        </div>
+      </details>
+    </div>
   </div>
 </section>
 
@@ -64,105 +71,68 @@ import { brew, downloads, repo, version } from '../data';
   if (guess() === 'intel') {
     const arm = document.querySelector('[data-dl="arm"]');
     const intel = document.querySelector('[data-dl="intel"]');
-    arm?.classList.replace('btn-primary', 'btn-ghost');
-    intel?.classList.replace('btn-ghost', 'btn-primary');
+    arm?.classList.replace('btn-primary', 'btn-secondary');
+    intel?.classList.replace('btn-secondary', 'btn-primary');
     if (arm && intel) arm.before(intel);
     const hint = document.querySelector('[data-dl-hint]');
-    if (hint) hint.textContent = 'This Mac looks like an Intel Mac. If About This Mac shows “Chip”, use Apple silicon.';
+    if (hint) hint.textContent = 'This Mac looks like an Intel Mac. If About This Mac shows “Chip”, use Apple silicon';
   }
 </script>
 
 <style>
-  .install {
-    position: relative;
-    overflow: hidden;
-  }
-
-  .halo {
-    position: absolute;
-    left: 50%;
-    top: 0;
-    width: min(1100px, 120vw);
-    aspect-ratio: 1;
-    translate: -50% -30%;
-    background: radial-gradient(closest-side, rgba(224, 16, 58, 0.22), transparent);
-    pointer-events: none;
-  }
-
-  .inner {
-    position: relative;
+  .grid {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
-    justify-items: center;
-    text-align: center;
-    gap: 22px;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 64px;
+    align-items: start;
+  }
+
+  .head {
+    margin-bottom: 0;
   }
 
   .icon {
-    border-radius: 24%;
-    filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.6));
+    border-radius: 14px;
+    margin-bottom: 8px;
   }
 
-  .ways {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
-    width: 100%;
-    max-width: 920px;
-    margin-top: 24px;
+  .panel {
+    border-radius: 16px;
+    background: var(--card);
+    box-shadow: inset 0 0 0 1px var(--line);
   }
 
   .way {
-    display: grid;
-    justify-items: center;
-    grid-template-columns: minmax(0, 1fr);
-    align-content: start;
-    gap: 16px;
-    padding: 32px 24px;
-    border-radius: var(--radius);
-    border: 1px solid var(--line);
-    background: rgba(19, 17, 19, 0.7);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 24px;
+    padding: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .way > div:first-child {
+    flex: 1 1 200px;
     min-width: 0;
   }
 
-  .step {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-weight: 600;
+  h3 {
+    font-size: 16px;
+    line-height: 24px;
   }
 
-  .step span {
-    font-size: 11.5px;
-    font-weight: 550;
-    padding: 1px 9px;
-    border-radius: 999px;
-    background: rgba(224, 16, 58, 0.16);
-    color: var(--crimson-soft);
+  .way p {
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink-3);
+    max-width: 22rem;
   }
 
   .buttons {
     display: flex;
     flex-wrap: wrap;
-    justify-content: center;
-    gap: 10px;
-  }
-
-  .fine {
-    font-size: 13.5px;
-    color: var(--ink-3);
-    max-width: 44ch;
-  }
-
-  details {
-    width: 100%;
-    max-width: 920px;
-    text-align: left;
-    border-radius: var(--radius);
-    border: 1px solid var(--line);
-    background: rgba(19, 17, 19, 0.7);
+    gap: 8px;
   }
 
   summary {
@@ -172,8 +142,16 @@ import { brew, downloads, repo, version } from '../data';
     gap: 16px;
     padding: 20px 24px;
     cursor: pointer;
-    font-weight: 550;
+    font-size: 15px;
+    line-height: 20px;
+    color: var(--ink-2);
     list-style: none;
+    border-radius: 0 0 16px 16px;
+    transition: color 160ms var(--ease);
+  }
+
+  summary:hover {
+    color: var(--ink);
   }
 
   summary::-webkit-details-marker {
@@ -181,51 +159,64 @@ import { brew, downloads, repo, version } from '../data';
   }
 
   summary::after {
-    content: '+';
-    font-size: 22px;
-    font-weight: 300;
-    color: var(--ink-3);
-    transition: transform 0.3s var(--ease);
+    content: '';
+    flex: none;
+    width: 8px;
+    height: 8px;
+    margin-right: 4px;
+    border-right: 1.5px solid var(--ink-3);
+    border-bottom: 1.5px solid var(--ink-3);
+    transform: rotate(45deg);
+    transition: transform 160ms var(--ease);
   }
 
   details[open] summary::after {
-    transform: rotate(45deg);
+    transform: rotate(225deg);
   }
 
   .answer {
     display: grid;
     gap: 12px;
     padding: 0 24px 24px;
-    font-size: 15.5px;
+    font-size: 15px;
+    line-height: 22px;
     color: var(--ink-2);
   }
 
   .answer ul {
-    margin: 0;
     padding-left: 20px;
+    list-style: disc;
     display: grid;
     gap: 8px;
   }
 
   .answer code {
     font-family: var(--mono);
-    font-size: 13.5px;
-    padding: 2px 7px;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.07);
+    font-size: 13px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: var(--raised);
     color: var(--ink);
     overflow-wrap: anywhere;
   }
 
   .answer a {
-    color: var(--crimson-soft);
+    color: var(--ink);
     text-decoration: underline;
-    text-underline-offset: 3px;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 4px;
   }
 
-  @media (max-width: 760px) {
-    .ways {
-      grid-template-columns: 1fr;
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 32px;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .way {
+      padding: 20px;
     }
   }
 </style>

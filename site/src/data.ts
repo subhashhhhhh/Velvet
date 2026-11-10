@@ -16,16 +16,18 @@ export const downloads = {
 };
 export const brew = 'brew install --cask subhashhhhhh/velvet/velvet';
 
-// Memory figures, measured by the maintainer with Activity Monitor's "Memory" value.
+// Memory figures, in MB ("Memory" in Activity Monitor).
+// `compare` is the maintainer's measurement from the README: the same 1440p video on one Mac.
+// `sequoia` was measured on macOS 15.8 on an M1 MacBook Air, two minutes into Big Buck Bunny
+// at 60 fps. At 1080p the figure rose during a ten-minute video; see the note on the page.
 export const memory = {
-  headline: 'A quarter of the memory.',
-  browserLabel: 'youtube.com in Safari',
-  browser: 1400,
-  velvet: 360,
-  note: 'The same 1440p video on the same Mac. Memory changes with the video, the quality and the macOS version; your numbers can be different.',
-  stats: [
-    { value: 160, unit: 'MB', label: 'Velvet with a 1080p video, on macOS 15.' },
-    { value: 280, unit: 'MB', label: 'Velvet with a 4K video, on macOS 15.' },
-    { value: 0, unit: '', label: 'Analytics, telemetry or crash reports.' },
+  axisMax: 1500,
+  compare: [
+    { name: 'youtube.com in Safari', mb: 1400, velvet: false },
+    { name: 'Velvet', mb: 360, velvet: true },
+  ],
+  sequoia: [
+    { name: '1080p', mb: 172 },
+    { name: '4K', mb: 292 },
   ],
 };
