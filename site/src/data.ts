@@ -10,10 +10,28 @@ const manifest = JSON.parse(
 export const repo = 'https://github.com/subhashhhhhh/Velvet';
 export const version = manifest.version;
 const base = `${repo}/releases/download/${manifest.tag}`;
-export const downloads = {
-  appleSilicon: `${base}/Velvet-${manifest.version}-AppleSilicon.dmg`,
-  intel: `${base}/Velvet-${manifest.version}-Intel.dmg`,
-};
+const mb = (key: string) => Math.round((manifest.archives[key]?.size ?? 0) / 1_000_000);
+
+// The two downloads. `slug` is the address of the page that starts the download and shows
+// the first-start procedure (/download/<slug>). The sizes are those of the update archives
+// in the manifest, which are almost the same as the disk images.
+export const downloads = [
+  {
+    slug: 'apple-silicon',
+    name: 'Apple silicon',
+    file: `Velvet-${manifest.version}-AppleSilicon.dmg`,
+    url: `${base}/Velvet-${manifest.version}-AppleSilicon.dmg`,
+    mb: mb('AppleSilicon'),
+  },
+  {
+    slug: 'intel',
+    name: 'Intel',
+    file: `Velvet-${manifest.version}-Intel.dmg`,
+    url: `${base}/Velvet-${manifest.version}-Intel.dmg`,
+    mb: mb('Intel'),
+  },
+];
+export const checksums = `${base}/SHA256SUMS-${manifest.version}.txt`;
 export const brew = 'brew install --cask subhashhhhhh/velvet/velvet';
 
 // Memory figures, in MB ("Memory" in Activity Monitor).

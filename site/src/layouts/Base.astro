@@ -31,6 +31,7 @@ const ogImage = new URL('/og.png', Astro.site);
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={ogImage} />
     <meta name="twitter:card" content="summary_large_image" />
+    <slot name="head" />
     <script is:inline>
       document.documentElement.classList.add('js');
       // The hero's wide layout is set before the first paint, so that nothing jumps.

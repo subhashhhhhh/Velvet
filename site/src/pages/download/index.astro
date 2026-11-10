@@ -1,0 +1,203 @@
+---
+import Base from '../../layouts/Base.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import PageHeader from '../../components/PageHeader.astro';
+import CopyCommand from '../../components/CopyCommand.astro';
+import { brew, checksums, downloads, repo, version } from '../../data';
+---
+
+<Base
+  title="Download Velvet for macOS"
+  description="Download Velvet, the free and open-source YouTube client for macOS 15 or later, for Apple silicon and Intel. Or install it with Homebrew."
+>
+  <Nav />
+  <main>
+    <PageHeader
+      label="Download"
+      title="Download Velvet"
+      lede={`Version ${version} is free and open source. It runs on macOS 15 (Sequoia) or later.`}
+    />
+
+    <section class="section ways">
+      <div class="wrap">
+        <div class="panel" data-reveal>
+          <div class="way">
+            <div class="about">
+              <h2>Download</h2>
+              <p data-dl-hint>
+                Select the type of your Mac. In the Apple menu, About This Mac shows “Chip” for Apple silicon and
+                “Processor” for Intel
+              </p>
+            </div>
+            <div class="buttons" data-dl-buttons>
+              {
+                downloads.map((d, i) => (
+                  <a class={`btn ${i === 0 ? 'btn-primary' : 'btn-secondary'}`} href={`/download/${d.slug}`} data-dl={d.slug}>
+                    {d.name}
+                    <span class="mono size">{d.mb} MB</span>
+                  </a>
+                ))
+              }
+            </div>
+          </div>
+
+          <div class="way">
+            <div class="about">
+              <h2>Homebrew</h2>
+              <p>Homebrew selects the correct version, and macOS does not stop the app on the first start</p>
+            </div>
+            <CopyCommand command={brew} />
+          </div>
+        </div>
+
+        <ul class="facts" data-reveal>
+          <li>
+            <h3>After the download</h3>
+            <p>
+              macOS stops a downloaded copy the first time. The page that starts the download shows you how to open
+              Velvet.
+            </p>
+          </li>
+          <li>
+            <h3>Updates</h3>
+            <p>
+              Velvet installs each new version itself. The <a href="/changelog">changelog</a> shows what changed.
+            </p>
+          </li>
+          <li>
+            <h3>Check the download</h3>
+            <p>
+              The release has a <a href={checksums}>list of SHA-256 checksums</a>. All the files are on the{' '}
+              <a href={`${repo}/releases/latest`}>release page</a>.
+            </p>
+          </li>
+          <li>
+            <h3>Build it yourself</h3>
+            <p>
+              Velvet is open source. The README tells you how to <a href={`${repo}#9-build-from-source`}>build it from source</a>.
+            </p>
+          </li>
+        </ul>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Base>
+
+<script>
+  // Browsers on a Mac report "Intel" on all processors. The WebGL renderer name is the only hint:
+  // Apple silicon reports an Apple GPU, Intel Macs report Intel or AMD graphics.
+  const guess = (): 'arm' | 'intel' | null => {
+    if (!/Mac/.test(navigator.platform)) return null;
+    try {
+      const gl = document.createElement('canvas').getContext('webgl');
+      const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+      const name = ext ? String(gl!.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
+      if (/Intel|AMD|Radeon|NVIDIA/i.test(name)) return 'intel';
+      if (/Apple M|Apple GPU/i.test(name)) return 'arm';
+    } catch {}
+    return null;
+  };
+
+  const kind = guess();
+  const hint = document.querySelector('[data-dl-hint]');
+  if (kind === 'intel') {
+    const arm = document.querySelector('[data-dl="apple-silicon"]');
+    const intel = document.querySelector('[data-dl="intel"]');
+    arm?.classList.replace('btn-primary', 'btn-secondary');
+    intel?.classList.replace('btn-secondary', 'btn-primary');
+    if (arm && intel) arm.before(intel);
+    if (hint) hint.textContent = 'This Mac looks like an Intel Mac. If About This Mac shows “Chip”, use Apple silicon';
+  } else if (kind === 'arm' && hint) {
+    hint.textContent = 'This Mac looks like an Apple silicon Mac. If About This Mac shows “Processor”, use Intel';
+  }
+</script>
+
+<style>
+  .ways {
+    padding-top: 48px;
+  }
+
+  .panel {
+    max-width: 800px;
+    border-radius: 16px;
+    background: var(--card);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+
+  .way {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 24px;
+    padding: 24px;
+  }
+
+  .way + .way {
+    border-top: 1px solid var(--line);
+  }
+
+  .about {
+    flex: 1 1 240px;
+    min-width: 0;
+  }
+
+  h2,
+  h3 {
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .about p {
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink-3);
+    max-width: 24rem;
+  }
+
+  .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .size {
+    font-size: 12px;
+    opacity: 0.64;
+  }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px 48px;
+    max-width: 800px;
+    margin-top: 48px;
+  }
+
+  .facts p {
+    margin-top: 4px;
+    font-size: 15px;
+    line-height: 22px;
+    color: var(--ink-2);
+  }
+
+  .facts a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 4px;
+  }
+
+  @media (max-width: 640px) {
+    .way {
+      padding: 20px;
+    }
+
+    .facts {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 24px;
+    }
+  }
+</style>

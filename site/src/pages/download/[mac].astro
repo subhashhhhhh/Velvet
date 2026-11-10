@@ -1,0 +1,243 @@
+---
+import Base from '../../layouts/Base.astro';
+import Nav from '../../components/Nav.astro';
+import Footer from '../../components/Footer.astro';
+import PageHeader from '../../components/PageHeader.astro';
+import CopyCommand from '../../components/CopyCommand.astro';
+import { downloads } from '../../data';
+
+export function getStaticPaths() {
+  return downloads.map((d) => ({ params: { mac: d.slug }, props: { download: d } }));
+}
+
+const { download } = Astro.props;
+const other = downloads.find((d) => d.slug !== download.slug)!;
+---
+
+<Base
+  title={`Open Velvet the first time · ${download.name}`}
+  description="The download of Velvet starts on this page. The page shows how to install Velvet and how to open it the first time."
+  noindex
+>
+  <!-- The download starts by itself, also without scripts. The page stays open. -->
+  <meta slot="head" http-equiv="refresh" content={`1; url=${download.url}`} />
+  <Nav />
+  <main>
+    <PageHeader
+      label={`Download for ${download.name}`}
+      title="The download starts now"
+      lede="Apple does not notarize Velvet, so macOS stops it the first time. Do this procedure one time to open it."
+    />
+
+    <section class="section body">
+      <div class="wrap">
+        <p class="retry" data-reveal>
+          If the download does not start, <a href={download.url}>download <span class="mono">{download.file}</span></a>.
+          For a Mac with {other.name === 'Intel' ? 'an Intel processor' : 'Apple silicon'}, get the{' '}
+          <a href={`/download/${other.slug}`}>{other.name} version</a>.
+        </p>
+
+        <ol class="steps">
+          <li data-row>
+            <span class="n mono">1</span>
+            <div>
+              <h2>Open the disk image</h2>
+              <p>Find <span class="mono">{download.file}</span> in your Downloads folder. Double-click it.</p>
+            </div>
+          </li>
+          <li data-row>
+            <span class="n mono">2</span>
+            <div>
+              <h2>Drag Velvet to Applications</h2>
+              <p>In the window that opens, drag the Velvet icon onto the Applications folder.</p>
+            </div>
+          </li>
+          <li data-row>
+            <span class="n mono">3</span>
+            <div>
+              <h2>Start Velvet</h2>
+              <p>
+                Open the Applications folder and double-click Velvet. macOS shows a message that it did not open
+                Velvet. Close the message.
+              </p>
+            </div>
+          </li>
+          <li data-row>
+            <span class="n mono">4</span>
+            <div>
+              <h2>Go to the security settings</h2>
+              <p>Open System Settings. Click Privacy &amp; Security. Go down to Security.</p>
+            </div>
+          </li>
+          <li data-row>
+            <span class="n mono">5</span>
+            <div>
+              <h2>Click Open Anyway</h2>
+              <p>The Security section shows a line about Velvet. Click the Open Anyway button next to it.</p>
+              <div class="mock" aria-hidden="true">
+                <p class="mock-title">Security</p>
+                <div class="mock-row">
+                  <p>“Velvet” was blocked to protect your Mac.</p>
+                  <span>Open Anyway</span>
+                </div>
+              </div>
+            </div>
+          </li>
+          <li data-row>
+            <span class="n mono">6</span>
+            <div>
+              <h2>Confirm</h2>
+              <p>macOS asks again. Click Open Anyway, then type your password or use Touch ID. Velvet opens.</p>
+            </div>
+          </li>
+        </ol>
+
+        <div class="after" data-reveal>
+          <div>
+            <h2>Or use Terminal</h2>
+            <p>After step 2, this command removes the block. Then start Velvet.</p>
+            <CopyCommand command="xattr -cr /Applications/Velvet.app" />
+          </div>
+          <div>
+            <h2>After the first start</h2>
+            <p>
+              macOS does not stop Velvet again. Velvet installs its updates itself, and it accepts only updates with
+              the same signature. If you have a problem, refer to <a href="/help">Help</a>.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .body {
+    padding-top: 32px;
+  }
+
+  .retry {
+    max-width: 40rem;
+    font-size: 15px;
+    line-height: 22px;
+    color: var(--ink-3);
+  }
+
+  a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 4px;
+  }
+
+  .steps {
+    margin: 48px 0 0;
+    padding: 0;
+    list-style: none;
+    max-width: 800px;
+    border-top: 1px solid var(--line);
+  }
+
+  .steps li {
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 16px;
+    padding-block: 24px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .n {
+    font-size: 24px;
+    line-height: 28px;
+    color: var(--ink-3);
+  }
+
+  h2 {
+    font-size: 20px;
+    line-height: 28px;
+  }
+
+  .steps p,
+  .after p {
+    margin-top: 4px;
+    max-width: 36rem;
+    font-size: 16px;
+    line-height: 24px;
+    color: var(--ink-2);
+  }
+
+  /* A plain drawing of the line in System Settings, so that the button is easy to find. */
+  .mock {
+    max-width: 480px;
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow: inset 0 0 0 1px var(--line);
+  }
+
+  .mock .mock-title {
+    margin: 0 0 12px;
+    font-size: 13px;
+    line-height: 20px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .mock-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--raised);
+  }
+
+  .mock-row p {
+    margin: 0;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--ink-2);
+  }
+
+  .mock-row span {
+    flex: none;
+    padding: 2px 12px;
+    border-radius: 6px;
+    background: #3a3733;
+    font-size: 13px;
+    line-height: 20px;
+    color: var(--ink);
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  .after {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px 48px;
+    max-width: 800px;
+    margin-top: 48px;
+  }
+
+  .after h2 {
+    font-size: 16px;
+    line-height: 24px;
+  }
+
+  .after :global(.cmd) {
+    margin-top: 12px;
+  }
+
+  @media (max-width: 640px) {
+    .steps li {
+      grid-template-columns: 32px minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .after {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+</style>

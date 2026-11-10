@@ -1,94 +1,33 @@
 ---
 import CopyCommand from './CopyCommand.astro';
-import { brew, downloads, repo, version } from '../data';
+import { brew, version } from '../data';
 ---
 
 <section class="section" id="install">
-  <div class="wrap grid">
+  <div class="wrap">
     <div class="head">
       <img class="icon" src="/icon.png" width="64" height="64" alt="" data-reveal />
       <h2 class="title" data-reveal>Get Velvet</h2>
       <p class="lede" data-reveal>
-        Free and open source. Version <a class="ver" href="/changelog">{version}</a> runs on macOS 15 or later, on Apple silicon and Intel.
+        Free and open source. Version <a class="ver" href="/changelog">{version}</a> runs on macOS 15 or later, on Apple silicon
+        and Intel.
       </p>
-    </div>
-
-    <div class="panel" data-reveal>
-      <div class="way">
-        <div>
-          <h3>Homebrew</h3>
-          <p>Installs Velvet ready to open. This is the easier way</p>
-        </div>
+      <div class="actions" data-reveal>
+        <a class="btn btn-primary" href="/download">Download for Mac</a>
         <CopyCommand command={brew} />
       </div>
-
-      <div class="way">
-        <div>
-          <h3>Download</h3>
-          <p data-dl-hint>In the Apple menu, About This Mac shows “Chip” for Apple silicon and “Processor” for Intel</p>
-        </div>
-        <div class="buttons">
-          <a class="btn btn-primary" href={downloads.appleSilicon} data-dl="arm">Apple silicon</a>
-          <a class="btn btn-secondary" href={downloads.intel} data-dl="intel">Intel</a>
-        </div>
-      </div>
-
-      <details>
-        <summary>macOS stops the downloaded app the first time</summary>
-        <div class="answer">
-          <p>
-            Apple does not notarize Velvet, because notarization needs a paid developer account. So macOS stops a
-            downloaded copy the first time that you open it. Do one of these:
-          </p>
-          <ul>
-            <li>Open System Settings › Privacy &amp; Security, go to Security and click Open Anyway.</li>
-            <li>Or do this command in Terminal: <code>xattr -cr /Applications/Velvet.app</code></li>
-          </ul>
-          <p>
-            The Homebrew install does not need this. You can also <a href={`${repo}#9-build-from-source`}>build Velvet from source</a>.
-          </p>
-        </div>
-      </details>
     </div>
   </div>
 </section>
 
-<script>
-  // Browsers on a Mac report "Intel" on all processors. The WebGL renderer name is the only hint:
-  // Apple silicon reports an Apple GPU, Intel Macs report Intel or AMD graphics.
-  const guess = (): 'arm' | 'intel' | null => {
-    if (!/Mac/.test(navigator.platform)) return null;
-    try {
-      const gl = document.createElement('canvas').getContext('webgl');
-      const ext = gl?.getExtension('WEBGL_debug_renderer_info');
-      const name = ext ? String(gl!.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
-      if (/Intel|AMD|Radeon|NVIDIA/i.test(name)) return 'intel';
-      if (/Apple M|Apple GPU/i.test(name)) return 'arm';
-    } catch {}
-    return null;
-  };
-
-  if (guess() === 'intel') {
-    const arm = document.querySelector('[data-dl="arm"]');
-    const intel = document.querySelector('[data-dl="intel"]');
-    arm?.classList.replace('btn-primary', 'btn-secondary');
-    intel?.classList.replace('btn-secondary', 'btn-primary');
-    if (arm && intel) arm.before(intel);
-    const hint = document.querySelector('[data-dl-hint]');
-    if (hint) hint.textContent = 'This Mac looks like an Intel Mac. If About This Mac shows “Chip”, use Apple silicon';
-  }
-</script>
-
 <style>
-  .grid {
-    display: grid;
-    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
-    gap: 64px;
-    align-items: start;
-  }
-
   .head {
     margin-bottom: 0;
+  }
+
+  .icon {
+    border-radius: 14px;
+    margin-bottom: 8px;
   }
 
   .ver {
@@ -98,132 +37,10 @@ import { brew, downloads, repo, version } from '../data';
     text-underline-offset: 4px;
   }
 
-  .icon {
-    border-radius: 14px;
-    margin-bottom: 8px;
-  }
-
-  .panel {
-    border-radius: 16px;
-    background: var(--card);
-    box-shadow: inset 0 0 0 1px var(--line);
-  }
-
-  .way {
+  .actions {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px 24px;
-    padding: 24px;
-    border-bottom: 1px solid var(--line);
-  }
-
-  .way > div:first-child {
-    flex: 1 1 200px;
-    min-width: 0;
-  }
-
-  h3 {
-    font-size: 16px;
-    line-height: 24px;
-  }
-
-  .way p {
-    font-size: 14px;
-    line-height: 20px;
-    color: var(--ink-3);
-    max-width: 22rem;
-  }
-
-  .buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 20px 24px;
-    cursor: pointer;
-    font-size: 15px;
-    line-height: 20px;
-    color: var(--ink-2);
-    list-style: none;
-    border-radius: 0 0 16px 16px;
-    transition: color 160ms var(--ease);
-  }
-
-  summary:hover {
-    color: var(--ink);
-  }
-
-  summary::-webkit-details-marker {
-    display: none;
-  }
-
-  summary::after {
-    content: '';
-    flex: none;
-    width: 8px;
-    height: 8px;
-    margin-right: 4px;
-    border-right: 1.5px solid var(--ink-3);
-    border-bottom: 1.5px solid var(--ink-3);
-    transform: rotate(45deg);
-    transition: transform 160ms var(--ease);
-  }
-
-  details[open] summary::after {
-    transform: rotate(225deg);
-  }
-
-  .answer {
-    display: grid;
     gap: 12px;
-    padding: 0 24px 24px;
-    font-size: 15px;
-    line-height: 22px;
-    color: var(--ink-2);
-  }
-
-  .answer ul {
-    padding-left: 20px;
-    list-style: disc;
-    display: grid;
-    gap: 8px;
-  }
-
-  .answer code {
-    font-family: var(--mono);
-    font-size: 13px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: var(--raised);
-    color: var(--ink);
-    overflow-wrap: anywhere;
-  }
-
-  .answer a {
-    color: var(--ink);
-    text-decoration: underline;
-    text-decoration-color: var(--line-2);
-    text-underline-offset: 4px;
-  }
-
-  @media (max-width: 900px) {
-    .grid {
-      grid-template-columns: minmax(0, 1fr);
-      gap: 32px;
-    }
-  }
-
-  @media (max-width: 560px) {
-    .way {
-      padding: 20px;
-    }
+    margin-top: 16px;
   }
 </style>
