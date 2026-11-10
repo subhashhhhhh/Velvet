@@ -41,6 +41,8 @@ All source files are in `Velvet/`.
 | `Images/` | Image pipeline (downsampling, memory cache), animated images. |
 | `Views/` | Root view, shared controls (`Controls.swift`: `Chip`, `SegmentedTabs`; use these, not the system segmented picker), the custom sidebar (`Sidebar.swift`) and top bar (`TopBar.swift`), window-level player layer. Pages put their Back button, title and actions in the top bar with `.topBarBack`, `.topBarTitle`, `.topBarActions` and `.topBarRefresh`, not with `.toolbar`. |
 
+The website (velvet.subhashh.tech) is in `site/`: Astro, built by Cloudflare Pages (root `site`, command `npm run build`, output `dist`). It reads the version and download links from `updates/latest.json` at build time. Keep its text and its memory figures (`site/src/data.ts`) the same as the README.
+
 ## 3. Rules for code
 
 1. Parse InnerTube responses with recursive searches. Do not use long fixed paths. YouTube changes its layouts frequently.
