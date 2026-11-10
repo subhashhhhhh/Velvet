@@ -1,6 +1,5 @@
-@import '@fontsource/instrument-serif/400.css';
-@import '@fontsource/instrument-serif/400-italic.css';
-@import '@fontsource-variable/geist';
+@import '@fontsource-variable/red-hat-display';
+@import '@fontsource-variable/red-hat-text';
 
 :root {
   --bg: #0a090a;
@@ -15,8 +14,8 @@
   --crimson-soft: #ff6b80;
   --crimson-glow: rgba(224, 16, 58, 0.35);
 
-  --serif: 'Instrument Serif', 'Iowan Old Style', 'Times New Roman', serif;
-  --sans: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --display: 'Red Hat Display Variable', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --sans: 'Red Hat Text Variable', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   --mono: ui-monospace, 'SF Mono', Menlo, monospace;
 
   --gutter: clamp(20px, 5vw, 56px);
@@ -129,9 +128,6 @@ button {
 }
 
 .eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
   font-size: 13px;
   font-weight: 500;
   letter-spacing: 0.14em;
@@ -139,26 +135,21 @@ button {
   color: var(--ink-3);
 }
 
-.eyebrow::before {
-  content: '';
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--crimson);
-  box-shadow: 0 0 12px var(--crimson-glow);
-}
 
 .display {
-  font-family: var(--serif);
-  font-size: clamp(40px, 6.4vw, 84px);
-  line-height: 1;
-  letter-spacing: -0.015em;
+  font-family: var(--display);
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  font-size: clamp(36px, 5.4vw, 72px);
+  line-height: 1.02;
+  letter-spacing: -0.035em;
   text-wrap: balance;
 }
 
+/* Two-tone headlines: the second part is quieter. */
 .display em {
-  font-style: italic;
-  color: var(--ink-2);
+  font-style: normal;
+  color: var(--ink-3);
 }
 
 .lede {
@@ -272,7 +263,7 @@ kbd {
 
 /* Two-part headlines in a narrow column: the second part on its own line. */
 .display.stack {
-  font-size: clamp(38px, 5.2vw, 72px);
+  font-size: clamp(34px, 4.6vw, 62px);
 }
 
 .display.stack em {

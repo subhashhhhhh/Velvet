@@ -74,20 +74,21 @@ import { brew, version } from '../data';
   }
 
   .title {
-    font-family: var(--serif);
-    font-size: clamp(46px, 8.6vw, 124px);
-    line-height: 0.92;
-    letter-spacing: -0.025em;
+    font-family: var(--display);
+    font-weight: 750;
+    letter-spacing: -0.03em;
+    font-size: clamp(42px, 7.6vw, 108px);
+    font-weight: 800;
+    line-height: 0.98;
+    letter-spacing: -0.04em;
   }
 
   .title em {
-    font-style: italic;
-    background: linear-gradient(100deg, #fff 10%, #ffb3be 55%, var(--crimson-soft) 100%);
+    font-style: normal;
+    background: linear-gradient(100deg, #ffc2cb 0%, var(--crimson-soft) 45%, var(--crimson) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
-    /* Room for the italic overhang, which the clipped background would cut. */
-    padding-right: 0.08em;
   }
 
   .lede {
