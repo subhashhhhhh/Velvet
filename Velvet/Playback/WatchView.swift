@@ -11,11 +11,12 @@ struct WatchView: View {
 
     /// The side column's height (wide layout): the page must be at least that tall.
     @State private var sideHeight: CGFloat = 0
-    /// The scroll content's height, for the spacer that makes room for the side column.
-    @State private var contentHeight: CGFloat = 0
-    /// A last, empty row that makes the page as tall as the side column when the main
-    /// column is shorter. (A minimum height on the stack itself broke its lazy layout.)
+    /// Padding under the lazy stack: makes the page as tall as the side column when the main
+    /// column is shorter.
     @State private var spacerHeight: CGFloat = 0
+    /// The lazy stack's last reported height. Not view state: the height is an estimate that
+    /// moves a little on every layout pass, and each write to view state starts another pass.
+    @State private var measured = MeasuredHeight()
 
     // The page is one lazy stack, the scroll view's direct content: the top (player, details)
     // and then each comment as its own row. The side column (related videos, chat, queue) is
@@ -30,6 +31,8 @@ struct WatchView: View {
             let size = playerSize(in: geo.size, wide: wide)
             let sideInset = wide ? Self.relatedWidth + Self.columnSpacing : 0
             let bandHeight = theater ? theaterHeight(in: geo.size) : 0
+            // The height the page needs for the side column.
+            let needed = wide ? bandHeight + Self.padding * 2 + sideHeight : 0
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
                     if theater {
@@ -56,8 +59,19 @@ struct WatchView: View {
                     .padding(.bottom, 18)
                     CommentsSection(page: page, player: session.player,
                                     layout: .inline(leading: Self.padding, trailing: Self.padding + sideInset))
-                    Color.clear.frame(height: Self.padding + spacerHeight)
+                    Color.clear.frame(height: Self.padding)
                 }
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: {
+                    measured.height = $0
+                    updateSpacer(needed: needed)
+                }
+                // Outside the stack, and sized from the stack's own height, so it cannot change
+                // what it is measured from. (It was a last row sized from the scroll content's
+                // height. While that row was off screen the stack's height estimate ignored it,
+                // so each pass made it larger: on macOS 15 a fullscreen page could go on
+                // re-laying itself out until the app froze. A minimum height on the stack
+                // broke its lazy layout.)
+                .padding(.bottom, spacerHeight)
                 .overlay(alignment: .topTrailing) {
                     if wide {
                         SideColumn(page: page, chatHeight: max(360, size.height + 120))
@@ -71,12 +85,7 @@ struct WatchView: View {
                     }
                 }
             }
-            .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, height in
-                contentHeight = height
-                updateSpacer(wide: wide, bandHeight: bandHeight)
-            }
-            .onChange(of: sideHeight) { updateSpacer(wide: wide, bandHeight: bandHeight) }
-            .onChange(of: wide) { updateSpacer(wide: wide, bandHeight: bandHeight) }
+            .onChange(of: needed) { updateSpacer(needed: needed) }
             .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { app.watchViewport = $0 }
         }
         .navigationTitle(page.details?.title ?? video.title)
@@ -103,14 +112,21 @@ struct WatchView: View {
         })
     }
 
-    /// Sizes the last row so the page is at least as tall as the side column.
-    private func updateSpacer(wide: Bool, bandHeight: CGFloat) {
-        let needed = wide ? bandHeight + Self.padding * 2 + sideHeight : 0
-        let main = contentHeight - spacerHeight
-        let next = max(0, (needed - main).rounded())
-        if abs(next - spacerHeight) > 1 { spacerHeight = next }
+    /// Sizes the padding under the stack: what the main column lacks, plus up to `spacerSlack`.
+    /// It changes only when the height has moved by that much, so the stack's drifting
+    /// estimate does not start a layout pass each time.
+    private func updateSpacer(needed: CGFloat) {
+        let short = needed - measured.height
+        var next = spacerHeight
+        if short <= 0 {
+            next = 0
+        } else if spacerHeight < short || spacerHeight - short > Self.spacerSlack * 2 {
+            next = (short + Self.spacerSlack).rounded()
+        }
+        if next != spacerHeight { spacerHeight = next }
     }
 
+    private static let spacerSlack: CGFloat = 48
     private static let padding: CGFloat = 20
     private static let relatedWidth: CGFloat = 400
     private static let columnSpacing: CGFloat = 24
@@ -1178,4 +1194,9 @@ private struct LoadMoreMarker: View {
             }
             .id(count)
     }
+}
+
+/// A value a view keeps without being redrawn when it changes.
+private final class MeasuredHeight {
+    var height: CGFloat = 0
 }
