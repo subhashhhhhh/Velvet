@@ -1,0 +1,84 @@
+---
+import { repo } from '../data';
+---
+
+<header class="nav" data-nav>
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top" aria-label="Velvet, top of page">
+      <img src="/favicon.svg" width="28" height="28" alt="" />
+      <span>Velvet</span>
+    </a>
+    <nav class="links" aria-label="Sections">
+      <a href="#memory">Memory</a>
+      <a href="#player">Player</a>
+      <a href="#features">Features</a>
+      <a href="#privacy">Privacy</a>
+      <a href={repo} rel="noopener">GitHub</a>
+    </nav>
+    <a class="btn btn-primary get" href="#install">Download</a>
+  </div>
+</header>
+
+<style>
+  .nav {
+    position: fixed;
+    inset: 0 0 auto 0;
+    z-index: 50;
+    transition:
+      background 0.3s,
+      border-color 0.3s,
+      backdrop-filter 0.3s;
+    border-bottom: 1px solid transparent;
+  }
+
+  .nav:global(.scrolled) {
+    background: rgba(10, 9, 10, 0.72);
+    backdrop-filter: blur(18px) saturate(1.4);
+    -webkit-backdrop-filter: blur(18px) saturate(1.4);
+    border-bottom-color: var(--line);
+  }
+
+  .nav-inner {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    height: 68px;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--serif);
+    font-size: 25px;
+    letter-spacing: -0.01em;
+    margin-right: auto;
+  }
+
+  .links {
+    display: flex;
+    gap: 28px;
+    font-size: 14.5px;
+    color: var(--ink-2);
+  }
+
+  .links a {
+    transition: color 0.2s;
+  }
+
+  .links a:hover {
+    color: var(--ink);
+  }
+
+  .get {
+    height: 38px;
+    padding: 0 18px;
+    font-size: 14px;
+  }
+
+  @media (max-width: 760px) {
+    .links {
+      display: none;
+    }
+  }
+</style>

@@ -1,0 +1,138 @@
+---
+import { Picture } from 'astro:assets';
+import home from '../assets/home.png';
+
+const tiles = [
+  { icon: 'M3 5.500h14M3 10h14M3 14.500h9', title: 'Queue and series', text: 'Add videos to the queue and drag them into order. Velvet finds the next episode of a series.' },
+  { icon: 'M10 3v9m0 0l-3.500-3.500M10 12l3.500-3.500M4 16h12', title: 'Downloads', text: 'Keep a video for a flight or a slow connection. Downloads play in Velvet.' },
+  { icon: 'M4 5h12v8H9l-3.500 3v-3H4z', title: 'Live chat and comments', text: 'Live streams with their chat. Comments with replies, and a search in the comments.' },
+  { icon: 'M7 3h6a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM9 14.500h2', title: 'Shorts', text: 'A vertical player for Shorts. You can also hide the Shorts shelf.' },
+  { icon: 'M4 10a6 6 0 0 1 12 0v4.500a1.500 1.500 0 0 1-1.500 1.500H13v-5h3M4 11h3v5H5.500A1.500 1.500 0 0 1 4 14.500z', title: 'Part of the Mac', text: 'Now Playing in Control Center, media keys, headphone buttons and trackpad swipes.' },
+  { icon: 'M8.500 11.500a3 3 0 0 0 4.200 0l3-3a3 3 0 0 0-4.200-4.200l-1 1M11.500 8.500a3 3 0 0 0-4.200 0l-3 3a3 3 0 0 0 4.200 4.200l1-1', title: 'Opens your links', text: 'Drag a link onto the window, copy one, or use the bookmarklet in your browser.' },
+  { icon: 'M16 10a6 6 0 1 1-2-4.500M16 3.500v3h-3', title: 'Updates itself', text: 'Velvet checks for a new version each day, and verifies its signature before the install.' },
+  { icon: 'M3 6.500l7-3.500 7 3.500-7 3.500zM3 10l7 3.500 7-3.500M3 13.500l7 3.500 7-3.500', title: 'Slow connection', text: 'For 4K and HDR, Velvet downloads from two links at the same time.' },
+];
+---
+
+<section class="section" id="features">
+  <div class="wrap">
+    <div class="section-head center">
+      <p class="eyebrow" data-reveal>Features</p>
+      <h2 class="display" data-reveal>Your account. <em>All of it.</em></h2>
+      <p class="lede" data-reveal>
+        Sign in, and the home feed, subscriptions, history, Watch Later, playlists and notifications are the same as on
+        youtube.com. You can also use Velvet without an account.
+      </p>
+    </div>
+
+    <figure class="shot" data-shot>
+      <div class="shot-inner" data-shot-inner>
+        <Picture
+          src={home}
+          formats={['avif']} fallbackFormat="webp"
+          widths={[720, 1080, 1440, 2160, 2560]}
+          sizes="(max-width: 1240px) 94vw, 1180px"
+          alt="The Velvet home feed: a row of topic chips above a grid of videos, with the sidebar at the left."
+        />
+      </div>
+    </figure>
+
+    <ul class="tiles">
+      {
+        tiles.map((t) => (
+          <li data-tile>
+            <svg viewBox="0 0 20 20" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.500" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d={t.icon} />
+            </svg>
+            <h3>{t.title}</h3>
+            <p>{t.text}</p>
+          </li>
+        ))
+      }
+    </ul>
+  </div>
+</section>
+
+<style>
+  .center {
+    justify-items: center;
+    text-align: center;
+  }
+
+  .shot {
+    margin: 0 0 clamp(40px, 6vw, 72px);
+    perspective: 1800px;
+  }
+
+  .shot-inner {
+    position: relative;
+    border-radius: clamp(8px, 1.4vw, 18px);
+    filter: drop-shadow(0 40px 80px rgba(0, 0, 0, 0.65));
+  }
+
+  .shot-inner::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    pointer-events: none;
+  }
+
+  .shot :global(img) {
+    width: 100%;
+    border-radius: inherit;
+  }
+
+  .tiles {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: var(--line);
+    overflow: hidden;
+  }
+
+  .tiles li {
+    padding: clamp(20px, 2.6vw, 30px);
+    background: var(--bg);
+    transition: background 0.3s;
+  }
+
+  .tiles li:hover {
+    background: var(--bg-raised);
+  }
+
+  .tiles svg {
+    color: var(--crimson-soft);
+    margin-bottom: 18px;
+  }
+
+  .tiles h3 {
+    font-size: 16.5px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .tiles p {
+    font-size: 14.5px;
+    color: var(--ink-2);
+    line-height: 1.5;
+  }
+
+  @media (max-width: 980px) {
+    .tiles {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 520px) {
+    .tiles {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

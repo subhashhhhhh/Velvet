@@ -1,0 +1,673 @@
+---
+import { Picture } from 'astro:assets';
+import frame from '../assets/frame.png';
+
+const keys = [
+  { key: 'k', cap: 'K', label: 'Play or pause' },
+  { key: 'j', cap: 'J', label: 'Back 10 s' },
+  { key: 'l', cap: 'L', label: 'Forward 10 s' },
+  { key: 'm', cap: 'M', label: 'Mute' },
+  { key: 'c', cap: 'C', label: 'Captions' },
+  { key: 't', cap: 'T', label: 'Theater mode' },
+  { key: ',', cap: ',', label: 'Slower' },
+  { key: '.', cap: '.', label: 'Faster' },
+  { key: '5', cap: '0–9', label: 'Jump to 0–90 %' },
+];
+---
+
+<section class="section player-section" id="player" data-player-section>
+  <div class="wrap">
+    <div class="section-head">
+      <p class="eyebrow" data-reveal>Player</p>
+      <h2 class="display" data-reveal>Hands on the keys. <em>Sponsors skipped.</em></h2>
+      <p class="lede" data-reveal>
+        This player is a live demo. Press the keys below: Velvet uses the same ones. Watch the seek bar when the
+        playhead gets to the green segment.
+      </p>
+    </div>
+
+    <div class="player" data-player tabindex="0" role="group" aria-label="Demo of the Velvet player. It shows a still image, not a real video.">
+      <div class="screen">
+        <div class="picture" data-picture>
+          <Picture
+            src={frame}
+            formats={['avif']} fallbackFormat="webp"
+            widths={[640, 960, 1280, 1596]}
+            sizes="(max-width: 1240px) 94vw, 1180px"
+            alt="A frame from Big Buck Bunny: a large rabbit in a meadow reaches up to a butterfly."
+          />
+        </div>
+        <span class="demo-tag">Demo</span>
+        <p class="hud" data-hud aria-hidden="true"></p>
+        <p class="toast" data-toast role="status"></p>
+        <p class="captions" data-captions hidden></p>
+
+        <div class="controls">
+          <div class="seek" data-seek>
+            <div class="rail">
+              <span class="seg sponsor" data-seg="sponsor"></span>
+              <span class="seg selfpromo" data-seg="selfpromo"></span>
+              <span class="played" data-played></span>
+              <span class="gaps" data-gaps></span>
+            </div>
+            <span class="knob" data-knob></span>
+          </div>
+          <div class="row">
+            <button type="button" class="ctl" data-act="k" aria-label="Play or pause">
+              <svg class="i-play" viewBox="0 0 20 20" width="18" height="18" fill="currentColor"><path d="M6 3.800v12.400a.8.8 0 0 0 1.200.7l10.200-6.200a.8.8 0 0 0 0-1.400L7.200 3.100A.8.8 0 0 0 6 3.800z"></path></svg>
+              <svg class="i-pause" viewBox="0 0 20 20" width="18" height="18" fill="currentColor"><rect x="4.500" y="3.500" width="4" height="13" rx="1.200"></rect><rect x="11.500" y="3.500" width="4" height="13" rx="1.200"></rect></svg>
+            </button>
+            <span class="time"><span data-time>1:37</span> / 10:35</span>
+            <span class="chapter" data-chapter></span>
+            <span class="grow"></span>
+            <span class="speed" data-speed>1×</span>
+            <button type="button" class="ctl" data-act="c" aria-label="Captions">
+              <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.600"><rect x="2.500" y="4.500" width="15" height="11" rx="2.500"></rect><path d="M8.500 8.800a1.800 1.800 0 1 0 0 2.400M13.500 8.800a1.800 1.800 0 1 0 0 2.400" stroke-linecap="round"></path></svg>
+            </button>
+            <button type="button" class="ctl" data-act="m" aria-label="Mute">
+              <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.600" stroke-linecap="round" stroke-linejoin="round"><path d="M3.500 8v4h2.500l4 3.200V4.800L6 8z" fill="currentColor"></path><path class="waves" d="M13 7.500a3.500 3.500 0 0 1 0 5M15.200 5.500a6.500 6.500 0 0 1 0 9"></path><path class="cross" d="M13.500 8l4 4m0-4l-4 4"></path></svg>
+            </button>
+            <button type="button" class="ctl" data-act="t" aria-label="Theater mode">
+              <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.600"><rect x="2" y="5" width="16" height="10" rx="2"></rect></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <ul class="keys" aria-label="Keyboard shortcuts for the demo">
+      {
+        keys.map((k) => (
+          <li>
+            <button type="button" data-act={k.key} data-keycap={k.key}>
+              <kbd>{k.cap}</kbd>
+              <span>{k.label}</span>
+            </button>
+          </li>
+        ))
+      }
+    </ul>
+
+    <div class="points">
+      <div data-reveal>
+        <h3>SponsorBlock</h3>
+        <p>Velvet skips sponsor segments, intros and other parts that you select. You choose the action for each category.</p>
+      </div>
+      <div data-reveal>
+        <h3>mpv inside</h3>
+        <p>Hardware decoding, quality up to 4K, and HDR on displays that can show it. Chapters show on the seek bar.</p>
+      </div>
+      <div data-reveal>
+        <h3>It remembers</h3>
+        <p>A video starts at the position where you stopped it. Captions can be manual, auto-generated or translated.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  const DURATION = 635;
+  const SEGMENTS = [
+    { id: 'sponsor', start: 103, end: 148, label: 'Skipped sponsor', done: false },
+    { id: 'selfpromo', start: 402, end: 431, label: 'Skipped self-promotion', done: false },
+  ];
+  const CHAPTERS = [
+    { at: 0, name: 'Morning' },
+    { at: 62, name: 'The butterfly' },
+    { at: 176, name: 'Three bullies' },
+    { at: 318, name: 'The plan' },
+    { at: 455, name: 'Payback' },
+    { at: 570, name: 'Credits' },
+  ];
+  const CAPTIONS = ['[ birds sing ]', '[ leaves move in the wind ]', '[ a butterfly goes past ]', '[ soft music ]'];
+  const SPEEDS = [0.5, 0.75, 1, 1.25, 1.5, 2];
+
+  const section = document.querySelector<HTMLElement>('[data-player-section]');
+  const player = section?.querySelector<HTMLElement>('[data-player]');
+
+  if (section && player) {
+    const $ = <T extends HTMLElement>(s: string) => section.querySelector<T>(s)!;
+    const played = $('[data-played]');
+    const knob = $('[data-knob]');
+    const timeEl = $('[data-time]');
+    const chapterEl = $('[data-chapter]');
+    const speedEl = $('[data-speed]');
+    const hud = $('[data-hud]');
+    const toast = $('[data-toast]');
+    const captions = $('[data-captions]');
+    const seek = $('[data-seek]');
+    const gaps = $('[data-gaps]');
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    const state = { t: 97, playing: false, speed: 1, muted: false, cc: false, visible: false, started: false };
+
+    for (const seg of SEGMENTS) {
+      const el = $(`[data-seg="${seg.id}"]`);
+      el.style.left = `${(seg.start / DURATION) * 100}%`;
+      el.style.width = `${((seg.end - seg.start) / DURATION) * 100}%`;
+    }
+    for (const c of CHAPTERS.slice(1)) {
+      const gap = document.createElement('i');
+      gap.style.left = `${(c.at / DURATION) * 100}%`;
+      gaps.append(gap);
+    }
+
+    const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    let hudTimer = 0;
+    let toastTimer = 0;
+
+    const flash = (text: string) => {
+      hud.textContent = text;
+      hud.classList.remove('show');
+      void hud.offsetWidth;
+      hud.classList.add('show');
+      clearTimeout(hudTimer);
+      hudTimer = window.setTimeout(() => hud.classList.remove('show'), 700);
+    };
+
+    const notify = (text: string) => {
+      toast.textContent = text;
+      toast.classList.add('show');
+      clearTimeout(toastTimer);
+      toastTimer = window.setTimeout(() => toast.classList.remove('show'), 2600);
+    };
+
+    const render = () => {
+      const pct = (state.t / DURATION) * 100;
+      played.style.width = `${pct}%`;
+      knob.style.left = `${pct}%`;
+      timeEl.textContent = fmt(state.t);
+      const chapter = [...CHAPTERS].reverse().find((c) => state.t >= c.at);
+      chapterEl.textContent = chapter ? `· ${chapter.name}` : '';
+      speedEl.textContent = `${state.speed}×`;
+      player.classList.toggle('playing', state.playing);
+      player.classList.toggle('muted', state.muted);
+      captions.hidden = !state.cc;
+      if (state.cc) captions.textContent = CAPTIONS[Math.floor(state.t / 9) % CAPTIONS.length];
+    };
+
+    const seekTo = (t: number, skipCheck = true) => {
+      state.t = Math.max(0, Math.min(DURATION - 0.01, t));
+      // A jump into the middle of a segment plays from there, as in the app.
+      if (skipCheck) for (const s of SEGMENTS) s.done = state.t > s.start;
+      render();
+    };
+
+    const act = (key: string) => {
+      switch (key) {
+        case 'k':
+        case ' ':
+          state.playing = !state.playing;
+          flash(state.playing ? 'Play' : 'Pause');
+          break;
+        case 'j':
+          seekTo(state.t - 10);
+          flash('− 10 s');
+          break;
+        case 'l':
+          seekTo(state.t + 10);
+          flash('+ 10 s');
+          break;
+        case 'arrowleft':
+          seekTo(state.t - 5);
+          flash('− 5 s');
+          break;
+        case 'arrowright':
+          seekTo(state.t + 5);
+          flash('+ 5 s');
+          break;
+        case 'm':
+          state.muted = !state.muted;
+          flash(state.muted ? 'Muted' : 'Sound on');
+          break;
+        case 'c':
+          state.cc = !state.cc;
+          flash(state.cc ? 'Captions on' : 'Captions off');
+          break;
+        case 't':
+          section.classList.toggle('theater');
+          flash(section.classList.contains('theater') ? 'Theater mode' : 'Default view');
+          break;
+        case ',':
+        case '.': {
+          const i = SPEEDS.indexOf(state.speed);
+          const next = SPEEDS[Math.max(0, Math.min(SPEEDS.length - 1, (i < 0 ? 2 : i) + (key === '.' ? 1 : -1)))];
+          state.speed = next;
+          flash(`${next}×`);
+          break;
+        }
+        default:
+          if (/^[0-9]$/.test(key)) {
+            seekTo((DURATION * Number(key)) / 10);
+            flash(`${Number(key) * 10} %`);
+          } else {
+            return false;
+          }
+      }
+      state.started = true;
+      render();
+      const cap = section.querySelector<HTMLElement>(`[data-keycap="${/^[0-9]$/.test(key) ? '5' : key}"]`);
+      if (cap) {
+        cap.classList.add('pressed');
+        setTimeout(() => cap.classList.remove('pressed'), 180);
+      }
+      return true;
+    };
+
+    let last = performance.now();
+    const tick = (now: number) => {
+      const dt = Math.min(0.1, (now - last) / 1000);
+      last = now;
+      if (state.playing && state.visible) {
+        state.t += dt * state.speed;
+        for (const s of SEGMENTS) {
+          if (!s.done && state.t >= s.start && state.t < s.end) {
+            s.done = true;
+            notify(`${s.label} · ${Math.round(s.end - s.start)} s`);
+            player.classList.add('skipping');
+            setTimeout(() => player.classList.remove('skipping'), 500);
+            state.t = s.end;
+          }
+        }
+        if (state.t >= DURATION) seekTo(0);
+        render();
+      }
+      requestAnimationFrame(tick);
+    };
+
+    new IntersectionObserver(
+      ([entry]) => {
+        state.visible = entry.intersectionRatio > 0.45;
+        // The demo starts by itself the first time, so that the sponsor skip shows without a key press.
+        if (state.visible && !state.started && !reduced) {
+          state.started = true;
+          state.playing = true;
+          render();
+        }
+      },
+      { threshold: [0, 0.45, 1] },
+    ).observe(player);
+
+    window.addEventListener('keydown', (e) => {
+      if (!state.visible || e.metaKey || e.ctrlKey || e.altKey) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('input, textarea, select, [contenteditable]')) return;
+      const key = e.key.toLowerCase();
+      // Space scrolls the page unless the player has the focus.
+      if (key === ' ' && !player.contains(document.activeElement)) return;
+      if (key === ' ' && target.closest('button')) return;
+      if (act(key)) e.preventDefault();
+    });
+
+    section.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLElement>('[data-act]');
+      if (btn) act(btn.dataset.act!);
+    });
+
+    seek.addEventListener('click', (e) => {
+      const r = seek.getBoundingClientRect();
+      seekTo(((e.clientX - r.left) / r.width) * DURATION);
+      state.started = true;
+    });
+
+    render();
+    requestAnimationFrame(tick);
+  }
+</script>
+
+<style>
+  .player-section {
+    transition: background 0.5s;
+  }
+
+  .player {
+    position: relative;
+    max-width: 980px;
+    margin-inline: auto;
+    border-radius: 18px;
+    transition: max-width 0.6s var(--ease);
+    box-shadow:
+      0 40px 90px rgba(0, 0, 0, 0.6),
+      0 0 0 1px var(--line);
+  }
+
+  .player-section:global(.theater) .player {
+    max-width: 100%;
+  }
+
+  .player-section:global(.theater) {
+    background: rgba(0, 0, 0, 0.55);
+  }
+
+  .screen {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    border-radius: inherit;
+    background: #000;
+    container-type: inline-size;
+  }
+
+  .picture {
+    position: absolute;
+    inset: 0;
+    animation: drift 36s ease-in-out infinite alternate;
+    animation-play-state: paused;
+  }
+
+  .player:global(.playing) .picture {
+    animation-play-state: running;
+  }
+
+  .picture :global(img) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  @keyframes drift {
+    from {
+      transform: scale(1.02) translate(0.6%, 0.4%);
+    }
+    to {
+      transform: scale(1.12) translate(-1.6%, -1.2%);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .picture {
+      animation: none;
+    }
+  }
+
+  .demo-tag {
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-size: 11.5px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .hud {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    translate: -50% -50%;
+    padding: 12px 22px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    font-size: clamp(15px, 2.6cqw, 22px);
+    font-weight: 600;
+    opacity: 0;
+    scale: 0.9;
+    transition:
+      opacity 0.35s,
+      scale 0.35s var(--ease);
+    pointer-events: none;
+  }
+
+  .hud:global(.show) {
+    opacity: 1;
+    scale: 1;
+    transition-duration: 0.08s;
+  }
+
+  .toast {
+    position: absolute;
+    right: 16px;
+    bottom: 84px;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 9px 15px;
+    border-radius: 12px;
+    background: rgba(20, 18, 20, 0.82);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid var(--line-strong);
+    font-size: 14px;
+    font-weight: 550;
+    opacity: 0;
+    translate: 0 10px;
+    transition:
+      opacity 0.3s,
+      translate 0.4s var(--ease);
+    pointer-events: none;
+  }
+
+  .toast::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22d35a;
+  }
+
+  .toast:global(.show) {
+    opacity: 1;
+    translate: 0 0;
+  }
+
+  .captions {
+    position: absolute;
+    left: 50%;
+    bottom: 92px;
+    translate: -50% 0;
+    padding: 4px 12px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.72);
+    font-size: clamp(13px, 2.3cqw, 20px);
+    white-space: nowrap;
+  }
+
+  .controls {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 40px 16px 10px;
+    background: linear-gradient(180deg, transparent, rgba(0, 0, 0, 0.78));
+  }
+
+  .seek {
+    position: relative;
+    padding-block: 9px;
+    cursor: pointer;
+  }
+
+  .rail {
+    position: relative;
+    height: 5px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.26);
+    overflow: hidden;
+    transition: height 0.2s;
+  }
+
+  .seek:hover .rail {
+    height: 7px;
+  }
+
+  .seg,
+  .played,
+  .gaps :global(i) {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+  }
+
+  .played {
+    left: 0;
+    background: var(--crimson);
+  }
+
+  .seg.sponsor {
+    background: #22d35a;
+    z-index: 1;
+  }
+
+  .seg.selfpromo {
+    background: #ffd60a;
+    z-index: 1;
+  }
+
+  .gaps :global(i) {
+    width: 3px;
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 2;
+  }
+
+  .knob {
+    position: absolute;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    translate: -50% -50%;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+    transition: scale 0.25s var(--ease);
+  }
+
+  .player:global(.skipping) .knob {
+    scale: 1.7;
+  }
+
+  .row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13.5px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .grow {
+    flex: 1;
+  }
+
+  .ctl {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    transition: background 0.2s;
+  }
+
+  .ctl:hover {
+    background: rgba(255, 255, 255, 0.14);
+  }
+
+  .i-pause,
+  .player:global(.playing) .i-play {
+    display: none;
+  }
+
+  .player:global(.playing) .i-pause {
+    display: block;
+  }
+
+  .cross,
+  .player:global(.muted) .waves {
+    display: none;
+  }
+
+  .player:global(.muted) .cross {
+    display: block;
+  }
+
+  .time {
+    margin-left: 4px;
+  }
+
+  .chapter {
+    color: rgba(255, 255, 255, 0.7);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .speed {
+    padding: 2px 9px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.14);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  .keys {
+    list-style: none;
+    margin: 28px auto 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    max-width: 980px;
+  }
+
+  .keys button {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 14px 7px 8px;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+    font-size: 14px;
+    color: var(--ink-2);
+    transition:
+      transform 0.15s var(--ease),
+      border-color 0.2s,
+      color 0.2s;
+  }
+
+  .keys button:hover {
+    border-color: var(--line-strong);
+    color: var(--ink);
+  }
+
+  .keys button:global(.pressed) {
+    transform: translateY(2px) scale(0.97);
+    border-color: var(--crimson);
+    color: var(--ink);
+  }
+
+  .points {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: clamp(24px, 4vw, 48px);
+    margin-top: clamp(48px, 7vw, 88px);
+  }
+
+  .points h3 {
+    font-family: var(--serif);
+    font-size: 28px;
+    margin-bottom: 8px;
+  }
+
+  .points p {
+    color: var(--ink-2);
+    font-size: 16px;
+  }
+
+  @media (max-width: 560px) {
+    .chapter,
+    .speed {
+      display: none;
+    }
+
+    .toast {
+      bottom: 74px;
+      font-size: 12.5px;
+    }
+  }
+</style>

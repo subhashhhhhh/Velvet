@@ -1,0 +1,35 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Hero from '../components/Hero.astro';
+import Memory from '../components/Memory.astro';
+import Pip from '../components/Pip.astro';
+import Player from '../components/Player.astro';
+import DeArrow from '../components/DeArrow.astro';
+import Features from '../components/Features.astro';
+import Privacy from '../components/Privacy.astro';
+import Install from '../components/Install.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base
+  title="Velvet — a YouTube client for macOS that uses little memory"
+  description="Velvet is a free, open-source YouTube app for the Mac. Your feed, subscriptions and history in a native app, with SponsorBlock, DeArrow and Picture in Picture, in a fraction of a browser tab's memory."
+>
+  <Nav />
+  <main>
+    <Hero />
+    <Memory />
+    <Pip />
+    <Player />
+    <DeArrow />
+    <Features />
+    <Privacy />
+    <Install />
+  </main>
+  <Footer />
+</Base>
+
+<script>
+  import '../scripts/motion.ts';
+</script>

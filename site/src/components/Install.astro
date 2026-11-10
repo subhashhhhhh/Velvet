@@ -1,0 +1,231 @@
+---
+import CopyCommand from './CopyCommand.astro';
+import { brew, downloads, repo, version } from '../data';
+---
+
+<section class="section install" id="install">
+  <div class="halo" aria-hidden="true"></div>
+  <div class="wrap inner">
+    <img class="icon" src="/icon.png" width="112" height="112" alt="" data-reveal />
+    <h2 class="display" data-reveal>Get Velvet.</h2>
+    <p class="lede" data-reveal>Free and open source. Version {version}, for macOS 15 (Sequoia) or later.</p>
+
+    <div class="ways">
+      <div class="way" data-reveal>
+        <p class="step">With Homebrew <span>Recommended</span></p>
+        <CopyCommand command={brew} />
+        <p class="fine">Homebrew installs Velvet ready to open.</p>
+      </div>
+
+      <div class="way" data-reveal>
+        <p class="step">With a download</p>
+        <div class="buttons">
+          <a class="btn btn-primary" href={downloads.appleSilicon} data-dl="arm">Apple silicon</a>
+          <a class="btn btn-ghost" href={downloads.intel} data-dl="intel">Intel</a>
+        </div>
+        <p class="fine" data-dl-hint>
+          Not sure? Open the Apple menu › About This Mac. “Chip” means Apple silicon; “Processor” means Intel.
+        </p>
+      </div>
+    </div>
+
+    <details data-reveal>
+      <summary>macOS stops the downloaded app the first time. What do I do?</summary>
+      <div class="answer">
+        <p>
+          Apple does not notarize Velvet, because notarization needs a paid developer account. So macOS stops a
+          downloaded copy the first time that you open it. Do one of these:
+        </p>
+        <ul>
+          <li>Open System Settings › Privacy &amp; Security. Go to Security and click <strong>Open Anyway</strong>.</li>
+          <li>Or do this command in Terminal: <code>xattr -cr /Applications/Velvet.app</code></li>
+        </ul>
+        <p>The Homebrew install does not need this. You can also <a href={`${repo}#9-build-from-source`}>build Velvet from source</a>.</p>
+      </div>
+    </details>
+  </div>
+</section>
+
+<script>
+  // Browsers on a Mac report "Intel" on all processors. The WebGL renderer name is the only hint:
+  // Apple silicon reports an Apple GPU, Intel Macs report Intel or AMD graphics.
+  const guess = (): 'arm' | 'intel' | null => {
+    if (!/Mac/.test(navigator.platform)) return null;
+    try {
+      const gl = document.createElement('canvas').getContext('webgl');
+      const ext = gl?.getExtension('WEBGL_debug_renderer_info');
+      const name = ext ? String(gl!.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
+      if (/Intel|AMD|Radeon|NVIDIA/i.test(name)) return 'intel';
+      if (/Apple M|Apple GPU/i.test(name)) return 'arm';
+    } catch {}
+    return null;
+  };
+
+  if (guess() === 'intel') {
+    const arm = document.querySelector('[data-dl="arm"]');
+    const intel = document.querySelector('[data-dl="intel"]');
+    arm?.classList.replace('btn-primary', 'btn-ghost');
+    intel?.classList.replace('btn-ghost', 'btn-primary');
+    if (arm && intel) arm.before(intel);
+    const hint = document.querySelector('[data-dl-hint]');
+    if (hint) hint.textContent = 'This Mac looks like an Intel Mac. If About This Mac shows “Chip”, use Apple silicon.';
+  }
+</script>
+
+<style>
+  .install {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .halo {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    width: min(1100px, 120vw);
+    aspect-ratio: 1;
+    translate: -50% -30%;
+    background: radial-gradient(closest-side, rgba(224, 16, 58, 0.22), transparent);
+    pointer-events: none;
+  }
+
+  .inner {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    text-align: center;
+    gap: 22px;
+  }
+
+  .icon {
+    border-radius: 24%;
+    filter: drop-shadow(0 24px 40px rgba(0, 0, 0, 0.6));
+  }
+
+  .ways {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+    width: 100%;
+    max-width: 920px;
+    margin-top: 24px;
+  }
+
+  .way {
+    display: grid;
+    justify-items: center;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: 16px;
+    padding: 32px 24px;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: rgba(19, 17, 19, 0.7);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    min-width: 0;
+  }
+
+  .step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 600;
+  }
+
+  .step span {
+    font-size: 11.5px;
+    font-weight: 550;
+    padding: 1px 9px;
+    border-radius: 999px;
+    background: rgba(224, 16, 58, 0.16);
+    color: var(--crimson-soft);
+  }
+
+  .buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  .fine {
+    font-size: 13.5px;
+    color: var(--ink-3);
+    max-width: 44ch;
+  }
+
+  details {
+    width: 100%;
+    max-width: 920px;
+    text-align: left;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background: rgba(19, 17, 19, 0.7);
+  }
+
+  summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 24px;
+    cursor: pointer;
+    font-weight: 550;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  summary::after {
+    content: '+';
+    font-size: 22px;
+    font-weight: 300;
+    color: var(--ink-3);
+    transition: transform 0.3s var(--ease);
+  }
+
+  details[open] summary::after {
+    transform: rotate(45deg);
+  }
+
+  .answer {
+    display: grid;
+    gap: 12px;
+    padding: 0 24px 24px;
+    font-size: 15.5px;
+    color: var(--ink-2);
+  }
+
+  .answer ul {
+    margin: 0;
+    padding-left: 20px;
+    display: grid;
+    gap: 8px;
+  }
+
+  .answer code {
+    font-family: var(--mono);
+    font-size: 13.5px;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.07);
+    color: var(--ink);
+    overflow-wrap: anywhere;
+  }
+
+  .answer a {
+    color: var(--crimson-soft);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  @media (max-width: 760px) {
+    .ways {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,368 @@
+---
+const filters = ['Videos that you watched', 'Members-only videos', 'Promotions', 'Channels that post AI-generated videos'];
+---
+
+<section class="section" id="calm">
+  <div class="wrap grid">
+    <div class="demo" data-dearrow>
+      <div class="card">
+        <div class="thumb">
+          <div class="bait" aria-hidden="true">
+            <span class="shout">I QUIT<br />MY JOB?!</span>
+            <span class="ring"></span>
+            <span class="pointer">➜</span>
+          </div>
+          <div class="calm" aria-hidden="true">
+            <span class="sun"></span>
+            <span class="hill h1"></span>
+            <span class="hill h2"></span>
+          </div>
+          <span class="len">14:02</span>
+        </div>
+        <div class="text">
+          <span class="avatar" aria-hidden="true"></span>
+          <div>
+            <p class="titles">
+              <span class="t-bait">I Tried Waking Up at 4AM for 30 DAYS… (You WON'T Believe What Happened)</span>
+              <span class="t-calm">What changed after a month of waking up at 4&nbsp;a.m.</span>
+            </p>
+            <p class="by">A channel · 1.2M views · 3 days ago</p>
+          </div>
+        </div>
+      </div>
+      <button type="button" class="switch" data-dearrow-toggle role="switch" aria-checked="true">
+        <span class="knob" aria-hidden="true"></span>
+        <span>DeArrow</span>
+      </button>
+      <p class="fine">The video in this example is not real.</p>
+    </div>
+
+    <div class="section-head">
+      <p class="eyebrow" data-reveal>A calmer feed</p>
+      <h2 class="display stack" data-reveal>Less shouting. <em>More watching.</em></h2>
+      <p class="lede" data-reveal>
+        DeArrow replaces clickbait titles and thumbnails with better ones from its community. Return YouTube Dislike
+        shows the dislike counts. Velvet can also hide what you do not want in your feed:
+      </p>
+      <ul class="filters">
+        {
+          filters.map((f) => (
+            <li data-reveal>
+              <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" aria-hidden="true">
+                <path d="M3 10s2.600-4.500 7-4.500 7 4.500 7 4.500-2.600 4.500-7 4.500S3 10 3 10zM3.500 3.500l13 13" />
+              </svg>
+              {f}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</section>
+
+<script>
+  const demo = document.querySelector<HTMLElement>('[data-dearrow]');
+  const toggle = demo?.querySelector<HTMLButtonElement>('[data-dearrow-toggle]');
+  if (demo && toggle) {
+    let touched = false;
+    const set = (on: boolean) => {
+      demo.classList.toggle('on', on);
+      toggle.setAttribute('aria-checked', String(on));
+    };
+    toggle.addEventListener('click', () => {
+      touched = true;
+      set(!demo.classList.contains('on'));
+    });
+    // Show the clickbait first, then turn DeArrow on when the card is in view.
+    set(false);
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (e.isIntersecting && !touched) {
+          setTimeout(() => !touched && set(true), 1100);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.7 },
+    );
+    io.observe(demo);
+  }
+</script>
+
+<style>
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: clamp(32px, 6vw, 88px);
+  }
+
+  .section-head {
+    margin-bottom: 0;
+  }
+
+  .demo {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: start;
+    gap: 20px;
+    max-width: 460px;
+    width: 100%;
+    justify-self: center;
+  }
+
+  .card {
+    width: 100%;
+    padding: 14px 14px 18px;
+    border-radius: 22px;
+    border: 1px solid var(--line);
+    background: var(--bg-raised);
+    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.45);
+  }
+
+  .thumb {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .bait,
+  .calm {
+    position: absolute;
+    inset: 0;
+    transition:
+      opacity 0.7s,
+      transform 0.9s var(--ease),
+      filter 0.7s;
+  }
+
+  .bait {
+    background:
+      radial-gradient(circle at 78% 40%, #fff200 0 18%, transparent 19%),
+      conic-gradient(from 20deg at 30% 60%, #ff2d00, #ff9d00, #ff005d, #ff2d00);
+  }
+
+  .shout {
+    position: absolute;
+    left: 6%;
+    top: 12%;
+    font-family: Impact, 'Arial Black', sans-serif;
+    font-size: clamp(26px, 5.4vw, 44px);
+    line-height: 0.95;
+    color: #fff;
+    -webkit-text-stroke: 2px #000;
+    paint-order: stroke fill;
+    text-shadow: 4px 4px 0 #000;
+    transform: rotate(-5deg);
+  }
+
+  .ring {
+    position: absolute;
+    right: 12%;
+    top: 22%;
+    width: 22%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 5px solid #f00;
+  }
+
+  .pointer {
+    position: absolute;
+    right: 36%;
+    top: 34%;
+    font-size: clamp(30px, 6vw, 52px);
+    color: #f00;
+    -webkit-text-stroke: 2px #fff;
+    transform: rotate(-12deg);
+  }
+
+  .calm {
+    background: linear-gradient(180deg, #1c2a4a 0%, #51466f 46%, #d98a6a 78%, #f3c98b 100%);
+    opacity: 0;
+    transform: scale(1.08);
+    filter: blur(8px);
+  }
+
+  .sun {
+    position: absolute;
+    left: 50%;
+    top: 58%;
+    width: 16%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    translate: -50% -50%;
+    background: #ffe6b0;
+    box-shadow: 0 0 60px 20px rgba(255, 214, 150, 0.5);
+  }
+
+  .hill {
+    position: absolute;
+    bottom: -42%;
+    border-radius: 50%;
+  }
+
+  .h1 {
+    left: -20%;
+    width: 90%;
+    aspect-ratio: 2 / 1;
+    background: #2b2440;
+  }
+
+  .h2 {
+    right: -30%;
+    width: 110%;
+    aspect-ratio: 2 / 1;
+    bottom: -52%;
+    background: #1b172b;
+  }
+
+  .len {
+    position: absolute;
+    right: 8px;
+    bottom: 8px;
+    padding: 1px 7px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.78);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  .text {
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
+  }
+
+  .avatar {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(140deg, #5d5560, #2e2a30);
+  }
+
+  .titles {
+    display: grid;
+    font-weight: 600;
+    font-size: 16.5px;
+    line-height: 1.3;
+  }
+
+  .titles span {
+    grid-area: 1 / 1;
+    transition:
+      opacity 0.5s,
+      filter 0.5s,
+      transform 0.7s var(--ease);
+  }
+
+  .t-calm {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(6px);
+  }
+
+  .by {
+    margin-top: 5px;
+    font-size: 14px;
+    color: var(--ink-3);
+  }
+
+  .demo:global(.on) .bait {
+    opacity: 0;
+    transform: scale(0.96);
+    filter: blur(8px);
+  }
+
+  .demo:global(.on) .calm {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+
+  .demo:global(.on) .t-bait {
+    opacity: 0;
+    filter: blur(6px);
+    transform: translateY(-6px);
+  }
+
+  .demo:global(.on) .t-calm {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+
+  .switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    font-weight: 550;
+    color: var(--ink-2);
+  }
+
+  .knob {
+    position: relative;
+    width: 44px;
+    height: 26px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.16);
+    transition: background 0.3s;
+  }
+
+  .knob::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.35s var(--ease);
+  }
+
+  .demo:global(.on) .knob {
+    background: var(--crimson);
+  }
+
+  .demo:global(.on) .knob::after {
+    transform: translateX(18px);
+  }
+
+  .fine {
+    font-size: 12.5px;
+    color: var(--ink-3);
+  }
+
+  .filters {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 10px;
+  }
+
+  .filters li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--ink);
+    font-size: 16px;
+  }
+
+  .filters svg {
+    color: var(--crimson-soft);
+    flex: none;
+  }
+
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+
+    .demo {
+      order: 2;
+    }
+  }
+</style>

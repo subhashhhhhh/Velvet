@@ -1,0 +1,270 @@
+---
+import { Image } from 'astro:assets';
+import frame from '../assets/frame.png';
+---
+
+<section class="section" id="pip" data-pip-section>
+  <div class="wrap grid">
+    <div class="section-head">
+      <p class="eyebrow" data-reveal>Picture in Picture</p>
+      <h2 class="display stack" data-reveal>Leave the page. <em>The video follows.</em></h2>
+      <p class="lede" data-reveal>
+        Go to a different app, scroll past the player, or open a different page in Velvet. The video moves to a small
+        window that stays on top. Each of these has a setting.
+      </p>
+      <p class="hint" data-reveal>
+        <span class="arrow" aria-hidden="true">↘</span> It followed you down this page. Look at the corner.
+      </p>
+    </div>
+
+    <div class="scene" data-pip-scene aria-hidden="true">
+      <div class="win velvet">
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="slot"></div>
+        <div class="lines"><b style="width:62%"></b><b style="width:38%"></b></div>
+      </div>
+      <div class="win other" data-pip-other>
+        <div class="bar"><i></i><i></i><i></i></div>
+        <div class="lines doc">
+          <b style="width:44%"></b><b style="width:92%"></b><b style="width:86%"></b><b style="width:90%"></b>
+          <b style="width:58%"></b><b style="width:0"></b><b style="width:88%"></b><b style="width:94%"></b>
+          <b style="width:72%"></b>
+        </div>
+      </div>
+      <div class="mini" data-pip-mini>
+        <Image src={frame} widths={[480, 960]} sizes="(max-width: 900px) 46vw, 300px" alt="" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<aside class="dock" data-pip-dock aria-hidden="true">
+  <Image src={frame} widths={[320, 640]} sizes="248px" alt="" loading="lazy" />
+  <span class="progress"><i></i></span>
+  <span class="tag">Picture in Picture</span>
+  <button type="button" data-pip-close tabindex="-1" aria-label="Close">
+    <svg viewBox="0 0 12 12" width="10" height="10" stroke="currentColor" stroke-width="1.800" stroke-linecap="round"><path d="M2 2l8 8M10 2l-8 8"></path></svg>
+  </button>
+</aside>
+
+<style>
+  .grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    align-items: center;
+    gap: clamp(32px, 6vw, 80px);
+  }
+
+  .section-head {
+    margin-bottom: 0;
+  }
+
+  .hint {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    font-size: 15px;
+    color: var(--crimson-soft);
+  }
+
+  .arrow {
+    font-size: 20px;
+  }
+
+  .scene {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    border-radius: var(--radius);
+    border: 1px solid var(--line);
+    background:
+      radial-gradient(80% 70% at 20% 10%, rgba(224, 16, 58, 0.16), transparent 70%),
+      linear-gradient(160deg, #1b181b, #0e0c0e);
+    overflow: hidden;
+  }
+
+  .win {
+    position: absolute;
+    border-radius: 12px;
+    border: 1px solid var(--line-strong);
+    background: #1d1b1d;
+    box-shadow: 0 24px 50px rgba(0, 0, 0, 0.5);
+    padding: 0 4% 4%;
+  }
+
+  .win.velvet {
+    left: 5%;
+    top: 8%;
+    width: 64%;
+    height: 66%;
+  }
+
+  .win.other {
+    left: 22%;
+    top: 20%;
+    width: 60%;
+    height: 68%;
+    background: #242224;
+  }
+
+  .bar {
+    display: flex;
+    gap: 6px;
+    padding-block: 10px;
+  }
+
+  .bar i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.16);
+  }
+
+  .slot {
+    aspect-ratio: 16 / 9;
+    border-radius: 8px;
+    border: 1px dashed rgba(255, 255, 255, 0.16);
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .lines {
+    display: grid;
+    gap: 9px;
+    margin-top: 12px;
+  }
+
+  .lines b {
+    height: 7px;
+    border-radius: 99px;
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .lines.doc b:first-child {
+    height: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    margin-bottom: 6px;
+  }
+
+  /* The video. It starts in the player slot and ends in the corner (the script moves it). */
+  .mini {
+    position: absolute;
+    left: 61%;
+    top: 62%;
+    width: 34%;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow:
+      0 18px 40px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(255, 255, 255, 0.14);
+  }
+
+  .mini :global(img) {
+    width: 100%;
+  }
+
+  .dock {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: 40;
+    width: 248px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow:
+      0 24px 60px rgba(0, 0, 0, 0.65),
+      0 0 0 1px rgba(255, 255, 255, 0.14);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(24px) scale(0.9);
+    transform-origin: 100% 100%;
+    transition:
+      opacity 0.35s,
+      transform 0.6s var(--ease),
+      visibility 0s 0.6s;
+    display: none;
+  }
+
+  .dock:global(.on) {
+    opacity: 1;
+    visibility: visible;
+    transform: none;
+    transition-delay: 0s;
+  }
+
+  .dock :global(img) {
+    width: 100%;
+  }
+
+  .progress {
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 3px;
+    background: rgba(255, 255, 255, 0.25);
+  }
+
+  .progress i {
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: var(--crimson);
+    transform-origin: left;
+    animation: run 60s linear infinite;
+  }
+
+  @keyframes run {
+    from {
+      transform: scaleX(0.15);
+    }
+    to {
+      transform: scaleX(1);
+    }
+  }
+
+  .tag {
+    position: absolute;
+    left: 10px;
+    bottom: 12px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    font-size: 11.5px;
+    font-weight: 550;
+  }
+
+  .dock button {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .dock:hover button {
+    opacity: 1;
+  }
+
+  @media (min-width: 1100px) and (prefers-reduced-motion: no-preference) {
+    .dock {
+      display: block;
+    }
+
+    :global(html.js) .hint {
+      display: flex;
+    }
+  }
+
+  @media (max-width: 900px) {
+    .grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
