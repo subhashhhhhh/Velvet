@@ -1,0 +1,169 @@
+---
+import Doc from '../layouts/Doc.astro';
+import { memory, repo } from '../data';
+
+const fmt = (mb: number) => mb.toLocaleString('en-US');
+const toc = [
+  { id: 'engine', label: 'No web engine' },
+  { id: 'images', label: 'Images' },
+  { id: 'player', label: 'The player' },
+  { id: 'data', label: 'Data from YouTube' },
+  { id: 'results', label: 'Measurements' },
+  { id: 'limits', label: 'Limits of the measurements' },
+  { id: 'measure', label: 'Measure it on your Mac' },
+];
+---
+
+<Doc
+  title="How Velvet stays light · Velvet"
+  description="The design decisions that keep the memory use of Velvet low, with the measurements and the method."
+  label="Memory"
+  heading="How Velvet stays light"
+  lede="Low memory use is the primary goal of Velvet. This page shows the decisions that keep it low, and the measurements."
+  toc={toc}
+>
+  <h2 id="engine">No web engine</h2>
+  <p>
+    The YouTube website runs in a web engine. The engine has a layout system and a JavaScript engine, and it runs the
+    scripts of the page. This uses most of the memory of a browser tab.
+  </p>
+  <p>
+    Velvet does not show the website. Its interface is a native SwiftUI interface. Velvet gets the feeds, the watch
+    page and the comments as data from the API that the website uses.
+  </p>
+  <p>Velvet uses a web view for one function only: the sign-in to your Google account.</p>
+
+  <h2 id="images">Images</h2>
+  <p>A home feed is mostly thumbnails. Thus, images have a large effect on the memory.</p>
+  <ul>
+    <li>Velvet decodes each image at the size that the screen shows. It does not decode an image at its full size.</li>
+    <li>The decoded images are in a cache with a limit of 48 MB. macOS can remove them when memory is low.</li>
+    <li>The downloaded image files are in a cache on the disk. Velvet does not keep these files in memory.</li>
+  </ul>
+
+  <h2 id="player">The player</h2>
+  <p>
+    mpv plays the video. The video decoder of the Mac (VideoToolbox) decodes it in hardware. These mpv settings keep
+    the memory low:
+  </p>
+  <table>
+    <thead>
+      <tr><th>Setting</th><th>Value in Velvet</th><th>Why</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Buffer ahead</td>
+        <td>30 seconds</td>
+        <td>Without a time limit, mpv fills the full buffer size.</td>
+      </tr>
+      <tr>
+        <td>Buffer size</td>
+        <td>150 MB maximum</td>
+        <td>This is a ceiling. You can change it in Settings › Playback.</td>
+      </tr>
+      <tr>
+        <td>Buffer behind</td>
+        <td>20 MB</td>
+        <td>Sufficient to go back a short time without a new download.</td>
+      </tr>
+      <tr>
+        <td>Spare decoded frames</td>
+        <td>2</td>
+        <td>The mpv default is 6. Each 4K frame is large.</td>
+      </tr>
+      <tr>
+        <td>mpv scripts</td>
+        <td>Off</td>
+        <td>Each script has a thread and an interpreter. Velvet draws its own controls.</td>
+      </tr>
+      <tr>
+        <td>Scaling</td>
+        <td>Fast profile</td>
+        <td>The video shows at its own resolution. More scaling passes do not help.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 id="data">Data from YouTube</h2>
+  <p>
+    A response from YouTube is large. The response for the home feed is approximately 2.4 MB of JSON. When Velvet reads
+    a response, it makes large data structures for a short time.
+  </p>
+  <ul>
+    <li>Velvet reads the responses in the background, not on the main thread.</li>
+    <li>Velvet keeps only the small values that the interface shows. It does not keep the full response.</li>
+    <li>
+      After a large response, Velvet tells the memory allocator to give the free memory back to macOS. Without this
+      step, the free memory stays in the count of the app.
+    </li>
+  </ul>
+
+  <h2 id="results">Measurements</h2>
+  <p>All values are the <strong>Memory</strong> value that Activity Monitor shows.</p>
+  <h3>Velvet and Safari with the same video</h3>
+  <table>
+    <thead>
+      <tr><th>App</th><th>Video</th><th>Memory</th></tr>
+    </thead>
+    <tbody>
+      {
+        memory.compare.map((r) => (
+          <tr>
+            <td>{r.name}</td>
+            <td>1440p</td>
+            <td class="mono">{fmt(r.mb)} MB</td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+  <p>The maintainer measured these two values on one Mac.</p>
+  <h3>Velvet on macOS 15</h3>
+  <table>
+    <thead>
+      <tr><th>Video</th><th>Memory after 2 minutes</th></tr>
+    </thead>
+    <tbody>
+      {
+        memory.sequoia.map((r) => (
+          <tr>
+            <td>{r.name}, 60 frames per second</td>
+            <td class="mono">{fmt(r.mb)} MB</td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+  <p>The conditions for these two values were:</p>
+  <ul>
+    <li>Velvet 1.0.1 on macOS 15.8, on a MacBook Air with an M1 chip and 8 GB of memory.</li>
+    <li>The video was Big Buck Bunny, in the VP9 codec, with hardware decoding.</li>
+    <li>Each value is the median of three samples: 90, 110 and 130 seconds after the start.</li>
+  </ul>
+
+  <h2 id="limits">Limits of the measurements</h2>
+  <ul>
+    <li>Memory changes with the video, the quality, the codec and the macOS version. Your values can be different.</li>
+    <li>Each value is from one test. It is not an average of many tests.</li>
+    <li>There is no measurement of Safari on macOS 15.</li>
+    <li>
+      In the 1080p test, the memory increased while the video played: 172 MB after 2 minutes, and approximately 350 MB
+      after 10 minutes. The 4K test did not show this increase in 5 minutes. The cause is not known. When the cause
+      is known, this page will show it.
+    </li>
+  </ul>
+
+  <h2 id="measure">Measure it on your Mac</h2>
+  <ol>
+    <li>Play a video in Velvet for 2 minutes.</li>
+    <li>Open Activity Monitor.</li>
+    <li>Click <strong>Memory</strong>.</li>
+    <li>Find Velvet in the list.</li>
+  </ol>
+  <p>You can also do this command in Terminal:</p>
+  <pre><code>footprint -p Velvet</code></pre>
+  <p>
+    If your values are much higher than the values on this page, tell us in an
+    <a href={`${repo}/issues/new`}>issue</a>.
+  </p>
+</Doc>
