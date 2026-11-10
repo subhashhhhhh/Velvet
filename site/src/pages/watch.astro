@@ -1,0 +1,86 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base title="Open in Velvet" description="Opens a YouTube video in Velvet, the YouTube client for macOS." noindex>
+  <Nav />
+  <main>
+    <section class="handoff">
+      <div class="wrap">
+        <div class="head">
+          <p class="label">Open in Velvet</p>
+          <h1 class="title" data-title>This link opens a video in Velvet</h1>
+          <p class="lede" data-lede>Scripts are necessary for this page. You can open the video on YouTube.</p>
+          <div class="actions">
+            <a class="btn btn-primary" href="/#install" data-primary>Get Velvet</a>
+            <a class="btn btn-secondary" href="https://www.youtube.com/" data-youtube>Open on YouTube</a>
+          </div>
+          <p class="fine" data-fine hidden>
+            Velvet did not open? Velvet is a YouTube client for macOS. <a href="/#install">Install it</a>, then open
+            this link again.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Base>
+
+<script>
+  // velvet.subhashh.tech/watch?v=<id>&t=<time> hands the video to the app through its
+  // velvet:// scheme (YouTubeLink.swift). Only a video ID and a time go into the link.
+  const query = new URLSearchParams(location.search);
+  const id = query.get('v') ?? '';
+  const time = query.get('t') ?? '';
+  const $ = (s: string) => document.querySelector<HTMLElement>(s)!;
+
+  if (/^[A-Za-z0-9_-]{11}$/.test(id)) {
+    const t = /^[0-9hms]{1,12}$/.test(time) ? time : '';
+    const app = `velvet://watch?v=${id}${t ? `&t=${t}` : ''}`;
+    const youtube = `https://www.youtube.com/watch?v=${id}${t ? `&t=${t}` : ''}`;
+    const primary = $('[data-primary]') as HTMLAnchorElement;
+    primary.href = app;
+    primary.textContent = 'Open in Velvet';
+    ($('[data-youtube]') as HTMLAnchorElement).href = youtube;
+    $('[data-title]').textContent = 'The video opens in Velvet';
+    $('[data-lede]').textContent = 'If your browser asks, permit it to open Velvet.';
+    $('[data-fine]').hidden = false;
+    location.href = app;
+  } else {
+    $('[data-title]').textContent = 'This link has no video';
+    $('[data-lede]').textContent = 'The address must contain a video, as in /watch?v= and the video ID.';
+  }
+</script>
+
+<style>
+  .handoff {
+    padding: calc(var(--nav) + 128px) 0 128px;
+  }
+
+  .head {
+    margin-bottom: 0;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .fine {
+    margin-top: 8px;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink-3);
+  }
+
+  .fine a {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 4px;
+  }
+</style>

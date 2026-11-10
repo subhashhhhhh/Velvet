@@ -1,0 +1,133 @@
+---
+import Doc from '../layouts/Doc.astro';
+import { bookmarklet } from '../data';
+
+const toc = [
+  { id: 'copy', label: 'Copy a link' },
+  { id: 'drag', label: 'Drag a link' },
+  { id: 'open-with', label: 'Open With' },
+  { id: 'bookmarklet', label: 'Bookmarklet' },
+  { id: 'website', label: 'Links through this website' },
+  { id: 'formats', label: 'Link formats' },
+];
+---
+
+<Doc
+  title="Open YouTube links in Velvet"
+  description="How to open a YouTube link in Velvet: copy it, drag it, use Open With, the bookmarklet, or a velvet:// link."
+  label="Open links"
+  heading="Open YouTube links in Velvet"
+  lede="Velvet opens links to videos, Shorts, live streams, playlists and channels."
+  toc={toc}
+>
+  <h2 id="copy">Copy a link</h2>
+  <ol>
+    <li>Copy a YouTube link.</li>
+    <li>Go to Velvet. Velvet asks if you want to open the link.</li>
+    <li>Click <strong>Open</strong>.</li>
+  </ol>
+  <p>
+    Velvet reads the clipboard only when it becomes the active app, and only when the clipboard contains a web address.
+    To stop this function, go to <strong>Settings › General</strong>.
+  </p>
+
+  <h2 id="drag">Drag a link</h2>
+  <p>Drag a YouTube link from your browser onto the Velvet window.</p>
+
+  <h2 id="open-with">Open With</h2>
+  <ul>
+    <li>Right-click a link in a different app, or a <code>.webloc</code> file.</li>
+    <li>Select <strong>Open With › Velvet</strong>.</li>
+  </ul>
+  <p>In Terminal, do this command:</p>
+  <pre><code>open -a Velvet "https://www.youtube.com/watch?v=aqz-KE-bpKQ"</code></pre>
+
+  <h2 id="bookmarklet">Bookmarklet</h2>
+  <p>
+    The bookmarklet is a bookmark that sends the page in your browser to Velvet. The browser pauses the video, and
+    Velvet opens the page.
+  </p>
+  <ol>
+    <li>Show the bookmarks bar of your browser.</li>
+    <li>Drag this button to the bookmarks bar:</li>
+  </ol>
+  <p class="row">
+    <a class="btn btn-secondary" href={bookmarklet} data-bookmarklet>Open in Velvet</a>
+    <button class="btn btn-secondary copy" type="button" data-copy={bookmarklet}>
+      <span class="idle">Copy the bookmarklet</span>
+      <span class="done">Copied</span>
+    </button>
+  </p>
+  <ol start="3">
+    <li>On a YouTube page, click the bookmark.</li>
+  </ol>
+  <p>
+    If you cannot drag the button, click <strong>Copy the bookmarklet</strong>. Then add a bookmark and paste the text
+    as its address. You can also copy the bookmarklet in <strong>Settings › General</strong>.
+  </p>
+
+  <h2 id="website">Links through this website</h2>
+  <p>
+    You can make a link to a video that opens in Velvet. In the address of the video, replace
+    <code>www.youtube.com</code> with <code>velvet.subhashh.tech</code>:
+  </p>
+  <pre><code>https://velvet.subhashh.tech/watch?v=aqz-KE-bpKQ</code></pre>
+  <p>
+    The page that opens sends the video to Velvet. If Velvet is not installed, the page shows a link to the video on
+    YouTube. A <code>t=</code> time in the address sets the start position.
+  </p>
+  <p>
+    The web host of this website receives the address, as each web server does. The website has no analytics. Refer to
+    <a href="/privacy#website">Privacy</a>.
+  </p>
+
+  <h2 id="formats">Link formats</h2>
+  <p>Velvet has its own link scheme. Other apps and scripts can use these formats:</p>
+  <table>
+    <thead>
+      <tr><th>Link</th><th>Result</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><code>velvet://watch?v=&lt;video ID&gt;</code></td>
+        <td>Opens the video.</td>
+      </tr>
+      <tr>
+        <td><code>velvet://watch?v=&lt;video ID&gt;&amp;t=&lt;seconds&gt;</code></td>
+        <td>Opens the video at this position.</td>
+      </tr>
+      <tr>
+        <td><code>velvet://open?url=&lt;YouTube link&gt;</code></td>
+        <td>Opens the YouTube page. Encode the link as a query value.</td>
+      </tr>
+    </tbody>
+  </table>
+</Doc>
+
+<script>
+  // A click on the bookmarklet button would run it on this page. It is for dragging.
+  document.querySelector('[data-bookmarklet]')?.addEventListener('click', (e) => e.preventDefault());
+</script>
+
+<style>
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-left: 24px;
+  }
+
+  .row a {
+    text-decoration: none;
+    cursor: grab;
+  }
+
+  .copy .done,
+  .copy:global(.copied) .idle {
+    display: none;
+  }
+
+  .copy:global(.copied) .done {
+    display: inline;
+  }
+</style>
