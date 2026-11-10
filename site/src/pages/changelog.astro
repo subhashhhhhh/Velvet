@@ -1,0 +1,139 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import PageHeader from '../components/PageHeader.astro';
+import { formatDate, releases } from '../releases';
+import { repo } from '../data';
+
+const list = await releases();
+---
+
+<Base title="Changelog · Velvet" description="What changed in each release of Velvet, the YouTube client for macOS. Newest first.">
+  <Nav />
+  <main>
+    <PageHeader label="Changelog" title="What changed in each release" lede="Newest first. Velvet installs each new version itself." />
+    <section class="section list">
+      <div class="wrap">
+        {
+          list.map((r, i) => (
+            <article class="release" id={`v${r.version}`} data-row>
+              <div class="meta">
+                <h2 class="mono">{r.version}</h2>
+                {r.date && <p>{formatDate(r.date)}</p>}
+                {i === 0 && <p>Latest release</p>}
+                <a href={`${repo}/releases/tag/v${r.version}`}>Downloads on GitHub</a>
+              </div>
+              <div class="notes" set:html={r.notesHtml} />
+            </article>
+          ))
+        }
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .list {
+    padding-top: 64px;
+  }
+
+  .release {
+    display: grid;
+    grid-template-columns: 208px minmax(0, 1fr);
+    gap: 48px;
+    padding-block: 48px;
+    border-top: 1px solid var(--line);
+  }
+
+  .meta {
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink-3);
+  }
+
+  .meta h2 {
+    font-size: 28px;
+    line-height: 32px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .meta a {
+    display: inline-block;
+    margin-top: 12px;
+    color: var(--ink-2);
+    text-decoration: underline;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 4px;
+    transition: color 160ms var(--ease);
+  }
+
+  .meta a:hover {
+    color: var(--ink);
+  }
+
+  .notes {
+    max-width: 40rem;
+    font-size: 16px;
+    line-height: 24px;
+    color: var(--ink-2);
+  }
+
+  .notes :global(p) {
+    margin-bottom: 12px;
+  }
+
+  /* The notes use a bold line as the heading of each group. */
+  .notes :global(p:has(> strong:only-child)) {
+    margin: 32px 0 8px;
+    color: var(--ink);
+  }
+
+  .notes :global(p:first-child:first-child) {
+    margin-top: 0;
+  }
+
+  .notes :global(strong) {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .notes :global(ul) {
+    display: grid;
+    gap: 8px;
+    padding-left: 20px;
+    margin-bottom: 12px;
+    list-style: disc;
+  }
+
+  .notes :global(li::marker) {
+    color: var(--ink-3);
+  }
+
+  .notes :global(code) {
+    font-family: var(--mono);
+    font-size: 14px;
+  }
+
+  .notes :global(a) {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 4px;
+  }
+
+  @media (max-width: 760px) {
+    .list {
+      padding-top: 32px;
+    }
+
+    .release {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+      padding-block: 32px;
+    }
+  }
+</style>

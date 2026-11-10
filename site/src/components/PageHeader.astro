@@ -1,0 +1,34 @@
+---
+interface Props {
+  label: string;
+  title: string;
+  lede?: string;
+}
+const { label, title, lede } = Astro.props;
+---
+
+<header class="page-header">
+  <div class="wrap">
+    <div class="head">
+      <p class="label" data-reveal>{label}</p>
+      <h1 class="title" data-reveal>{title}</h1>
+      {lede && <p class="lede" data-reveal>{lede}</p>}
+    </div>
+  </div>
+</header>
+
+<style>
+  .page-header {
+    padding-top: calc(var(--nav) + 96px);
+  }
+
+  .head {
+    margin-bottom: 0;
+  }
+
+  @media (max-width: 760px) {
+    .page-header {
+      padding-top: calc(var(--nav) + 48px);
+    }
+  }
+</style>

@@ -4,18 +4,19 @@ import { repo } from '../data';
 
 <header class="nav" data-nav>
   <div class="wrap inner">
-    <a class="brand" href="#top" aria-label="Velvet, top of page">
+    <a class="brand" href="/" aria-label="Velvet, home page">
       <img src="/favicon.svg" width="24" height="24" alt="" />
       <span>Velvet</span>
     </a>
     <nav class="links" aria-label="Sections">
-      <a href="#memory">Memory</a>
-      <a href="#player">Player</a>
-      <a href="#features">Features</a>
-      <a href="#privacy">Privacy</a>
+      <a href="/#memory">Memory</a>
+      <a href="/#player">Player</a>
+      <a href="/#features">Features</a>
+      <a href="/#privacy">Privacy</a>
+      <a href="/changelog">Changelog</a>
       <a href={repo} rel="noopener">GitHub</a>
     </nav>
-    <a class="btn btn-primary get" href="#install">Download</a>
+    <a class="btn btn-primary get" href="/#install">Download</a>
   </div>
   <!-- The page's own seek bar: sections are its chapters, the scroll position is the playhead. -->
   <div class="seek" data-page-seek aria-hidden="true">

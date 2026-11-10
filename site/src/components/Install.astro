@@ -9,7 +9,7 @@ import { brew, downloads, repo, version } from '../data';
       <img class="icon" src="/icon.png" width="64" height="64" alt="" data-reveal />
       <h2 class="title" data-reveal>Get Velvet</h2>
       <p class="lede" data-reveal>
-        Free and open source. Version {version} runs on macOS 15 or later, on Apple silicon and Intel.
+        Free and open source. Version <a class="ver" href="/changelog">{version}</a> runs on macOS 15 or later, on Apple silicon and Intel.
       </p>
     </div>
 
@@ -89,6 +89,13 @@ import { brew, downloads, repo, version } from '../data';
 
   .head {
     margin-bottom: 0;
+  }
+
+  .ver {
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 4px;
   }
 
   .icon {
