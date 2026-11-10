@@ -7,7 +7,6 @@ const links = [
   ['Help', '/help'],
   ['Changelog', '/changelog'],
   ['Privacy', '/privacy'],
-  ['GitHub', repo],
 ];
 ---
 
@@ -19,6 +18,11 @@ const links = [
     </a>
     <nav class="links" aria-label="Pages">
       {links.map(([name, href]) => <a href={href}>{name}</a>)}
+      <a class="github" href={repo} rel="noopener" aria-label="Velvet on GitHub" title="GitHub">
+        <svg viewBox="0 0 16 16" width="18" height="18" fill="currentColor" aria-hidden="true">
+          <path d="M8 0a8 8 0 0 0-2.530 15.590c.4.070.550-.170.550-.380v-1.330c-2.230.480-2.700-1.070-2.700-1.070-.360-.920-.890-1.170-.890-1.170-.730-.500.050-.490.050-.490.800.060 1.230.830 1.230.830.710 1.220 1.870.870 2.330.660.070-.520.280-.870.510-1.070-1.780-.200-3.640-.890-3.640-3.950 0-.870.310-1.590.820-2.150-.080-.200-.360-1.020.080-2.120 0 0 .670-.210 2.200.820a7.650 7.650 0 0 1 4 0c1.530-1.040 2.200-.820 2.200-.820.440 1.100.160 1.920.080 2.120.510.560.820 1.270.820 2.150 0 3.070-1.870 3.750-3.650 3.950.290.250.540.730.540 1.480v2.190c0 .210.150.460.550.380A8 8 0 0 0 8 0z"></path>
+        </svg>
+      </a>
     </nav>
     <a class="btn btn-primary get" href="/download">Download</a>
     <details class="menu">
@@ -29,6 +33,7 @@ const links = [
       </summary>
       <nav aria-label="Pages">
         {links.map(([name, href]) => <a href={href}>{name}</a>)}
+        <a href={repo} rel="noopener">GitHub</a>
       </nav>
     </details>
   </div>
@@ -65,6 +70,7 @@ const links = [
 
   .links {
     display: flex;
+    align-items: center;
     gap: 28px;
     font-size: 14px;
     line-height: 20px;
@@ -78,6 +84,13 @@ const links = [
 
   .links a:hover {
     color: var(--ink);
+  }
+
+  .github {
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
   }
 
   .get {
