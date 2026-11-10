@@ -10,6 +10,34 @@ const thanks = [
   ['Return YouTube Dislike', 'https://returnyoutubedislike.com'],
   ['AiSList', 'https://aisloplist.com'],
 ];
+
+const columns = [
+  {
+    name: 'Velvet',
+    links: [
+      ['Download', '/#install'],
+      ['Changelog', '/changelog'],
+      ['How Velvet stays light', '/memory'],
+      ['Privacy', '/privacy'],
+    ],
+  },
+  {
+    name: 'Use it',
+    links: [
+      ['Help', '/help'],
+      ['Keyboard shortcuts', '/shortcuts'],
+      ['Open links in Velvet', '/open'],
+    ],
+  },
+  {
+    name: 'Project',
+    links: [
+      ['GitHub', repo],
+      ['Report a problem', `${repo}/issues/new`],
+      ['MIT License', `${repo}/blob/main/LICENSE`],
+    ],
+  },
+];
 ---
 
 <footer class="footer">
@@ -19,12 +47,18 @@ const thanks = [
         <img src="/favicon.svg" width="24" height="24" alt="" />
         <span>Velvet</span>
       </a>
-      <nav aria-label="Project links">
-        <a href={repo}>GitHub</a>
-        <a href="/changelog">Changelog</a>
-        <a href={`${repo}/issues/new`}>Report a problem</a>
-        <a href={`${repo}/blob/main/LICENSE`}>MIT License</a>
-      </nav>
+      <div class="columns">
+        {
+          columns.map((c) => (
+            <nav aria-label={c.name}>
+              <p>{c.name}</p>
+              {c.links.map(([name, href]) => (
+                <a href={href}>{name}</a>
+              ))}
+            </nav>
+          ))
+        }
+      </div>
     </div>
     <p class="thanks">
       Velvet stands on {thanks.map(([name, url], i) => (
@@ -43,7 +77,7 @@ const thanks = [
 <style>
   .footer {
     border-top: 1px solid var(--line);
-    padding-block: 48px 64px;
+    padding-block: 64px;
     font-size: 14px;
     line-height: 22px;
     color: var(--ink-3);
@@ -52,10 +86,10 @@ const thanks = [
   .top {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    gap: 16px 24px;
-    margin-bottom: 32px;
+    gap: 32px 64px;
+    margin-bottom: 48px;
   }
 
   .brand {
@@ -67,11 +101,22 @@ const thanks = [
     color: var(--ink);
   }
 
-  nav {
+  .columns {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px 24px;
+    gap: 32px 64px;
+  }
+
+  nav {
+    display: grid;
+    align-content: start;
+    gap: 8px;
+    min-width: 144px;
     color: var(--ink-2);
+  }
+
+  nav p {
+    color: var(--ink-3);
   }
 
   a {

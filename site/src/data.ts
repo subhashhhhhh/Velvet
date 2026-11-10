@@ -31,3 +31,37 @@ export const memory = {
     { name: '4K', mb: 292 },
   ],
 };
+
+// The same bookmarklet that Settings › General copies (SettingsView.swift).
+export const bookmarklet =
+  "javascript:(()=>{document.querySelector('video')?.pause();location.href='velvet://open?url='+encodeURIComponent(location.href)})()";
+
+// Every service that the app connects to (README §3).
+export const services = [
+  {
+    name: 'YouTube and Google',
+    sends: 'Your session cookies and your searches',
+    why: 'Feeds, search, videos, comments, notifications and account actions',
+    optional: false,
+  },
+  {
+    name: 'GitHub',
+    sends: 'No personal data',
+    why: 'Downloads of yt-dlp and its JavaScript runtime, the daily update check, and the list of AI channels (only with the AI filter)',
+    optional: false,
+  },
+  {
+    name: 'SponsorBlock',
+    sends: 'Four characters of a hash of the video ID. The service cannot find which video you watch',
+    why: 'Segments to skip',
+    optional: true,
+  },
+  { name: 'DeArrow titles', sends: 'Four characters of a hash of the video ID', why: 'Better titles', optional: true },
+  {
+    name: 'DeArrow thumbnails',
+    sends: 'The video ID. This service can see which videos you look at',
+    why: 'Better thumbnails',
+    optional: true,
+  },
+  { name: 'Return YouTube Dislike', sends: 'The video ID', why: 'Dislike counts', optional: true },
+];

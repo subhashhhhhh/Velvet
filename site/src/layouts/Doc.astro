@@ -1,0 +1,95 @@
+---
+import Base from './Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+import PageHeader from '../components/PageHeader.astro';
+
+interface Props {
+  title: string;
+  description: string;
+  label: string;
+  heading: string;
+  lede?: string;
+  /** The page's sections, for the list at the left. Each id is the id of an h2. */
+  toc?: { id: string; label: string }[];
+}
+
+const { title, description, label, heading, lede, toc } = Astro.props;
+---
+
+<Base title={title} description={description}>
+  <Nav />
+  <main>
+    <PageHeader label={label} title={heading} lede={lede} />
+    <section class="section body">
+      <div class="wrap">
+        <div class="grid">
+        <nav class="toc" aria-label="On this page">
+          {
+            toc && (
+              <ul>
+                {toc.map((t) => (
+                  <li>
+                    <a href={`#${t.id}`}>{t.label}</a>
+                  </li>
+                ))}
+              </ul>
+            )
+          }
+        </nav>
+        <div class="prose" data-reveal>
+          <slot />
+        </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .body {
+    padding-top: 64px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 208px minmax(0, 1fr);
+    gap: 48px;
+    padding-top: 48px;
+    border-top: 1px solid var(--line);
+  }
+
+  .toc ul {
+    position: sticky;
+    top: calc(var(--nav) + 32px);
+    display: grid;
+    gap: 8px;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink-3);
+  }
+
+  .toc a {
+    transition: color 160ms var(--ease);
+  }
+
+  .toc a:hover {
+    color: var(--ink);
+  }
+
+  @media (max-width: 900px) {
+    .body {
+      padding-top: 32px;
+    }
+
+    .grid {
+      grid-template-columns: minmax(0, 1fr);
+      padding-top: 32px;
+    }
+
+    .toc {
+      display: none;
+    }
+  }
+</style>

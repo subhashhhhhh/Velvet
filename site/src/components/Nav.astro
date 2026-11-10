@@ -1,5 +1,14 @@
 ---
 import { repo } from '../data';
+
+const links = [
+  ['Features', '/#features'],
+  ['Shortcuts', '/shortcuts'],
+  ['Help', '/help'],
+  ['Changelog', '/changelog'],
+  ['Privacy', '/privacy'],
+  ['GitHub', repo],
+];
 ---
 
 <header class="nav" data-nav>
@@ -8,15 +17,20 @@ import { repo } from '../data';
       <img src="/favicon.svg" width="24" height="24" alt="" />
       <span>Velvet</span>
     </a>
-    <nav class="links" aria-label="Sections">
-      <a href="/#memory">Memory</a>
-      <a href="/#player">Player</a>
-      <a href="/#features">Features</a>
-      <a href="/#privacy">Privacy</a>
-      <a href="/changelog">Changelog</a>
-      <a href={repo} rel="noopener">GitHub</a>
+    <nav class="links" aria-label="Pages">
+      {links.map(([name, href]) => <a href={href}>{name}</a>)}
     </nav>
     <a class="btn btn-primary get" href="/#install">Download</a>
+    <details class="menu">
+      <summary aria-label="Menu">
+        <svg viewBox="0 0 18 18" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.500" stroke-linecap="round" aria-hidden="true">
+          <path d="M3 6h12M3 12h12"></path>
+        </svg>
+      </summary>
+      <nav aria-label="Pages">
+        {links.map(([name, href]) => <a href={href}>{name}</a>)}
+      </nav>
+    </details>
   </div>
   <!-- The page's own seek bar: sections are its chapters, the scroll position is the playhead. -->
   <div class="seek" data-page-seek aria-hidden="true">
@@ -57,7 +71,8 @@ import { repo } from '../data';
     color: var(--ink-2);
   }
 
-  .links a {
+  .links a,
+  .menu a {
     transition: color 160ms var(--ease);
   }
 
@@ -70,6 +85,53 @@ import { repo } from '../data';
     padding: 0 16px;
     border-radius: 8px;
     font-size: 14px;
+  }
+
+  .menu {
+    display: none;
+    position: relative;
+  }
+
+  summary {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: var(--raised);
+    box-shadow: inset 0 0 0 1px var(--line);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+
+  .menu nav {
+    position: absolute;
+    top: 44px;
+    right: 0;
+    display: grid;
+    min-width: 200px;
+    padding: 8px;
+    border-radius: 12px;
+    background: var(--card);
+    box-shadow:
+      inset 0 0 0 1px var(--line-2),
+      0 16px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .menu a {
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 15px;
+    line-height: 24px;
+    color: var(--ink);
+  }
+
+  .menu a:hover {
+    background: var(--raised);
   }
 
   .seek {
@@ -95,9 +157,17 @@ import { repo } from '../data';
     background: var(--bg);
   }
 
-  @media (max-width: 760px) {
+  @media (max-width: 860px) {
     .links {
       display: none;
+    }
+
+    .inner {
+      gap: 12px;
+    }
+
+    .menu {
+      display: block;
     }
   }
 </style>

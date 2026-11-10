@@ -86,6 +86,7 @@ const keys = [
           </li>
         ))
       }
+      <li><a class="all" href="/shortcuts">All the keys</a></li>
     </ul>
 
     <div class="points">
@@ -545,6 +546,18 @@ const keys = [
     gap: 8px 24px;
     margin-top: 24px;
     max-width: 976px;
+  }
+
+  .keys .all {
+    display: inline-flex;
+    align-items: center;
+    height: 32px;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 4px;
   }
 
   .keys button {

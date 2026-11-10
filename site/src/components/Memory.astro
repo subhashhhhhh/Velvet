@@ -62,6 +62,7 @@ const ticks = [0, 500, 1000, 1500];
           Two minutes into a 60 fps video on an M1 MacBook Air. Memory changes with the video, its length and the macOS
           version, so your numbers can be different.
         </p>
+        <a class="more" href="/memory">How Velvet stays light</a>
       </div>
     </div>
   </div>
@@ -192,6 +193,17 @@ const ticks = [0, 500, 1000, 1500];
     font-size: 13px;
     line-height: 20px;
     color: var(--ink-3);
+  }
+
+  .more {
+    display: inline-block;
+    margin-top: 16px;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--line-2);
+    text-underline-offset: 4px;
   }
 
   @media (max-width: 900px) {
