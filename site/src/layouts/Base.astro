@@ -6,11 +6,13 @@ interface Props {
   description: string;
   /** Pages that search engines must not list (link hand-off, 404). */
   noindex?: boolean;
+  /** The link-preview card for this page: a file in public/og (scripts/og/render.jsx). */
+  card?: 'home' | 'download' | 'changelog' | 'help' | 'open' | 'privacy' | 'shortcuts' | 'memory';
 }
 
-const { title, description, noindex } = Astro.props;
+const { title, description, noindex, card = 'home' } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
-const ogImage = new URL('/og.png', Astro.site);
+const ogImage = new URL(`/og/${card}.jpg`, Astro.site);
 ---
 
 <!doctype html>
@@ -33,7 +35,7 @@ const ogImage = new URL('/og.png', Astro.site);
     <meta property="og:image" content={ogImage} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="YouTube, without the weight. The Velvet window with a video playing." />
+    <meta property="og:image:alt" content={`${title}. A card in the look of the Velvet website.`} />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:image" content={ogImage} />
     <slot name="head" />

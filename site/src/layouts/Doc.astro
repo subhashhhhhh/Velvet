@@ -12,12 +12,13 @@ interface Props {
   lede?: string;
   /** The page's sections, for the list at the left. Each id is the id of an h2. */
   toc?: { id: string; label: string }[];
+  card?: 'home' | 'download' | 'changelog' | 'help' | 'open' | 'privacy' | 'shortcuts' | 'memory';
 }
 
-const { title, description, label, heading, lede, toc } = Astro.props;
+const { title, description, label, heading, lede, toc, card } = Astro.props;
 ---
 
-<Base title={title} description={description}>
+<Base title={title} description={description} card={card}>
   <Nav />
   <main>
     <PageHeader label={label} title={heading} lede={lede} />
