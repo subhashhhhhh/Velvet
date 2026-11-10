@@ -1,0 +1,114 @@
+---
+import Doc from '../layouts/Doc.astro';
+import { repo, services } from '../data';
+
+const toc = [
+  { id: 'data', label: 'Data about you' },
+  { id: 'sign-in', label: 'Your sign-in' },
+  { id: 'services', label: 'Services' },
+  { id: 'search-history', label: 'Search history' },
+  { id: 'notifications', label: 'Notifications' },
+  { id: 'clipboard', label: 'Clipboard' },
+  { id: 'website', label: 'This website' },
+];
+---
+
+<Doc
+  title="Privacy · Velvet"
+  description="What data Velvet keeps on your Mac, which services it connects to, and what each service gets."
+  label="Privacy"
+  heading="What Velvet keeps and what it sends"
+  lede="Velvet has no analytics, no telemetry and no crash reports."
+  toc={toc}
+>
+  <h2 id="data">Data about you</h2>
+  <p>
+    Velvet does not collect data about you. The maintainer of Velvet gets no data from the app. Velvet is open source.
+    Thus, you can read the <a href={repo}>code</a> that does each function on this page.
+  </p>
+
+  <h2 id="sign-in">Your sign-in</h2>
+  <p>
+    You sign in to your Google account in a window that Velvet opens. Velvet then keeps your session cookies in a file
+    in this folder:
+  </p>
+  <pre><code>~/Library/Application Support/com.subhash.Velvet</code></pre>
+  <ul>
+    <li>The file is not encrypted.</li>
+    <li>The permissions of the file let only your macOS user account read it.</li>
+    <li>Other apps that run as your user can read the file.</li>
+    <li>Backups of your Mac include the file.</li>
+    <li>Velvet sends the cookies only to YouTube and Google.</li>
+  </ul>
+  <p>To remove the cookies, sign out in <strong>Settings › Account</strong>.</p>
+  <p>
+    Velvet does not use the macOS keychain for the cookies. Velvet has a self-signed signature, and with this type of
+    signature macOS asks for your login password after each update.
+  </p>
+  <p>You can use Velvet without an account.</p>
+
+  <h2 id="services">Services</h2>
+  <p>Velvet connects only to these services:</p>
+  <table>
+    <thead>
+      <tr><th>Service</th><th>Data that Velvet sends</th><th>Why Velvet connects</th></tr>
+    </thead>
+    <tbody>
+      {
+        services.map((s) => (
+          <tr>
+            <td>{s.name}</td>
+            <td>{s.sends}.</td>
+            <td>{s.why}.</td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+  <p>You can disable each service in the settings, except YouTube, Google and GitHub.</p>
+  <p>
+    The DeArrow thumbnail service can see which videos you look at. To stop this, set <strong
+      >Settings › DeArrow › Thumbnails</strong
+    > to <strong>Original</strong>.
+  </p>
+
+  <h2 id="search-history">Search history</h2>
+  <p>
+    When you are signed in, Velvet reads your search history from the Google My Activity page. This history comes from
+    all your devices. Velvet only reads it.
+  </p>
+  <p>
+    This function is on by default. You can turn it off in the welcome or in <strong>Settings › General</strong>.
+  </p>
+
+  <h2 id="notifications">Notifications</h2>
+  <p>
+    Velvet can show a macOS notification for a new upload. To find new uploads, Velvet reads the notifications of your
+    account. YouTube then marks them as seen on all your devices, as when you open the bell on youtube.com.
+  </p>
+
+  <h2 id="clipboard">Clipboard</h2>
+  <p>
+    Velvet can open a YouTube link that you copied. Velvet reads the clipboard only when it becomes the active app, and
+    only when the clipboard contains a web address.
+  </p>
+  <p>
+    On macOS 15.4 or later, macOS can tell you each time that Velvet reads the clipboard. To stop this function, go to
+    <strong>Settings › General</strong>.
+  </p>
+
+  <h2 id="website">This website</h2>
+  <ul>
+    <li>This website has no analytics and sets no cookies.</li>
+    <li>The fonts and the scripts come from this website. Your browser gets nothing from other servers.</li>
+    <li>
+      Cloudflare is the host of this website. Cloudflare receives each request, with your IP address and the address of
+      the page, as each web host does.
+    </li>
+    <li>The download buttons go to GitHub.</li>
+    <li>
+      A <a href="/open#website">link through this website</a> contains the ID of a video. The page sends this ID only to
+      Velvet on your Mac.
+    </li>
+  </ul>
+</Doc>

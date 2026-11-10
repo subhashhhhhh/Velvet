@@ -41,7 +41,7 @@ All source files are in `Velvet/`.
 | `Images/` | Image pipeline (downsampling, memory cache), animated images. |
 | `Views/` | Root view, shared controls (`Controls.swift`: `Chip`, `SegmentedTabs`; use these, not the system segmented picker), the custom sidebar (`Sidebar.swift`) and top bar (`TopBar.swift`), window-level player layer. Pages put their Back button, title and actions in the top bar with `.topBarBack`, `.topBarTitle`, `.topBarActions` and `.topBarRefresh`, not with `.toolbar`. |
 
-The website (velvet.subhashh.tech) is in `site/`: Astro, built by Cloudflare Pages (root `site`, command `npm run build`, output `dist`). It reads the version and download links from `updates/latest.json` at build time, and its changelog page from `docs/releases/*.md` (versions up to the manifest's), so a release needs no change to the site. Keep its text and its memory figures (`site/src/data.ts`) the same as the README.
+The website (velvet.subhashh.tech) is in `site/`: Astro, built by Cloudflare Pages (root `site`, command `npm run build`, output `dist`). It reads the version and download links from `updates/latest.json` at build time, and its changelog page from `docs/releases/*.md` (versions up to the manifest's), so a release needs no change to the site. Keep its text and its memory figures (`site/src/data.ts`) the same as the README. Write the text pages (help, privacy, shortcuts, open links, the memory write-up) in ASD-STE100 Simplified Technical English, as the README. `/watch?v=<id>` on the site hands a video to the app through `velvet://watch` (`YouTubeLink.swift`); keep the two formats the same.
 
 ## 3. Rules for code
 
