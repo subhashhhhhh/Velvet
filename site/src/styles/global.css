@@ -1,0 +1,280 @@
+@import '@fontsource/instrument-serif/400.css';
+@import '@fontsource/instrument-serif/400-italic.css';
+@import '@fontsource-variable/geist';
+
+:root {
+  --bg: #0a090a;
+  --bg-raised: #131113;
+  --bg-card: #171517;
+  --ink: #f5f5f7;
+  --ink-2: #b9b3b7;
+  --ink-3: #7d777b;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --crimson: #e0103a;
+  --crimson-soft: #ff6b80;
+  --crimson-glow: rgba(224, 16, 58, 0.35);
+
+  --serif: 'Instrument Serif', 'Iowan Old Style', 'Times New Roman', serif;
+  --sans: 'Geist Variable', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --mono: ui-monospace, 'SF Mono', Menlo, monospace;
+
+  --gutter: clamp(20px, 5vw, 56px);
+  --max: 1180px;
+  --radius: 20px;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 88px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+/* The fabric: a fine grain and a faint diagonal weave, as on the app icon. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .09 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 4px);
+}
+
+main,
+header,
+footer {
+  position: relative;
+  z-index: 1;
+}
+
+img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+p {
+  margin: 0;
+}
+
+h1,
+h2,
+h3 {
+  margin: 0;
+  font-weight: 400;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+:focus-visible {
+  outline: 2px solid var(--crimson-soft);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+::selection {
+  background: var(--crimson);
+  color: #fff;
+}
+
+.wrap {
+  width: 100%;
+  max-width: calc(var(--max) + var(--gutter) * 2);
+  margin-inline: auto;
+  padding-inline: var(--gutter);
+}
+
+.section {
+  padding-block: clamp(88px, 13vw, 168px);
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.eyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--crimson);
+  box-shadow: 0 0 12px var(--crimson-glow);
+}
+
+.display {
+  font-family: var(--serif);
+  font-size: clamp(40px, 6.4vw, 84px);
+  line-height: 1;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+
+.display em {
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+.lede {
+  font-size: clamp(17px, 1.6vw, 20px);
+  line-height: 1.55;
+  color: var(--ink-2);
+  max-width: 58ch;
+  text-wrap: pretty;
+}
+
+.section-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 22px;
+  margin-bottom: clamp(40px, 6vw, 72px);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 22px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 550;
+  white-space: nowrap;
+  transition:
+    transform 0.25s var(--ease),
+    background 0.2s,
+    border-color 0.2s;
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: #0a090a;
+}
+
+.btn-primary:hover {
+  background: #fff;
+}
+
+.btn-ghost {
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+}
+
+.btn-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.32);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.9em;
+  height: 1.9em;
+  padding: 0 0.45em;
+  border-radius: 7px;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  background: var(--bg-card);
+  font-family: var(--sans);
+  font-size: 0.82em;
+  font-weight: 550;
+  color: var(--ink);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* Elements that animate in are hidden only when scripts run and motion is allowed. */
+@media (prefers-reduced-motion: no-preference) {
+  html.js:not(.no-motion-js) [data-reveal] {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The hero waits for its entrance. If the script never runs, the inline fallback in the
+     layout adds .loaded and everything shows. */
+  html.js:not(.loaded) [data-hero-fade],
+  html.js:not(.loaded) [data-hero-title],
+  html.js:not(.loaded) [data-hero-stage] {
+    opacity: 0;
+  }
+
+  html.js.loaded [data-reveal].display {
+    opacity: 1;
+  }
+}
+
+/* Room under each masked line for descenders and the italic overhang. */
+.split-line-mask {
+  padding-bottom: 0.16em;
+  margin-bottom: -0.16em;
+  padding-inline: 0.06em;
+  margin-inline: -0.06em;
+}
+
+/* Two-part headlines in a narrow column: the second part on its own line. */
+.display.stack {
+  font-size: clamp(38px, 5.2vw, 72px);
+}
+
+.display.stack em {
+  display: block;
+}
