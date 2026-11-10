@@ -1,0 +1,42 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base title="Page not found · Velvet" description="This page does not exist." noindex>
+  <Nav />
+  <main>
+    <section class="missing">
+      <div class="wrap">
+        <div class="head">
+          <p class="label mono">404</p>
+          <h1 class="title">This page does not exist</h1>
+          <p class="lede">The address is incorrect, or the page moved.</p>
+          <div class="actions">
+            <a class="btn btn-primary" href="/">Go to the home page</a>
+            <a class="btn btn-secondary" href="/help">Help</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <Footer />
+</Base>
+
+<style>
+  .missing {
+    padding: calc(var(--nav) + 128px) 0 128px;
+  }
+
+  .head {
+    margin-bottom: 0;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 16px;
+  }
+</style>

@@ -1,0 +1,152 @@
+---
+import Doc from '../layouts/Doc.astro';
+import { repo } from '../data';
+
+const toc = [
+  { id: 'first-open', label: 'macOS stops Velvet' },
+  { id: 'which-download', label: 'Find the correct download' },
+  { id: 'first-start', label: 'Download on the first start' },
+  { id: 'no-playback', label: 'Videos do not play' },
+  { id: 'buffering', label: 'A video stops to load' },
+  { id: 'search-history', label: 'Few past searches' },
+  { id: 'pip-timeline', label: 'Picture in Picture timeline' },
+  { id: 'intel', label: 'Intel Macs' },
+  { id: 'updates', label: 'Update Velvet' },
+  { id: 'sign-out', label: 'Remove your sign-in' },
+  { id: 'report', label: 'Report a problem' },
+];
+---
+
+<Doc
+  title="Help · Velvet"
+  description="Solutions for the usual problems with Velvet, the YouTube client for macOS: the first start, playback, updates and sign-in."
+  label="Help"
+  heading="Solutions for the usual problems"
+  lede="If your problem is not here, report it. The last section tells you how."
+  toc={toc}
+>
+  <h2 id="first-open">macOS stops Velvet when you open it the first time</h2>
+  <p>
+    Apple does not notarize Velvet. Notarization needs a paid developer account. Because of this, macOS stops a downloaded copy
+    the first time that you open it.
+  </p>
+  <p>This does not occur when you install Velvet with Homebrew.</p>
+  <p>To open Velvet, do one of these two procedures.</p>
+  <h3>Procedure 1: System Settings</h3>
+  <ol>
+    <li>Open <strong>System Settings</strong>.</li>
+    <li>Click <strong>Privacy &amp; Security</strong>.</li>
+    <li>Go to <strong>Security</strong>.</li>
+    <li>Click <strong>Open Anyway</strong>.</li>
+  </ol>
+  <h3>Procedure 2: Terminal</h3>
+  <ol>
+    <li>Open Terminal.</li>
+    <li>
+      Do this command:
+      <pre><code>xattr -cr /Applications/Velvet.app</code></pre>
+    </li>
+    <li>Start Velvet.</li>
+  </ol>
+
+  <h2 id="which-download">Find the correct download for your Mac</h2>
+  <ol>
+    <li>Open the Apple menu.</li>
+    <li>Click <strong>About This Mac</strong>.</li>
+    <li>If you see <strong>Chip</strong>, your Mac has Apple silicon. Use the Apple silicon download.</li>
+    <li>If you see <strong>Processor</strong>, your Mac has an Intel processor. Use the Intel download.</li>
+  </ol>
+  <p>The Homebrew installation selects the correct version for your Mac.</p>
+
+  <h2 id="first-start">The player shows a download on the first start</h2>
+  <p>
+    Velvet needs two tools to play videos: yt-dlp and a JavaScript runtime (Deno). On the first start, Velvet downloads
+    these tools. The progress shows at the bottom of the window.
+  </p>
+  <p>
+    If you open a video before the downloads are complete, the player shows the progress. The video starts when the
+    downloads are complete.
+  </p>
+
+  <h2 id="no-playback">Videos do not play</h2>
+  <p>
+    YouTube changes frequently. A change at YouTube can stop playback in Velvet. A new version of yt-dlp usually
+    corrects the problem.
+  </p>
+  <ol>
+    <li>Push Command-comma to open the settings.</li>
+    <li>Click <strong>Advanced</strong>.</li>
+    <li>Click <strong>Check Now</strong>.</li>
+    <li>Play the video again.</li>
+  </ol>
+  <p>If the video does not play after this procedure, <a href="#report">report the problem</a>.</p>
+
+  <h2 id="buffering">A video stops frequently to load</h2>
+  <p>
+    YouTube sets a speed limit for each video link. On a slow connection, 4K video and HDR video can stop to load.
+  </p>
+  <p>
+    If the video stops frequently, Velvet decreases the quality by one step. A quality that you select yourself does
+    not change.
+  </p>
+  <p>To prevent the stops, select a lower quality in <strong>Settings › Playback</strong>.</p>
+
+  <h2 id="search-history">The search box shows only a few past searches</h2>
+  <p>
+    The full search history comes from the Google My Activity page. If Google changes this page, Velvet shows a shorter
+    history from YouTube.
+  </p>
+  <p>Make sure that the search history is on in <strong>Settings › General</strong>.</p>
+
+  <h2 id="pip-timeline">You cannot drag the timeline in Picture in Picture</h2>
+  <p>
+    The Picture in Picture window of macOS does not let you drag its timeline. Use the buttons that go back 10 seconds
+    and forward 10 seconds. Other players have the same limit.
+  </p>
+  <p>
+    Velvet also has its own floating window, which has a seek bar. You can select it in the Picture in Picture settings
+    in <strong>Settings › Playback</strong>.
+  </p>
+
+  <h2 id="intel">Intel Macs</h2>
+  <p>
+    Intel Macs cannot decode AV1 video in hardware. Most Intel Macs from 2017 or later can decode VP9 video in
+    hardware. Velvet selects a codec that your Mac can decode in hardware.
+  </p>
+  <p class="note">
+    When version 1.0 was released, nobody had tested the Intel version on an Intel Mac. If you use it, tell us the
+    result in an <a href={`${repo}/issues/new`}>issue</a>.
+  </p>
+
+  <h2 id="updates">Update Velvet</h2>
+  <p>
+    Velvet looks for a new version one time each day. When a new version is available, <strong
+      >Settings › About</strong
+    > shows the release notes and an <strong>Install and Relaunch</strong> button.
+  </p>
+  <p>To look for a new version at a different time, select <strong>Velvet › Check for Updates…</strong>.</p>
+  <p>Before Velvet installs an update, it does these checks:</p>
+  <ul>
+    <li>The download is complete.</li>
+    <li>The download has the same signature as the installed app.</li>
+  </ul>
+  <p>If a check fails, Velvet does not install the update.</p>
+  <p>The <a href="/changelog">changelog</a> shows what changed in each version.</p>
+
+  <h2 id="sign-out">Remove your sign-in</h2>
+  <ol>
+    <li>Push Command-comma to open the settings.</li>
+    <li>Click <strong>Account</strong>.</li>
+    <li>Sign out.</li>
+  </ol>
+  <p>Velvet then removes your session cookies from your Mac. Refer to <a href="/privacy">Privacy</a>.</p>
+
+  <h2 id="report">Report a problem</h2>
+  <p>Open an <a href={`${repo}/issues/new`}>issue</a> on GitHub. Include this information:</p>
+  <ul>
+    <li>The Velvet version. You can find it in <strong>Settings › About</strong>.</li>
+    <li>The macOS version.</li>
+    <li>What you did, what you expected, and what occurred.</li>
+    <li>For a playback problem, the video link.</li>
+  </ul>
+</Doc>

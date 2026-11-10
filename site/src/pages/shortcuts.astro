@@ -1,0 +1,116 @@
+---
+import Doc from '../layouts/Doc.astro';
+
+const player = [
+  [['Space'], ['K'], 'Play or pause'],
+  [['←'], ['→'], 'Go back 5 seconds, go forward 5 seconds'],
+  [['J'], ['L'], 'Go back 10 seconds, go forward 10 seconds'],
+  [['↑'], ['↓'], 'Increase the volume, decrease the volume'],
+  [['M'], null, 'Mute or unmute'],
+  [['C'], null, 'Show or hide the captions'],
+  [['R'], null, 'Loop the video'],
+  [[','], ['.'], 'Decrease the speed, increase the speed'],
+  [['0'], ['9'], 'Go to 0 % to 90 % of the video (keys 0 to 9)'],
+  [['⇧', 'N'], null, 'Play the next video in the queue'],
+  [['F'], null, 'Enter or exit fullscreen'],
+  [['T'], null, 'Theater mode'],
+  [['P'], null, 'Start or stop Picture in Picture'],
+  [['I'], null, 'Go back to the page. The video continues in Picture in Picture'],
+] as const;
+
+const app = [
+  [['⌘', 'K'], ['⌘', 'F'], 'Search'],
+  [['⌘', '['], ['⌘', ']'], 'Go back, go forward'],
+  [['⌘', 'R'], null, 'Refresh the page'],
+  [['⌘', 'S'], null, 'Collapse or expand the sidebar'],
+  [['⌘', ','], null, 'Open the settings'],
+] as const;
+
+const toc = [
+  { id: 'player', label: 'Player' },
+  { id: 'app', label: 'App' },
+  { id: 'other', label: 'Trackpad and media keys' },
+];
+---
+
+<Doc
+  title="Keyboard shortcuts · Velvet"
+  description="All the keyboard shortcuts of Velvet, the YouTube client for macOS: the player keys and the app keys."
+  label="Keyboard shortcuts"
+  heading="All the keys"
+  lede="Most of the player keys are the same as on the YouTube website."
+  toc={toc}
+>
+  <h2 id="player">Player</h2>
+  <p>These keys operate when a video is open. You can try some of them in the <a href="/#player">demo player</a>.</p>
+  <table class="keys">
+    <tbody>
+      {
+        player.map(([a, b, action]) => (
+          <tr>
+            <td>
+              <span class="combo">{a.map((k) => <kbd>{k}</kbd>)}</span>
+              {b && <span class="or">{a[0] === '0' ? 'to' : 'or'}</span>}
+              {b && <span class="combo">{b.map((k) => <kbd>{k}</kbd>)}</span>}
+            </td>
+            <td>{action}</td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+
+  <h2 id="app">App</h2>
+  <table class="keys">
+    <tbody>
+      {
+        app.map(([a, b, action]) => (
+          <tr>
+            <td>
+              <span class="combo">{a.map((k) => <kbd>{k}</kbd>)}</span>
+              {b && <span class="or">or</span>}
+              {b && <span class="combo">{b.map((k) => <kbd>{k}</kbd>)}</span>}
+            </td>
+            <td>{action}</td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+  <p>⌘ is the Command key. ⇧ is the Shift key.</p>
+
+  <h2 id="other">Trackpad and media keys</h2>
+  <ul>
+    <li>Swipe with two fingers on the trackpad to go back and forward.</li>
+    <li>The media keys and the buttons on your headphones control the playback.</li>
+    <li>Control Center shows the video in Now Playing.</li>
+  </ul>
+</Doc>
+
+<style>
+  .keys td:first-child {
+    width: 208px;
+    white-space: nowrap;
+  }
+
+  .keys td {
+    color: var(--ink-2);
+  }
+
+  .combo {
+    display: inline-flex;
+    gap: 4px;
+  }
+
+  .or {
+    margin-inline: 8px;
+    font-size: 13px;
+    color: var(--ink-3);
+  }
+
+  @media (max-width: 560px) {
+    .keys td:first-child {
+      width: 144px;
+    }
+  }
+</style>
