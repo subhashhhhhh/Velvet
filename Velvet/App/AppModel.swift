@@ -1131,6 +1131,7 @@ final class AppModel {
         let signedIn = authState == .signedIn
         homeFeed = signedIn ? FeedModel(source: .browse("FEwhat_to_watch"), client: client) : nil
         homeFeed?.hidesPromotions = { [settings] in settings.hidePromotions }
+        homeFeed?.hidesNews = { [settings] in settings.hideBreakingNews }
         historyFeed = signedIn ? SectionedFeedModel(browseId: "FEhistory", client: client) : nil
         watchLaterFeed = signedIn ? SectionedFeedModel(browseId: "VLWL", client: client) : nil
         subscriptionsFeed = signedIn ? FeedModel(source: .browse("FEsubscriptions"), client: client) : nil
@@ -1197,6 +1198,8 @@ final class AppModel {
                     let videos = VideoParser.videos(in: home)
                     let promoted = Set(videos.map(\.id)).subtracting(VideoParser.videos(in: home, skipping: VideoParser.promotionKeys).map(\.id))
                     log.info("Dump: home promotions hidden: \(promoted.count)")
+                    let news = Set(videos.map(\.id)).subtracting(VideoParser.videos(in: home, skippingNews: true).map(\.id))
+                    log.info("Dump: home breaking news hidden: \(news.count)")
                     log.info("Dump: home \(videos.count) videos, notInterested=\(videos.filter { $0.notInterestedToken != nil }.count), dontRecommend=\(videos.filter { $0.dontRecommendChannelToken != nil }.count)")
                     if UserDefaults.standard.bool(forKey: "VelvetDumpNotifications") {
                         save(try await client.unseenNotificationCount(), "unseen.json")

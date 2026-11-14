@@ -21,12 +21,22 @@ nonisolated enum VideoParser {
     /// be flattened into the grid like ordinary videos.
     static let promotionKeys: Set<String> = ["brandVideoShelfRenderer", "adSlotRenderer"]
 
+    /// Home's "Breaking news" shelf: several news clips about one story. Its title is in the
+    /// user's language, so it is found by its layout: of the home shelves, only the news
+    /// shelf has a headline under its title (`subtitle`). Shorts shelves carry an icon.
+    static func isNewsShelf(_ key: String, _ value: JSON) -> Bool {
+        key == "richShelfRenderer" && !value["subtitle"].isNull && value["icon"].isNull
+    }
+
     /// All videos in `json`, in document order, de-duplicated by id. Containers named in
-    /// `skipping` are not searched.
-    static func videos(in json: JSON, skipping: Set<String> = []) -> [Video] {
+    /// `skipping` are not searched, and neither is the news shelf when `skippingNews` is set.
+    static func videos(in json: JSON, skipping: Set<String> = [], skippingNews: Bool = false) -> [Video] {
         var out: [Video] = []
         var seen = Set<String>()
-        walk(json, skipping: skipping) { key, value in
+        let skip: (String, JSON) -> Bool = { key, value in
+            skipping.contains(key) || (skippingNews && isNewsShelf(key, value))
+        }
+        walk(json, skip: skip) { key, value in
             guard let video = parse(key: key, value) else { return }
             if seen.insert(video.id).inserted { out.append(video) }
         }
@@ -60,19 +70,20 @@ nonisolated enum VideoParser {
 
     /// Visits recognised renderers depth-first, without descending into them
     /// (so a video's own menus/endpoints are never mistaken for other videos).
-    private static func walk(_ json: JSON, skipping: Set<String>, _ visit: (String, JSON) -> Void) {
+    private static func walk(_ json: JSON, skip: (String, JSON) -> Bool, _ visit: (String, JSON) -> Void) {
         switch json {
         case .object(let o):
-            for key in o.keys.sorted() where !skipping.contains(key) {
+            for key in o.keys.sorted() {
                 let value = o[key]!
+                if skip(key, value) { continue }
                 if rendererKeys.contains(key) {
                     visit(key, value)
                 } else {
-                    walk(value, skipping: skipping, visit)
+                    walk(value, skip: skip, visit)
                 }
             }
         case .array(let a):
-            for v in a { walk(v, skipping: skipping, visit) }
+            for v in a { walk(v, skip: skip, visit) }
         default:
             break
         }

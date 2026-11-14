@@ -327,8 +327,10 @@ private struct FeedPane: View {
                 Toggle("Hide members-only videos", isOn: $settings.hideMembersOnly)
                 Toggle("Hide YouTube featured promotions and ads", isOn: $settings.hidePromotions)
                     .onChange(of: settings.hidePromotions) { Task { await app.homeFeed?.reload() } }
+                Toggle("Hide Breaking news on Home", isOn: $settings.hideBreakingNews)
+                    .onChange(of: settings.hideBreakingNews) { Task { await app.homeFeed?.reload() } }
             } footer: {
-                Text("Watched: videos YouTube reports as mostly watched (90% or more). Promotions: shelves YouTube features for campaigns such as film launches, which aren't based on what you watch.")
+                Text("Watched: videos YouTube reports as mostly watched (90% or more). Promotions: shelves YouTube features for campaigns such as film launches, which aren't based on what you watch. Breaking news: a group of news clips about one current story.")
             }
             AIFilterSection()
         }

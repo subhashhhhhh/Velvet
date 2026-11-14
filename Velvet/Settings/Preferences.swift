@@ -116,6 +116,7 @@ final class Preferences {
     var hideWatched: Bool { didSet { save(hideWatched, .hideWatched) } }
     var hideMembersOnly: Bool { didSet { save(hideMembersOnly, .hideMembersOnly) } }
     var hidePromotions: Bool { didSet { save(hidePromotions, .hidePromotions) } }
+    var hideBreakingNews: Bool { didSet { save(hideBreakingNews, .hideBreakingNews) } }
 
     // Playback
     var quality: VideoQuality { didSet { save(quality.rawValue, .quality) } }
@@ -200,6 +201,7 @@ final class Preferences {
         hideWatched = get(.hideWatched, false)
         hideMembersOnly = get(.hideMembersOnly, false)
         hidePromotions = get(.hidePromotions, true)
+        hideBreakingNews = get(.hideBreakingNews, false)
 
         quality = VideoQuality(rawValue: get(.quality, 1080)) ?? .p1080
         codec = VideoCodec(rawValue: get(.codec, "")) ?? .auto
@@ -270,7 +272,7 @@ final class Preferences {
         let fresh = Preferences(defaults: defaults)
         startPage = fresh.startPage; appearance = fresh.appearance; searchSuggestions = fresh.searchSuggestions; searchHistoryFromMyActivity = fresh.searchHistoryFromMyActivity
         showShortsShelf = fresh.showShortsShelf; shortsAfterRows = fresh.shortsAfterRows
-        videosPerRow = fresh.videosPerRow; videosPerRowSidebarHidden = fresh.videosPerRowSidebarHidden; hideWatched = fresh.hideWatched; hideMembersOnly = fresh.hideMembersOnly; hidePromotions = fresh.hidePromotions
+        videosPerRow = fresh.videosPerRow; videosPerRowSidebarHidden = fresh.videosPerRowSidebarHidden; hideWatched = fresh.hideWatched; hideMembersOnly = fresh.hideMembersOnly; hidePromotions = fresh.hidePromotions; hideBreakingNews = fresh.hideBreakingNews
         quality = fresh.quality; codec = fresh.codec; defaultSpeed = fresh.defaultSpeed
         autoplay = fresh.autoplay; hardwareDecoding = fresh.hardwareDecoding
         bufferMB = fresh.bufferMB; prefetchOnHover = fresh.prefetchOnHover
@@ -286,7 +288,7 @@ final class Preferences {
     // MARK: Persistence
 
     private enum Key: CaseIterable {
-        case startPage, appearance, searchSuggestions, searchHistoryFromMyActivity, showShortsShelf, shortsAfterRows, videosPerRow, videosPerRowSidebarHidden, hideWatched, hideMembersOnly, hidePromotions
+        case startPage, appearance, searchSuggestions, searchHistoryFromMyActivity, showShortsShelf, shortsAfterRows, videosPerRow, videosPerRowSidebarHidden, hideWatched, hideMembersOnly, hidePromotions, hideBreakingNews
         case quality, codec, defaultSpeed, autoplay, hardwareDecoding, bufferMB, prefetchOnHover, autoPictureInPicture, pipOnScroll, autoCaptions, pipOnNavigate, pipStyle, queueAutoAdvance
         case uploadAlerts, notificationCheckMinutes, theaterMode
         case audioDelayMs, showDislikes, hdr, splitStreams, hideAIChannels, hideAILikely, seriesTracking

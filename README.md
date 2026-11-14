@@ -165,6 +165,7 @@ You can hide these videos:
 - Videos that you watched.
 - Members-only videos.
 - Promotions.
+- The Breaking news group on Home: news videos about one current story.
 - Videos from channels that post AI-generated videos.
 
 ### 4.6 Picture in Picture
